@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import axios from 'axios';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 
@@ -172,6 +173,12 @@ export default function SettingsPage() {
             خروج
           </button>
         </div>
+        <Link
+          className="mt-4 inline-flex rounded-lg border border-slate-300 px-4 py-2 font-medium"
+          href="/categories"
+        >
+          مدیریت دسته‌بندی‌ها
+        </Link>
 
         <form className="mt-7 space-y-5" onSubmit={saveProfile}>
           <div>

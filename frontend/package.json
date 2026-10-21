@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:jalali": "node --experimental-strip-types --test tests/jalaliDate.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

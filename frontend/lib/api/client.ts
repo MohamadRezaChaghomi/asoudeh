@@ -36,12 +36,16 @@ api.interceptors.response.use(
   (error: unknown) => {
     if (!axios.isAxiosError(error)) return Promise.reject(error);
     const config = error.config as AxiosRequestConfig | undefined;
-    const isProfileRequest = config?.url?.startsWith('/me');
+    const isRefreshableRequest =
+      config?.url?.startsWith('/me') ||
+      config?.url?.startsWith('/categories') ||
+      config?.url?.startsWith('/transactions') ||
+      config?.url?.startsWith('/dashboard');
 
     if (
       error.response?.status !== 401 ||
       !config ||
-      !isProfileRequest ||
+      !isRefreshableRequest ||
       config._sessionRetry
     ) {
       return Promise.reject(error);

@@ -13,6 +13,7 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-transactionSchema.index({ userId: 1, date: -1 });
+transactionSchema.index({ userId: 1, date: -1, _id: -1 });
+transactionSchema.index({ userId: 1, categoryId: 1, date: -1 });
 
 export default mongoose.model('Transaction', transactionSchema);

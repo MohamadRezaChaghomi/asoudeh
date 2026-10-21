@@ -43,3 +43,34 @@ Recorded: 2026-10-21
 - Canonical phone numbers use Iranian mobile format `09` followed by 9 digits. Common `+98`, `0098`, and Persian/Arabic digit input is normalized before validation and storage.
 - Display names are trimmed and limited to 1–80 characters. Birth year is optional and, when supplied, must be an Iranian Solar Hijri year from 1300 through the current Solar Hijri year.
 - Initial balance is a non-negative safe integer in toman. Accessibility text scale is restricted to 100%, 125%, 150%, or 200%; high contrast is boolean.
+
+## Category management checkpoint
+
+Recorded: 2026-10-21
+
+- The category specification defines `userId: null` as a system category and uniqueness by `(userId, type, name)`. The API lists those system categories read-only alongside the authenticated user’s categories; create and update operations always scope ownership to the authenticated user.
+- API-created categories use only the specified `income` and `expense` types. The legacy schema value `both` remains readable for existing documents but cannot be created through the API.
+- Category names are trimmed and limited to 50 characters. The specification defines the icon field as a string but gives no allowed-value list; the API therefore accepts a non-empty string and uses the existing `wallet` default when omitted.
+- Duplicate names are compared exactly after trimming and are scoped by type and owner as specified; case folding is not introduced because the specification does not define it.
+- The model’s existing `isActive` field is used for deactivation/reactivation. `DELETE /api/v1/categories/:id` is registered but intentionally returns `409 CATEGORY_DELETION_UNAVAILABLE` for an owned category without changing data. The available MongoDB topology is standalone, so multi-document reassignment cannot be guaranteed atomically against concurrent transaction creation. Enabling deletion requires a transaction-capable replica set or an equivalent schema/workflow that safely blocks concurrent references, plus a confirmed type-correct income fallback; the specification names “متفرقه” but does not define the income fallback.
+- The development-only seed inserts the specification’s eight expense defaults (including “متفرقه”) and three income defaults (including “سایر”) using `$setOnInsert`. It requires an explicit local `asoudeh_dev` URI and confirmation value, and never modifies personal categories or existing defaults.
+
+## Transaction management checkpoint
+
+- Transaction ownership is always derived from the authenticated server-side identity. List and mutation operations are scoped to that owner; deleted records are excluded from lists and cannot be updated or deleted again.
+- Keep the existing transaction model and API field names `date` and `note` rather than renaming persisted fields to the specification’s `occurredOn` and `description`. Dates are exchanged as date-only `YYYY-MM-DD` values and stored at UTC midnight; future dates are rejected. Notes are limited to 200 characters.
+- Transaction amounts are positive safe integers in toman, with an API maximum of 1,000,000,000,000 toman based on the specification’s example boundary. This preserves integer arithmetic for persisted amounts.
+- A transaction category must be active, either personal to the authenticated user or system-owned (`userId: null`), and match the transaction type. The legacy category type `both` remains accepted for existing records.
+- Deactivating a category prevents assigning it to a new transaction or switching another transaction to it. An existing transaction may still be edited while retaining its same, still-owned category; this does not reactivate the category.
+- Deletion is soft deletion via `deletedAt`; this preserves transaction history and avoids physical data loss.
+- The transaction list defaults to 20 items, newest first with `_id` as a deterministic tie-breaker, and returns total item/page counts. `pageSize` is capped at 100 and page is capped at 10,000 to bound offset scans.
+- Undo is enforced server-side for ten seconds from the persisted `deletedAt`; the restore operation is owner-scoped and atomic for a single transaction. The frontend persists only pending transaction IDs and server-provided expiry timestamps in session storage; the server remains authoritative.
+- The Persian transaction form follows the specified amount, category/date, and review sequence. Jalali selection and Gregorian date conversion use the platform `Intl` Persian calendar support without adding a date dependency. Date-only values are stored at UTC midnight; current-day validation follows `Asia/Tehran`.
+
+## Financial dashboard checkpoint
+
+- The monthly remaining amount follows the specification: initial balance + income in the current month − expenses in the current month. It is not described as a live bank balance.
+- The specification defines monthly totals but not the calendar. The dashboard uses Solar Hijri month boundaries to match the Persian-facing product; the current civil day and upcoming-reminder window use `Asia/Tehran`.
+- Dashboard totals are aggregated as MongoDB decimal values and returned as integer strings, avoiding JavaScript floating-point arithmetic in sum and remaining calculations. Individual stored transaction amounts retain the existing integer-number representation.
+- The dashboard reads only the authenticated user’s initial balance, non-deleted transactions, and active near-term reminder records. It does not create reminders or imply that notification delivery is available.
+- No threshold for labeling the remaining amount “good” or “needs attention” is specified, so the dashboard displays the calculated amount without inventing a status classification.

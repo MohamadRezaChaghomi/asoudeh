@@ -4,6 +4,7 @@ const browserChannel = process.env.PLAYWRIGHT_CHANNEL === 'msedge' ? 'msedge' : 
 
 export default defineConfig({
   testDir: './tests',
+  testMatch: '**/*.spec.ts',
   fullyParallel: true,
   reporter: 'list',
   use: {
