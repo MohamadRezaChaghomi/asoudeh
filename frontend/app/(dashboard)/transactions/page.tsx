@@ -279,6 +279,7 @@ export default function TransactionsPage() {
       await loadData(lastAvailablePage);
       return;
     }
+    setPage(requestedPage);
     setTransactions(result.transactions);
     setPagination(result.pagination);
     setCategories(categoryResponse.data.data.categories);
@@ -642,9 +643,21 @@ export default function TransactionsPage() {
     }
   }
 
-  function changePage(nextPage: number) {
+  async function changePage(nextPage: number) {
     if (nextPage < 1 || nextPage > pagination.totalPages || saving) return;
-    setPage(nextPage);
+    setError('');
+    setLoading(true);
+    try {
+      await loadData(nextPage);
+    } catch (loadError) {
+      if (axios.isAxiosError(loadError) && loadError.response?.status === 401) {
+        router.replace('/login');
+        return;
+      }
+      setError(errorMessage(loadError));
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (loading) {

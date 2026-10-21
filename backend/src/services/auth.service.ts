@@ -8,7 +8,6 @@ import User from '../models/User.js';
 import {
   generateId,
   generateOpaqueToken,
-  generateOtp,
   hashAuthValue,
   hashOtp,
   secureStringEqual,
@@ -242,7 +241,7 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
     );
   }
 
-  const code = generateOtp();
+  const code = env.otpDevFallbackCode;
   const resetAttempts =
     !current?.attemptWindowStartedAt ||
     now.getTime() - current.attemptWindowStartedAt.getTime() >= OTP_ATTEMPT_WINDOW_MS;
@@ -253,6 +252,7 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
       $set: {
         phone,
         otpHash: hashOtp(phone, code),
+        deliveryMode: 'development',
         codeExpiresAt: new Date(now.getTime() + OTP_LIFETIME_MS),
         verifiedAt: null,
         deleteAt: new Date(now.getTime() + OTP_BLOCK_MS + OTP_LIFETIME_MS),
@@ -342,6 +342,12 @@ export async function verifyOtp(
   }
 
   if (!challenge?.otpHash || !challenge.codeExpiresAt || challenge.codeExpiresAt <= now) {
+    throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
+  }
+  if (
+    challenge.deliveryMode !== 'sms' &&
+    (env.nodeEnv !== 'development' || !env.otpDevSimulatorEnabled)
+  ) {
     throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
   }
 
@@ -603,6 +609,12 @@ export async function scheduleAccountDeletion(
   const now = new Date();
   const phoneHash = hashAuthValue('phone', user.phone);
   const challenge = await OtpChallenge.findOne({ phoneHash });
+  if (
+    challenge?.deliveryMode !== 'sms' &&
+    (env.nodeEnv !== 'development' || !env.otpDevSimulatorEnabled)
+  ) {
+    throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
+  }
   if (challenge?.blockedUntil && challenge.blockedUntil > now) {
     throw new HttpError(
       429,

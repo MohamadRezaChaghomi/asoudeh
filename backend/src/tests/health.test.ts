@@ -2,6 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import app from '../app.js';
+import * as database from '../config/db.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 
 afterEach(() => {
@@ -17,6 +18,35 @@ describe('HTTP application baseline', () => {
       success: true,
       data: {
         status: 'ok',
+        service: 'asoudeh-backend',
+      },
+    });
+    expect(Number.isNaN(Date.parse(response.body.data.timestamp))).toBe(false);
+  });
+
+  it('reports the service as not ready while MongoDB is disconnected', async () => {
+    vi.spyOn(database, 'isDatabaseReady').mockReturnValue(false);
+    const response = await request(app).get('/api/v1/health/ready');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      success: false,
+      error: {
+        code: 'SERVICE_NOT_READY',
+        message: 'Service is not ready.',
+      },
+    });
+  });
+
+  it('reports the service as ready after MongoDB connects', async () => {
+    vi.spyOn(database, 'isDatabaseReady').mockReturnValue(true);
+    const response = await request(app).get('/api/v1/health/ready');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      data: {
+        status: 'ready',
         service: 'asoudeh-backend',
       },
     });

@@ -214,6 +214,72 @@ test('allows editing an existing transaction while retaining its inactive catego
   });
 });
 
+test('loads the selected page of transactions when pagination changes', async ({ page }) => {
+  const firstTransaction = {
+    id: '64b000000000000000000031',
+    type: 'expense',
+    amount: 1200,
+    categoryId: expenseCategory.id,
+    categoryName: 'صفحهٔ اول',
+    date: '2026-03-20',
+    note: '',
+  };
+  const secondTransaction = {
+    ...firstTransaction,
+    id: '64b000000000000000000032',
+    categoryName: 'صفحهٔ دوم',
+  };
+  const requestedPages: number[] = [];
+
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: activeUserId,
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/categories', async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { categories: [expenseCategory] } },
+    });
+  });
+  await page.route('**/api/v1/transactions**', async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const requestedPage = Number(requestUrl.searchParams.get('page'));
+    requestedPages.push(requestedPage);
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          transactions: [requestedPage === 2 ? secondTransaction : firstTransaction],
+          pagination: { page: requestedPage, pageSize: 1, totalItems: 2, totalPages: 2 },
+        },
+      },
+    });
+  });
+
+  await page.goto('/transactions');
+  await expect(page.getByText('صفحهٔ اول', { exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: 'صفحه‌بندی تراکنش‌ها' })
+    .getByRole('button', { name: 'بعدی' }).click();
+
+  await expect(page.getByText('صفحهٔ دوم', { exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'صفحه‌بندی تراکنش‌ها' }))
+    .toContainText('صفحهٔ ۲ از ۲');
+  expect(requestedPages).toEqual([1, 2]);
+
+  await page.getByRole('navigation', { name: 'صفحه‌بندی تراکنش‌ها' })
+    .getByRole('button', { name: 'قبلی' }).click();
+  await expect(page.getByText('صفحهٔ اول', { exact: true })).toBeVisible();
+  expect(requestedPages).toEqual([1, 2, 1]);
+});
+
 test('restores an opted-in draft only for the same authenticated account', async ({ page }) => {
   const firstAccountId = '64b000000000000000000099';
   activeUserId = firstAccountId;

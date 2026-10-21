@@ -14,6 +14,8 @@ Recorded: 2026-10-21
 
 ### OTP resend, attempts, and expiry
 
+The random-code requirement below applies to a future SMS delivery integration. The local development simulator intentionally uses the fixed fallback described here.
+- The local development simulator uses `OTP_DEV_FALLBACK_CODE` (default `123456`), which must be exactly six digits. Development challenges cannot be verified outside development or while the simulator is disabled. This fixed code must not be used with shared or production data; any future SMS provider must use cryptographically generated codes.
 - OTPs are cryptographically generated six-digit decimal codes, valid for 5 minutes, and stored only as an HMAC-SHA-256 digest using a dedicated server secret.
 - Allow at most 5 failed verification attempts. The fifth failure blocks verification and further OTP sends for that phone number for 10 minutes.
 - Requesting another code does not clear failed attempts or an active block. A replacement code may be issued only when the phone is not blocked and both request limits permit it; its challenge retains the existing attempt count until its attempt window ends.

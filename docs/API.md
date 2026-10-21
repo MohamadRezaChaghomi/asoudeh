@@ -13,6 +13,11 @@ Returns `{ success: true, message: "Asoudeh API is running" }`.
 ### `GET /api/v1/health`
 
 Returns HTTP 200 with `{ success: true, data: { status: "ok", service: "asoudeh-backend", timestamp } }`.
+This is a liveness check and does not depend on MongoDB.
+
+### `GET /api/v1/health/ready`
+
+Returns HTTP 200 with `{ success: true, data: { status: "ready", service: "asoudeh-backend", timestamp } }` when the MongoDB connection is established. Otherwise it returns HTTP 503 with `{ success: false, error: { code: "SERVICE_NOT_READY", message: "Service is not ready." } }`. Use this endpoint for deployment readiness checks; it does not expose database details.
 
 ### `POST /api/v1/auth/otp/request`
 Request body: `{ "phone": "09121234567" }`. Persian/Arabic digits and common `+98`, `0098`, or `98` prefixes are normalized to `09xxxxxxxxx`.
@@ -21,6 +26,8 @@ The current code has no SMS provider. OTP delivery is unavailable unless both `N
 
 ### `POST /api/v1/auth/otp/verify`
 Request body: `{ "phone": "09121234567", "code": "012345" }`.
+
+When the local development simulator is enabled, the requested code is `OTP_DEV_FALLBACK_CODE` (default `123456`), shown by the login UI. It remains single-use, expires after five minutes, and is subject to existing request and attempt limits. Development-issued codes cannot be verified outside development or after disabling the simulator. Do not use this fixed code with shared or production data. This simulator is the local no-SMS path, not an automatic fallback after a real SMS provider failure.
 
 Success for an existing account: `{ success: true, data: { registrationRequired: false, csrfToken } }`, with access, refresh, and CSRF cookies set.
 

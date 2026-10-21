@@ -16,6 +16,7 @@ import { connectDB } from '../config/db.js';
 const testMongoUri = process.env.TEST_MONGODB_URI;
 const originalNodeEnv = env.nodeEnv;
 const originalSimulatorSetting = env.otpDevSimulatorEnabled;
+const originalFallbackCode = env.otpDevFallbackCode;
 const originalAuthHashSecret = env.authHashSecret;
 const origin = env.clientUrl;
 const testPhones: string[] = [];
@@ -125,6 +126,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     }
     env.nodeEnv = originalNodeEnv;
     env.otpDevSimulatorEnabled = originalSimulatorSetting;
+    env.otpDevFallbackCode = originalFallbackCode;
     env.authHashSecret = originalAuthHashSecret;
     if (mongoose.connection.readyState === 1) {
       await User.deleteMany({ phone: { $in: testPhones } });
@@ -173,7 +175,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const developmentResponse = await otpRequest(phone);
     expect(developmentResponse.status).toBe(200);
     const developmentOtp = developmentResponse.body.data.developmentOtp as string;
-    expect(developmentOtp).toMatch(/^\d{6}$/);
+    expect(developmentOtp).toBe(env.otpDevFallbackCode);
     const challenge = await OtpChallenge.findOne({
       phoneHash: hashAuthValue('phone', phone),
     }).lean();
@@ -183,13 +185,33 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       4 * 60 * 1000,
     );
 
+    const verified = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: env.otpDevFallbackCode });
+    expect(verified.status).toBe(200);
+    expect(verified.body.data.registrationRequired).toBe(true);
+
+    const fallbackOnlyPhone = await createUniquePhone();
+    await otpRequest(fallbackOnlyPhone);
+    env.otpDevSimulatorEnabled = false;
+    const disabledResponse = await otpRequest(await createUniquePhone());
+    env.otpDevSimulatorEnabled = true;
+
     env.nodeEnv = 'production';
     env.otpDevSimulatorEnabled = true;
     const productionResponse = await otpRequest(await createUniquePhone());
+    const replayedInProduction = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone: fallbackOnlyPhone, code: env.otpDevFallbackCode });
 
+    expect(disabledResponse.status).toBe(503);
+    expect(JSON.stringify(disabledResponse.body)).not.toContain(env.otpDevFallbackCode);
     expect(productionResponse.status).toBe(503);
     expect(JSON.stringify(productionResponse.body)).not.toMatch(/\d{6}/);
     expect(JSON.stringify(productionResponse.body)).not.toContain('developmentOtp');
+    expect(replayedInProduction.status).toBe(400);
   });
 
   it('limits OTP requests to three per phone in a rolling 15-minute window', async () => {

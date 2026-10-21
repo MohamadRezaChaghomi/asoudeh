@@ -1,56 +1,132 @@
-# آسوده (Asoudeh)
+# Asoudeh
 
-سامانه مدیریت مالی شخصی با تمرکز بر تجربه کاربری سالمندان.
+Asoudeh is a Persian, right-to-left personal finance web application designed to make everyday money management approachable for older adults and people with limited experience using financial software. It supports personal transactions, budgets, reminders, monthly reports, and optional read-only caregiver access.
 
-## Stack
-- Frontend: Next.js + TypeScript + Tailwind CSS
-- Backend: Node.js + Express.js + TypeScript
-- Database: MongoDB + Mongoose
-- API: REST
-- Validation: Zod
-- Testing: Vitest / Supertest / Playwright
-- Git: GitHub
+> **Development status:** This repository is not production-ready. No production deployment or real SMS provider is configured. OTP login in a local environment is available only through an explicitly enabled development simulator.
 
-## ساختار
-- `frontend/` رابط کاربری
-- `backend/` API و منطق سمت سرور
-- `docs/` مستندات پروژه
-- `scripts/` اسکریپت‌های کمکی
+## Product capabilities
 
-## شروع سریع
-پیش‌نیاز: Node.js `22.14.0` یا جدیدتر و MongoDB محلی. نسخه پایه Node در `.nvmrc` مشخص شده است.
+- Persian/RTL interface with profile-level font scaling and high-contrast settings.
+- OTP-based, passwordless registration and login, cookie-backed sessions, CSRF and Origin checks, profile editing, and account deletion scheduled 30 days after OTP confirmation.
+- Personal and read-only system categories; owner-scoped transaction management, soft deletion with a 10-second undo window, and 20-item pagination.
+- Solar Hijri dashboard, monthly budgets, recurring reminders with month-scoped completion, and monthly reports.
+- Explicitly accepted, permission-scoped, read-only caregiver access with revocation and audit events.
+- Optional, account-keyed session-only transaction draft storage.
+- A PWA manifest and a limited offline shell. Only a generic public offline page and its icon are cached; authenticated pages and API data are not cached.
 
-1. اگر فایل‌های محیطی محلی از قبل وجود ندارند، `backend/.env.example` را به `backend/.env` و `frontend/.env.example` را به `frontend/.env.local` کپی کن.
-2. مقدارهای محلی را فقط در فایل‌های محیطی خودت تنظیم کن؛ هرگز آن‌ها را commit نکن.
-3. وابستگی‌ها را از ریشه نصب کن: `npm run install:all`
-4. در دو ترمینال جدا اجرا کن: `npm run dev:backend` و `npm run dev:frontend`
-5. Frontend: http://localhost:3000
-6. Backend: http://localhost:5000
-7. Health check: http://localhost:5000/api/v1/health
+See the [engineering report](docs/PROJECT_REPORT.md) for implementation status, verification evidence, limitations, and recommended next steps. The [API contract](docs/API.md) distinguishes registered routes from planning notes.
 
-## بررسی کیفیت
-- `npm run typecheck`
-- `npm run lint`
-- `npm run test:backend`
-- `npm --prefix frontend run test:jalali`
-- `npm run build:backend`
-- `npm run build:frontend`
-- برای تست اتصال DB، دستورهای ایزوله‌شده در `docs/ENVIRONMENT.md` را اجرا کن.
+## Technology
 
-## اصل توسعه
-احراز هویت، پروفایل کاربر، مدیریت دسته‌بندی‌های شخصی، هستهٔ مدیریت تراکنش‌ها، داشبورد مالی، بودجه‌های ماهانه، مدیریت یادآورها، گزارش ماهانه و مراقب فقط‌خواندنی پیاده‌سازی شده‌اند. ثبت تراکنش به‌صورت سه‌مرحله‌ای با تاریخ شمسی، صفحه‌بندی ۲۰تایی و بازگردانی حذف تا ۱۰ ثانیه پشتیبانی می‌شود. حذف فیزیکی دسته‌بندی همراه با انتقال تراکنش‌ها فعلاً فعال نیست؛ اتصال MongoDB موجود برای تضمین امن این عملیات چندسندی تراکنش‌پذیر نیست.
-حذف حساب با کد OTP دسترسی را فوراً می‌بندد و پاک‌سازی دائمی داده‌ها را برای ۳۰ روز بعد زمان‌بندی می‌کند؛ ارسال واقعی OTP در production تا اتصال ارائه‌دهنده پیامک در دسترس نیست.
-گزارش ماهانه شامل جمع درآمد و هزینه، تفکیک هزینه بر اساس دسته و مقایسه با ماه قبل است. دسترسی مراقب با دعوت و پذیرش صریح و مجوزهای فقط‌خواندنی قابل لغو پیاده‌سازی شده؛ ارسال پیامک دعوت ارائه نمی‌شود. قابلیت‌های OCR، Voice و Chatbot نیز در نسخهٔ فعلی پیاده‌سازی نشده‌اند و در فازهای بعدی قابل بررسی هستند.
+| Area | Technology |
+| --- | --- |
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| Backend | Node.js, Express 4, TypeScript, Zod |
+| Persistence | MongoDB, Mongoose |
+| Tests | Vitest, Supertest, Node test runner, Playwright |
 
-وب‌اپ manifest و صفحهٔ عمومی آفلاین دارد؛ Service Worker فقط همین صفحه و آیکون را cache می‌کند و داده‌های حساب یا پاسخ API را نگه نمی‌دارد. پیش‌نویس تراکنش فقط با انتخاب صریح کاربر، در نشست فعلی مرورگر و مختص همان حساب ذخیره می‌شود؛ ثبت نهایی و همگام‌سازی خودکار آفلاین وجود ندارد. ارزیابی WCAG/Lighthouse و آزمون کاربردپذیری واقعی هنوز باقی است.
+## Repository layout
 
-## Git
-پیشنهاد branch:
-- `main`: نسخه پایدار
-- `develop`: توسعه
-- `feature/*`: هر قابلیت مستقل
+```text
+backend/      Express API, validation, services, Mongoose models, and API/unit tests
+frontend/     Next.js application, shared UI, Jalali date utilities, and browser tests
+docs/         API, environment, development, decisions, roadmap, handover, and specification
+scripts/      Repository helper scripts
+```
 
-## وضعیت
-زیرساخت فرانت‌اند و بک‌اند، health endpoint، ثبت‌نام و ورود با OTP، نشست‌ها، ویرایش پروفایل، APIهای دسته‌بندی و تراکنش و داشبورد، بودجه‌های ماهانه، مدیریت یادآورها، گزارش ماهانه و دسترسی مراقب در کد موجودند. داشبورد جمع‌های ماه شمسی، باقیمانده بر پایهٔ موجودی اولیه، پنج تراکنش اخیر و یادآورهای فعال و تکمیل‌نشدهٔ هفت روز آینده را نشان می‌دهد. تکمیل یادآور ماهانه برای هر ماه شمسی جداگانه ذخیره می‌شود و تاریخچهٔ ماه‌های گذشته باقی می‌ماند. دسته‌های پیش‌فرض سیستم با فرمان توسعه‌ای محدودشده به پایگاه محلی `asoudeh_dev` قابل seed هستند. دعوت مراقب پیامک ندارد و باید از کانالی دیگر اطلاع‌رسانی شود؛ پیامک/ایمیل/push یادآورها نیز ارائه نمی‌شود.
+The backend follows a routes/controllers/services/models structure. The frontend uses the Next.js App Router and calls the API through cookie-based authentication.
 
-سرویس پیامک واقعی متصل نشده است. شبیه‌ساز OTP فقط در development و با فعال‌سازی صریح قابل استفاده است؛ ارسال OTP در production در دسترس نیست و API پاسخ unavailable می‌دهد. بنابراین ورود پیامکی برای استفادهٔ production آماده نیست.
+## Requirements
+
+- Node.js `22.14.0` or newer (the repository pins `22.14.0` in `.nvmrc`).
+- npm.
+- A local MongoDB instance for the application and database integration tests.
+
+## Local development (PowerShell)
+
+Run these commands from the repository root. They create local environment files only when they do not already exist, so existing local configuration is not overwritten:
+
+```powershell
+if (-not (Test-Path 'backend\.env')) {
+    Copy-Item 'backend\.env.example' 'backend\.env'
+}
+if (-not (Test-Path 'frontend\.env.local')) {
+    Copy-Item 'frontend\.env.example' 'frontend\.env.local'
+}
+npm run install:all
+```
+
+Review the sample files and configure local values in `backend\.env` and `frontend\.env.local`:
+
+- Set independent, randomly generated values for `JWT_SECRET` and `AUTH_HASH_SECRET`. `AUTH_HASH_SECRET` must be at least 32 bytes. Authentication fails closed if it is missing or too short.
+- Keep `MONGODB_URI` pointed at a local development database and `CLIENT_URL` at the frontend origin.
+- `NEXT_PUBLIC_API_URL` is public configuration; never place secrets in it.
+- Never commit or print local `.env` files or their secret values.
+
+Start MongoDB, then run the backend and frontend in separate PowerShell terminals:
+
+```powershell
+npm run dev:backend
+```
+
+```powershell
+npm run dev:frontend
+```
+
+The frontend is at <http://localhost:3000>. The API is at <http://localhost:5000>; liveness and database readiness are available at `/api/v1/health` and `/api/v1/health/ready`.
+
+### Local OTP without an SMS provider
+
+The project does not send real SMS messages. To exercise authentication locally, set `NODE_ENV=development` and explicitly set `OTP_DEV_SIMULATOR_ENABLED=true` in the backend's local environment file. The simulator uses `OTP_DEV_FALLBACK_CODE` (default `123456`) and exposes it only in the development response so the login UI can display it.
+
+The development OTP is single-use, expires after five minutes, is stored as a keyed digest, and retains the application's rate and attempt limits. It is not an automatic fallback when a production SMS delivery fails. Never enable the simulator outside local development or use its fixed code with shared or production data. More detail is in [environment setup](docs/ENVIRONMENT.md).
+
+## Checks and tests
+
+Run commands from the repository root:
+
+```powershell
+npm run typecheck
+npm run lint
+npm run test:backend
+npm --prefix frontend run test:jalali
+npm run build:backend
+npm run build:frontend
+```
+
+Playwright browser tests are run separately:
+
+```powershell
+npm --prefix frontend run test:e2e
+```
+
+The backend database integration test is skipped by the regular suite unless `TEST_MONGODB_URI` is configured. It must point to a dedicated local `asoudeh_test` database without credentials. Follow the guarded instructions in [environment setup](docs/ENVIRONMENT.md); do not point test commands at a shared or production database.
+
+Available root scripts are declared in the root `package.json`. Backend and frontend scripts are declared in their respective package manifests; there is no root script that runs every E2E/browser test.
+
+## Known limitations
+
+- **Production OTP delivery is unavailable:** no SMS provider is connected. Production OTP requests fail closed instead of returning a development code.
+- **Category deletion is intentionally unavailable:** the registered delete route returns `409 CATEGORY_DELETION_UNAVAILABLE`; safely reassigning transactions requires a transaction-capable database topology or an equivalent safe workflow, and a confirmed income fallback.
+- **No reminder or caregiver invitation delivery:** reminders are shown in the app, and caregiver invitations must be communicated out of band.
+- **Account deletion cannot currently be cancelled:** access is revoked immediately and permanent purge is scheduled for 30 days later.
+- **Offline behavior is limited:** the public offline page is cached, but account/API data and automatic offline transaction submission or synchronization are not supported.
+- **Not production-verified:** deployment, production index rollout, WCAG/Lighthouse results, and real-user usability studies have not been verified. OCR, voice, and chatbot features are not implemented.
+
+There is no `LICENSE` file in the repository. No deployment URL, demo, screenshot, or CI status is claimed here.
+
+## Documentation
+
+- [Project engineering report](docs/PROJECT_REPORT.md)
+- [API contract](docs/API.md)
+- [Environment setup and safe database testing](docs/ENVIRONMENT.md)
+- [Development guide](docs/DEVELOPMENT.md)
+- [Architecture and security decisions](docs/DECISIONS.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Project handover](docs/PROJECT_HANDOVER.md)
+- [Original specification (PDF)](docs/SPECIFICATION.pdf)
+- [Git workflow notes](docs/GIT.md)
+
+## Source
+
+Repository: <https://github.com/MohamadRezaChaghomi/asoudeh>

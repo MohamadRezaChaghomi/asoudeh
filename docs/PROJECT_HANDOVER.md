@@ -27,6 +27,9 @@
 - گزارش ماه‌شمسی و caregiver با مجوزهای تفکیک‌شده، پذیرش دعوت و لغو دسترسی پیاده‌سازی شده‌اند. آزمون‌های API، مالکیت و شاخص یکتای دعوت caregiver را بررسی کردند.
 - قاعده تکمیل مستقل یادآور ماهانه، clamp روز در ماه کوتاه، حفظ تاریخچه، حذف نرم تراکنش و پنجره بازگردانی در کد/آزمون‌ها پوشش دارند.
 - فرم تراکنش سه‌مرحله‌ای، مسیر قدیمی `/transactions/new`، manifest، Service Worker و پیش‌نویس opt-in و محدود به حساب در کد حاضرند. آزمون‌های Playwright توسعه و PWA production در آخرین اجرای تحویل موفق بودند.
+- صفحه‌بندی تراکنش‌ها هنگام جابه‌جایی صفحه، داده همان صفحه را دوباره از API دریافت می‌کند؛ آزمون E2E رفت‌وبرگشت صفحه‌های ۱ و ۲ را بررسی می‌کند.
+- endpoint زنده‌بودن (`/api/v1/health`) از endpoint آمادگی (`/api/v1/health/ready`) جداست؛ readiness در قطع اتصال MongoDB پاسخ 503 می‌دهد و جزئیات اتصال را افشا نمی‌کند.
+- برای توسعه محلی بدون SMS، شبیه‌ساز OTP با opt-in صریح از `OTP_DEV_FALLBACK_CODE` (پیش‌فرض `123456`) استفاده می‌کند؛ challenge همچنان hash‌شده، یک‌بارمصرف، محدود به زمان و rate-limit است و در production یا پس از خاموش‌شدن simulator قابل تأیید نیست.
 - ارسال واقعی SMS برای OTP یا دعوت caregiver وجود ندارد. شبیه‌ساز OTP فقط با تنظیم صریح در development فعال است؛ در غیر این صورت endpoint با خطای unavailable fail-closed می‌شود.
 
 ## ماتریس شکاف‌ها و اولویت بعدی
@@ -37,7 +40,7 @@
 | P1 | حذف دسته و انتقال تراکنش‌ها به fallback | عمداً غیرفعال است؛ تضمین هم‌زمانی بدون topology تراکنشی ممکن نیست و PDF برای fallback درآمد ابهام دارد. | تصمیم‌گیری درباره fallback درآمد و استفاده از replica set یا workflow معادل؛ آزمون هم‌زمانی و عدم از دست‌رفتن داده پیش از فعال‌سازی. |
 | P1 برای بهره‌برداری | تحویل OTP از SMS provider | provider و اعتبارنامه در دسترس نیست؛ ورود production عمداً سرویس‌دهی نمی‌کند. | انتخاب/پیکربندی provider و آزمون محدودیت نرخ، عدم افشای OTP و شکست تحویل؛ simulator فقط برای development. |
 | P2 | WCAG 2.2 AA، کنتراست، لمس و کاربردپذیری | تنظیمات اندازه متن/کنتراست موجود است؛ ارزیابی Lighthouse/assistive technology و آزمون واقعی کاربران انجام نشده. | اجرای ارزیابی دستی و خودکار، ثبت نتیجه و رفع موارد بحرانی؛ ادعای AA فقط پس از بررسی کامل. |
-| P2 | تأیید browser و PWA/E2E | با Edge: ۱۴ آزمون Playwright توسعه و آزمون PWA production موفق؛ هر اجرا یک آزمون مربوط به حالت دیگر را عمداً skip کرد. Chromium خود Playwright در این محیط در دسترس نیست. | اجرای ماتریس مرورگرهای پشتیبانی‌شده و بررسی نصب PWA/تجربه کاربری روی دستگاه واقعی. |
+| P2 | تأیید browser و PWA/E2E | با Edge: ۱۵ آزمون Playwright توسعه و آزمون PWA production موفق؛ هر اجرا یک آزمون مربوط به حالت دیگر را عمداً skip کرد. Chromium خود Playwright در این محیط در دسترس نیست. | اجرای ماتریس مرورگرهای پشتیبانی‌شده و بررسی نصب PWA/تجربه کاربری روی دستگاه واقعی. |
 | P2 | راه‌اندازی production و شاخص‌ها | هیچ deployment یا شاخصی در production اجرا/بررسی نشده است. شاخص‌های یکتای reminder completion و caregiver باید پیش از ترافیک واقعی ایمن rollout شوند. | بررسی داده‌های موجود و اجرای rollout شاخص‌ها توسط اپراتور روی replica set مناسب؛ سپس health check و smoke test. |
 | P3 / خارج از MVP | OCR، Voice، Chatbot و اعلان‌های SMS/email/push | در scope نسخه فعلی پیاده‌سازی نشده‌اند. | فقط در صورت تصمیم محصول برای فاز بعدی. |
 
@@ -48,12 +51,11 @@
 | بررسی مخزن و worktree | PASS | شاخه `main`، تغییرات قبلی حفظ شد؛ envهای محلی ignore هستند. |
 | تطبیق specification و checkpoint | PASS | مستندات و PDF با پیاده‌سازی و تصمیم‌های ثبت‌شده تطبیق داده شدند. |
 | حذف حساب و مهلت ۳۰روزه | PASS | OTP یک‌بارمصرف، قطع نشست و دسترسی فوری، worker و آزمون API. |
-| backend tests/typecheck/lint/build | PASS | همه بررسی‌های backend موفق؛ ۹۲ تست API/unit. |
-| frontend tests/build | PASS | typecheck/lint/build موفق؛ ۱۴ E2E و آزمون PWA production موفق. |
+| backend tests/typecheck/lint/build | PASS | همه بررسی‌های backend موفق؛ اکنون ۹۴ تست API/unit. |
+| frontend tests/build | PASS | typecheck/lint/build موفق؛ ۱۵ E2E و آزمون PWA production موفق. |
 | محدودیت‌ها و آمادگی production | PARTIAL | SMS واقعی، لغو حذف، استقرار ایندکس‌ها، WCAG و deployment هنوز تأیید نشده‌اند. |
-| stage و بازبینی patch | PASS | فقط ۵۳ فایل مرتبط stage؛ diff و اسکن فایل‌های محرمانه بازبینی شدند. |
-| commit | PASS | `490d80e` با trailer هم‌نویس ساخته شد؛ به‌روزرسانی نهایی این handover جداگانه ثبت می‌شود. |
-| push | PASS | commit `490d80e` روی `origin/main` تأیید شد؛ به‌روزرسانی نهایی handover هنوز push می‌شود. |
+| بازبینی تغییر جاری | PASS | اصلاح صفحه‌بندی و آزمون E2E آن بازبینی و مستند handover به‌روز شد؛ هیچ فایلی stage نشده است. |
+| commit و push تغییر جاری | انجام نشده | تغییرات این بازبینی عمداً commit یا push نشده‌اند. |
 | اجرای محلی frontend/backend | PASS | هر دو روی URLهای محلی با پایگاه تازه اجرا و health-checked شدند؛ بنا به درخواست کاربر اکنون متوقف‌اند. `AUTH_HASH_SECRET` در env محلی موجود نیست و OTP fail-closed می‌ماند. |
 | health check و URLها | PASS | پاسخ frontend `/login` با HTTP 200 و backend `/api/v1/health` با HTTP 200 تأیید شد. |
 
@@ -70,13 +72,14 @@
 
 در این نشست:
 
-- `npm run typecheck` — موفق (backend و frontend).
-- `npm run lint` — موفق (backend و frontend).
-- `npm run build:backend` — موفق.
-- `npm run test:backend` — ۱۵ فایل موفق؛ ۹۲ تست موفق، صفر ناموفق، صفر skip. اجرا با `MONGODB_URI` و `TEST_MONGODB_URI` محدود به MongoDB loopback و دیتابیس اختصاصی `asoudeh_test`، env موقت بدون بارگذاری فایل محلی، و کلیدهای صرفاً آزمایشی انجام شد.
+- `npm run typecheck` — موفق (backend و frontend؛ پس از اصلاح صفحه‌بندی).
+- `npm run lint` — موفق (backend و frontend؛ پس از اصلاح صفحه‌بندی).
+- `npm run build:backend` — موفق در همین نوبت بازبینی.
+- `npm run test:backend` — روی دیتابیس ایزوله `asoudeh_test`: ۹۴ تست موفق، صفر ناموفق و صفر skip؛ آزمون‌های OTP، حذف حساب و health/readiness هم پوشش داده شدند.
+- `npm --prefix backend run typecheck`, `npm --prefix backend run lint` و `npm --prefix backend run build` — پس از افزودن readiness endpoint موفق.
 - `npm --prefix frontend run test:jalali` — ۳ موفق، صفر ناموفق. Node برای type stripping هشدار آزمایشی داد.
 - `npm run build:frontend` — build production موفق؛ Next.js بارگذاری `.env.local` را گزارش کرد، اما محتوای آن باز یا چاپ نشد.
-- Playwright با Microsoft Edge — مجموعه توسعه: ۱۴ موفق، صفر ناموفق، یک skip (آزمون PWA production به‌علت حالت dev). آزمون PWA در حالت production جداگانه: یک موفق، یک skip (آزمون dev). یک آزمون draft پس از اضافه‌کردن انتظار صریح برای UI آماده‌شده پایدار شد.
+- Playwright با Microsoft Edge — مجموعه توسعه: ۱۵ موفق، صفر ناموفق، یک skip (آزمون PWA production به‌علت حالت dev). آزمون PWA در حالت production جداگانه: یک موفق، یک skip (آزمون dev). آزمون جدید صفحه‌بندی، درخواست‌های صفحه‌های ۱، ۲ و بازگشت به ۱ را تأیید می‌کند.
 - Production deployment، اتصال SMS واقعی، WCAG/Lighthouse و usability study — اجرا/تأیید نشده‌اند.
 
 دستورهای معمولی:
@@ -95,24 +98,10 @@ npm run build:frontend
 
 ## Git و فایل‌های محافظت‌شده
 
-- شاخه `main` هنگام آغاز برابر `e26b01d` بود و پس از fetch بدون واگرایی ماند.
-- commit پیاده‌سازی `490d80e` با پیام `feat: complete caregiver reports PWA and account deletion` روی `origin/main` push و تأیید شد. فایل‌های env و خروجی Playwright commit نشده‌اند.
-- commit مستندات وضعیت محلی در ادامهٔ این گردش کار ثبت و push می‌شود.
-- تغییرات تحویل قبلی و جاری در commit ۵۳ فایل مرتبط حفظ شدند. فهرست زیر وضعیت تغییرها هنگام شروع این اجرا را نشان می‌دهد:
-
-تغییرکرده:
-
-`README.md`, `backend/src/app.ts`, `backend/src/controllers/caregiver.controller.ts`, `backend/src/controllers/reports.controller.ts`, `backend/src/models/CaregiverLink.ts`, `backend/src/services/caregiver.service.ts`, `backend/src/services/reports.service.ts`, `backend/src/services/transactions.service.ts`, `backend/src/tests/transactions.api.test.ts`, `backend/src/validators/budget.validator.ts`, `docs/API.md`, `docs/DECISIONS.md`, `docs/ROADMAP.md`, `frontend/app/(dashboard)/caregiver/page.tsx`, `frontend/app/(dashboard)/reports/page.tsx`, `frontend/app/(dashboard)/transactions/new/page.tsx`, `frontend/app/(dashboard)/transactions/page.tsx`, `frontend/app/globals.css`, `frontend/app/layout.tsx`, `frontend/app/page.tsx`, `frontend/lib/api/client.ts`, `frontend/playwright.config.ts`, `frontend/tests/auth.spec.ts`, `frontend/tests/budgets.spec.ts`, `frontend/tests/reminders.spec.ts`, `frontend/tests/transactions.spec.ts`.
-
-جدید و ثبت‌نشده هنگام شروع:
-
-`backend/src/models/AuditLog.ts`, `backend/src/routes/caregiver.routes.ts`, `backend/src/routes/reports.routes.ts`, `backend/src/tests/accountDeletion.api.test.ts`, `backend/src/tests/caregiver.api.test.ts`, `backend/src/tests/reports.api.test.ts`, `backend/src/validators/caregiver.validator.ts`, `backend/src/validators/report.validator.ts`, `backend/src/services/accountDeletion.service.ts`, `frontend/app/(dashboard)/caregiver/[seniorId]/page.tsx`, `frontend/app/(dashboard)/layout.tsx`, `frontend/app/manifest.ts`, `frontend/components/ServiceWorkerRegistration.tsx`, `frontend/public/icons/asoudeh.svg`, `frontend/public/offline.html`, `frontend/public/sw.js`, `frontend/tests/pwa.spec.ts`, `frontend/tests/reports-caregiver.spec.ts`.
-
-این سند نیز به‌عنوان فایل تحویل جدید اضافه شده است. علاوه بر تغییرات تحویل قبلی، موارد زیر برای حذف حساب و مستندات آن تغییر یافتند:
-
-`README.md`, `backend/src/controllers/auth.controller.ts`, `backend/src/middleware/auth.ts`, `backend/src/models/User.ts`, `backend/src/routes/auth.routes.ts`, `backend/src/server.ts`, `backend/src/services/accountDeletion.service.ts`, `backend/src/services/auth.service.ts`, `backend/src/services/caregiver.service.ts`, `backend/src/tests/accountDeletion.api.test.ts`, `backend/src/validators/auth.validator.ts`, `docs/API.md`, `docs/DECISIONS.md`, `docs/PROJECT_HANDOVER.md`, `docs/ROADMAP.md`, `frontend/app/(dashboard)/settings/page.tsx`, `frontend/tests/auth.spec.ts`.
-
-تست E2E حذف حساب به سطح فایل منتقل شد. `loadData` در صفحه تراکنش از callback وابسته به شماره صفحه به تابع پایدار با صفحهٔ پیش‌فرض ۱ تبدیل شد تا تغییر صفحه موجب اجرای مجدد و ناخواستهٔ فرایند بازیابی draft نشود. تست draft اکنون پس از reload برای آماده‌شدن رابط انتظار می‌کشد؛ رفتار پاک‌سازی پیش‌نویس نامعتبر و جداسازی حساب‌ها بررسی شد.
+- شاخه `main` روی `58eb74a` (`docs: record requested local server shutdown`) است و هنگام بررسی با `origin/main` همگام بود.
+- پیاده‌سازی جامع قبلی در `490d80e` ثبت شده و مستندات وضعیت محلی در `a82fe18` و `58eb74a` قرار دارند.
+- تغییرات این بازبینی در [صفحه تراکنش‌ها](../frontend/app/%28dashboard%29/transactions/page.tsx)، [آزمون‌های تراکنش](../frontend/tests/transactions.spec.ts)، OTP توسعه، endpoint آمادگی backend و مستندات مرتبط هنوز commit یا push نشده‌اند. فایل‌های env واقعی و خروجی تست نیز بخشی از تغییر جاری نیستند.
+- پایدارشدن `loadData` برای جلوگیری از اجرای مجدد ناخواستهٔ بازیابی draft قبلاً اعمال شده بود؛ اصلاح جاری تضمین می‌کند دکمه‌های صفحه‌بندی علاوه بر تغییر state، داده صفحهٔ درخواستی را نیز بارگذاری کنند.
 
 ## وضعیت راه‌اندازی محلی
 

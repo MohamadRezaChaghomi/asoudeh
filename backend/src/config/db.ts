@@ -5,3 +5,7 @@ export async function connectDB(uri: string = env.mongoUri): Promise<void> {
   await mongoose.connect(uri);
   console.log('MongoDB connected');
 }
+
+export function isDatabaseReady(): boolean {
+  return mongoose.connection.readyState === mongoose.ConnectionStates.connected;
+}

@@ -4,7 +4,7 @@
 Repository, environment, GitHub, MongoDB, frontend/backend bootstrap. **Status:** bootstrap is present.
 
 ## Phase 1
-Express + Mongoose + configuration + error handling + validation. **Status:** configuration, health endpoint, error handling, authentication/profile, category, transaction, budget, reminder, report, and caregiver APIs are implemented with request validation. Production deployment and operational verification remain.
+Express + Mongoose + configuration + error handling + validation. **Status:** configuration, liveness and MongoDB readiness endpoints, error handling, authentication/profile, category, transaction, budget, reminder, report, and caregiver APIs are implemented with request validation. Production deployment and operational verification remain.
 
 ## Phase 2
 Authentication and user profile. **Status:** OTP-based registration/login flow, cookie sessions, refresh/logout, and profile editing are implemented in the current code. OTP-confirmed account deletion immediately revokes access and schedules idempotent data purge after 30 days. OTP delivery uses a development-only simulator; no real SMS provider is connected, so production OTP delivery is unavailable.

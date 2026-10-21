@@ -5,6 +5,7 @@ const otpChallengeSchema = new mongoose.Schema(
     phoneHash: { type: String, required: true, unique: true },
     phone: { type: String, required: true },
     otpHash: { type: String, default: null },
+    deliveryMode: { type: String, enum: ['development', 'sms'], default: 'development' },
     failedAttempts: { type: Number, required: true, default: 0 },
     attemptWindowStartedAt: { type: Date, default: null },
     blockedUntil: { type: Date, default: null },
