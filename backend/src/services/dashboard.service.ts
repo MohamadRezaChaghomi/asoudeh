@@ -4,6 +4,7 @@ import Reminder from '../models/Reminder.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 import { HttpError } from '../utils/httpError.js';
+import { decimalIntegerToBigInt } from '../utils/financialAmount.js';
 import {
   formatUtcDateOnly,
   getCurrentJalaliMonthRange,
@@ -69,35 +70,6 @@ export interface DashboardResponse {
   }>;
 }
 
-function integerString(value: string): bigint {
-  const match = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(value);
-  if (!match) {
-    throw new Error('A financial total was not represented as a decimal number.');
-  }
-
-  const [, sign, whole, fraction = '', exponentText = '0'] = match;
-  const exponent = Number(exponentText);
-  const digits = `${whole}${fraction}`;
-  const scale = fraction.length - exponent;
-
-  if (scale <= 0) {
-    return BigInt(`${sign}${digits}${'0'.repeat(-scale)}`);
-  }
-  if (scale >= digits.length) {
-    if ([...digits].some((digit) => digit !== '0')) {
-      throw new Error('A financial total was not an integer.');
-    }
-    return 0n;
-  }
-
-  const fractionalDigits = digits.slice(-scale);
-  if ([...fractionalDigits].some((digit) => digit !== '0')) {
-    throw new Error('A financial total was not an integer.');
-  }
-
-  return BigInt(`${sign}${digits.slice(0, -scale)}`);
-}
-
 export async function getDashboard(userId: string): Promise<DashboardResponse> {
   const ownerId = new mongoose.Types.ObjectId(userId);
   const { year, month, startDate, endDateExclusive, today } =
@@ -149,8 +121,8 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
   let income = 0n;
   let expenses = 0n;
   for (const total of totals) {
-    if (total._id === 'income') income = integerString(total.amount.toString());
-    if (total._id === 'expense') expenses = integerString(total.amount.toString());
+    if (total._id === 'income') income = decimalIntegerToBigInt(total.amount.toString());
+    if (total._id === 'expense') expenses = decimalIntegerToBigInt(total.amount.toString());
   }
 
   const initialBalance = user.initialBalance ?? 0;

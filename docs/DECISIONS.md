@@ -74,3 +74,12 @@ Recorded: 2026-10-21
 - Dashboard totals are aggregated as MongoDB decimal values and returned as integer strings, avoiding JavaScript floating-point arithmetic in sum and remaining calculations. Individual stored transaction amounts retain the existing integer-number representation.
 - The dashboard reads only the authenticated user’s initial balance, non-deleted transactions, and active near-term reminder records. It does not create reminders or imply that notification delivery is available.
 - No threshold for labeling the remaining amount “good” or “needs attention” is specified, so the dashboard displays the calculated amount without inventing a status classification.
+
+## Monthly budget checkpoint
+
+- Budgets use the specification’s Solar Hijri `monthKey` (`MM-YYYY`) and a unique `(userId, categoryId, monthKey)` index. The corresponding Gregorian interval is start-inclusive and end-exclusive.
+- A budget can be assigned only to an active personal expense category owned by the authenticated user. If a category becomes inactive later, its existing budget remains visible and its amount can still be edited without reassigning it.
+- Spending is calculated from non-deleted expense transactions matching the authenticated owner, category, and month. Decimal database aggregation and integer-string API totals avoid floating-point summation.
+- `warning` begins at 80% and `exceeded` at 100%; percentages are rounded to one decimal place for display. Remaining amount may be negative when spending exceeds the limit.
+- Budget creation enforces one budget per user/category/month in both service behavior and the database unique index. Deletion removes only the budget record and does not modify transactions or categories.
+- The earlier scaffold schema stored `period`, `startDate`, and `endDate`; this implementation replaces those unused fields with `monthKey`. No live database was inspected or migrated. Before deploying against any database that may contain scaffold-era budget documents, verify that they are disposable or perform a reviewed migration to `monthKey`; do not assume existing records are compatible.

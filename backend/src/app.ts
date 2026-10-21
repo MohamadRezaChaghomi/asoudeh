@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import authRoutes, { profileRouter } from './routes/auth.routes.js';
+import budgetRoutes from './routes/budgets.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import healthRoutes from './routes/health.routes.js';
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/budgets', budgetRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);

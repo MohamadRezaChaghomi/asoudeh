@@ -11,6 +11,7 @@ const jalaliDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn'
   timeZone: 'UTC',
   year: 'numeric',
   month: 'numeric',
+  day: 'numeric',
 });
 
 function dateParts(
@@ -41,60 +42,63 @@ export interface JalaliMonthRange {
   today: Date;
 }
 
-export function getCurrentJalaliMonthRange(now = new Date()): JalaliMonthRange {
-  const tehranParts = dateParts(tehranDateFormatter, now);
-  const todayMilliseconds = Date.UTC(
-    tehranParts.year,
-    tehranParts.month - 1,
-    tehranParts.day,
-  );
-  const currentJalaliParts = dateParts(jalaliDateFormatter, asUtcDate(todayMilliseconds));
-
-  let startMilliseconds = todayMilliseconds;
-  let foundStart = false;
-  for (let day = 0; day < 32; day += 1) {
-    const previousMilliseconds = startMilliseconds - DAY_IN_MS;
-    const previousMonth = dateParts(
-      jalaliDateFormatter,
-      asUtcDate(previousMilliseconds),
-    );
-    if (
-      previousMonth.year !== currentJalaliParts.year ||
-      previousMonth.month !== currentJalaliParts.month
-    ) {
-      foundStart = true;
-      break;
-    }
-    startMilliseconds = previousMilliseconds;
+export function getJalaliMonthRange(year: number, month: number): Omit<JalaliMonthRange, 'today'> {
+  if (!Number.isInteger(year) || year < 1200 || year > 1600) {
+    throw new RangeError('Invalid Jalali year.');
+  }
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new RangeError('Invalid Jalali month.');
   }
 
-  let endMilliseconds = startMilliseconds;
+  const searchStart = Date.UTC(year + 621, 2, 1);
+  const searchEnd = Date.UTC(year + 622, 3, 30);
+  let startMilliseconds: number | undefined;
+  for (let milliseconds = searchStart; milliseconds <= searchEnd; milliseconds += DAY_IN_MS) {
+    const parts = dateParts(jalaliDateFormatter, asUtcDate(milliseconds));
+    if (parts.year === year && parts.month === month && parts.day === 1) {
+      startMilliseconds = milliseconds;
+      break;
+    }
+  }
+
+  if (startMilliseconds === undefined) {
+    throw new RangeError('Unable to determine the Jalali month start.');
+  }
+
+  let endMilliseconds = startMilliseconds + DAY_IN_MS;
   let foundEnd = false;
   for (let day = 0; day < 32; day += 1) {
     const nextMonth = dateParts(
       jalaliDateFormatter,
       asUtcDate(endMilliseconds),
     );
-    if (
-      nextMonth.year !== currentJalaliParts.year ||
-      nextMonth.month !== currentJalaliParts.month
-    ) {
+    if (nextMonth.year !== year || nextMonth.month !== month) {
       foundEnd = true;
       break;
     }
     endMilliseconds += DAY_IN_MS;
   }
 
-  if (!foundStart || !foundEnd) {
-    throw new Error('Unable to determine the current Jalali month boundaries.');
+  if (!foundEnd) {
+    throw new RangeError('Unable to determine the Jalali month end.');
   }
 
   return {
-    year: currentJalaliParts.year,
-    month: currentJalaliParts.month,
+    year,
+    month,
     startDate: asUtcDate(startMilliseconds),
     endDateExclusive: asUtcDate(endMilliseconds),
-    today: asUtcDate(todayMilliseconds),
+  };
+}
+
+export function getCurrentJalaliMonthRange(now = new Date()): JalaliMonthRange {
+  const tehranParts = dateParts(tehranDateFormatter, now);
+  const today = asUtcDate(Date.UTC(tehranParts.year, tehranParts.month - 1, tehranParts.day));
+  const currentJalaliParts = dateParts(jalaliDateFormatter, today);
+
+  return {
+    ...getJalaliMonthRange(currentJalaliParts.year, currentJalaliParts.month),
+    today,
   };
 }
 

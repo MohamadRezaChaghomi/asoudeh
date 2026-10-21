@@ -117,12 +117,20 @@ export default function DashboardPage() {
               <p className="app-muted mt-2">{formatMonth(dashboard.period.startDate)}</p>
             )}
           </div>
-          <Link
-            className="rounded-lg border border-slate-300 px-4 py-2 font-medium"
-            href="/transactions"
-          >
-            فهرست تراکنش‌ها
-          </Link>
+          <nav className="flex flex-wrap gap-2" aria-label="بخش‌های مالی">
+            <Link
+              className="rounded-lg border border-slate-300 px-4 py-2 font-medium"
+              href="/transactions"
+            >
+              فهرست تراکنش‌ها
+            </Link>
+            <Link
+              className="rounded-lg border border-slate-300 px-4 py-2 font-medium"
+              href="/budgets"
+            >
+              بودجه‌ها
+            </Link>
+          </nav>
         </header>
 
         {error && (

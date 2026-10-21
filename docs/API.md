@@ -109,6 +109,18 @@ Requires the access cookie, configured Origin, and CSRF cookie/header pair. Soft
 ### `POST /api/v1/transactions/:id/restore`
 Requires the access cookie, configured Origin, and CSRF cookie/header pair. Restores only the authenticated user’s transaction and only while its server-recorded soft-delete time is within the ten-second undo window. Success: `{ success: true, data: { transaction } }`. An expired undo returns `410 TRANSACTION_UNDO_EXPIRED`; a missing, already-restored, or other user’s transaction returns `404 TRANSACTION_NOT_FOUND`.
 
+### `GET /api/v1/budgets?month=MM-YYYY`
+Requires the access cookie. `month` is a Solar Hijri month key such as `07-1405`. Returns only the authenticated user’s budgets for that month, together with the corresponding Gregorian date boundaries and calculated spending. Spending includes only that user’s non-deleted expense transactions in the budget category and month. Amount totals are integer strings; `percentageUsed` is rounded to one decimal place. A budget is `normal` below 80%, `warning` from 80% to less than 100%, and `exceeded` at or above 100%. Empty months return an empty `budgets` array.
+
+### `POST /api/v1/budgets`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Request body: `{ "categoryId": "...", "monthKey": "07-1405", "limitAmount": 250000 }`. `limitAmount` must be a positive integer in toman not greater than 1,000,000,000,000. The category must be an active personal expense category owned by the authenticated user; system, income, inactive, missing, and other users’ categories are rejected. Only one budget per user/category/month is allowed; a duplicate returns `409 BUDGET_ALREADY_EXISTS`. Success: HTTP 201 with `{ success: true, data: { budget } }`.
+
+### `PATCH /api/v1/budgets/:id`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Accepts a non-empty subset of `categoryId` and `limitAmount`; any new category assignment must meet the same eligibility rules as creation. An existing budget may retain its now-inactive category while its amount is edited. Budgets and category assignments are owner-scoped. A duplicate category/month assignment returns `409 BUDGET_ALREADY_EXISTS`; an inaccessible budget returns `404 BUDGET_NOT_FOUND`. Success: `{ success: true, data: { budget } }`.
+
+### `DELETE /api/v1/budgets/:id`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Physically deletes only a budget owned by the authenticated user. An inaccessible or already deleted budget returns `404 BUDGET_NOT_FOUND`. Success: `{ success: true, message: "بودجه حذف شد." }`.
+
 ### `GET /api/v1/dashboard`
 Requires the access cookie. Returns only data belonging to the authenticated user:
 
@@ -127,12 +139,6 @@ The following endpoint shapes are planned only. The current backend does not reg
 
 ### Categories
 - No additional category routes are planned here; `DELETE /api/v1/categories/:id` is registered but intentionally returns `409 CATEGORY_DELETION_UNAVAILABLE` as described above.
-
-### Budgets
-- `GET /api/v1/budgets`
-- `POST /api/v1/budgets`
-- `PATCH /api/v1/budgets/:id`
-- `DELETE /api/v1/budgets/:id`
 
 ### Reminders
 - `GET /api/v1/reminders`
