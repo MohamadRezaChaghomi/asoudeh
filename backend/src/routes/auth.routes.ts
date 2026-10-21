@@ -7,6 +7,7 @@ import {
   refresh,
   register,
   requestOtp,
+  scheduleAccountDeletion,
   verifyOtp,
 } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -15,6 +16,7 @@ import { validateBody } from '../validators/validateBody.js';
 import {
   completeRegistrationSchema,
   requestOtpSchema,
+  accountDeletionSchema,
   updateProfileSchema,
   verifyOtpSchema,
 } from '../validators/auth.validator.js';
@@ -32,6 +34,12 @@ router.post(
 );
 router.post('/refresh', requireOrigin, refresh);
 router.post('/logout', requireOrigin, logout);
+router.post(
+  '/account-deletion',
+  requireOrigin,
+  validateBody(accountDeletionSchema),
+  scheduleAccountDeletion,
+);
 router.get('/csrf', csrfBootstrap);
 profileRouter.get('/me', requireAuth, getCurrentProfile);
 profileRouter.patch(

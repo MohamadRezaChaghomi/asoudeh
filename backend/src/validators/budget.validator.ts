@@ -4,7 +4,7 @@ import { getJalaliMonthRange } from '../utils/jalaliMonth.js';
 const MAX_BUDGET_AMOUNT = 1_000_000_000_000;
 const categoryIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/);
 
-const monthKeySchema = z
+export const monthKeySchema = z
   .string()
   .regex(/^(0[1-9]|1[0-2])-(12\d{2}|13\d{2}|14\d{2}|15\d{2}|1600)$/)
   .superRefine((monthKey, context) => {

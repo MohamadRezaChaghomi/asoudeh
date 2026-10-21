@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import type { RequestHandler } from 'express';
 import { env } from '../config/env.js';
 import AuthSession from '../models/AuthSession.js';
+import User from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { getCookie } from './csrf.js';
 import { HttpError } from '../utils/httpError.js';
@@ -45,6 +46,15 @@ export const requireAuth: RequestHandler = asyncHandler(async (req, _res, next) 
 
   if (!activeSession) {
     next(new HttpError(401, 'AUTHENTICATION_REQUIRED', 'نشست معتبر نیست. دوباره وارد شوید.'));
+    return;
+  }
+
+  const activeUser = await User.exists({
+    _id: userId,
+    deletionScheduledAt: null,
+  });
+  if (!activeUser) {
+    next(new HttpError(401, 'SESSION_INVALID', 'این حساب دیگر فعال نیست.'));
     return;
   }
 

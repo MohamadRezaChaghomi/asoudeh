@@ -41,6 +41,8 @@ api.interceptors.response.use(
       config?.url?.startsWith('/categories') ||
       config?.url?.startsWith('/reminders') ||
       config?.url?.startsWith('/transactions') ||
+      config?.url?.startsWith('/reports') ||
+      config?.url?.startsWith('/caregiver') ||
       config?.url?.startsWith('/dashboard');
 
     if (

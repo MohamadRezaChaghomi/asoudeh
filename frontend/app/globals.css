@@ -43,6 +43,15 @@ html[data-high-contrast='true'] .app-panel .text-asoudeh-navy {
   color: #fff;
 }
 
+html[data-high-contrast='true'] .text-emerald-700 {
+  color: #6ee7b7;
+}
+
+html[data-high-contrast='true'] .text-rose-700,
+html[data-high-contrast='true'] .text-red-800 {
+  color: #fda4af;
+}
+
 html[data-high-contrast='true'] .app-panel input,
 html[data-high-contrast='true'] .app-panel select {
   border-color: #fff;
@@ -65,4 +74,8 @@ textarea {
 :focus-visible {
   outline: 3px solid #163A5F;
   outline-offset: 2px;
+}
+
+html[data-high-contrast='true'] :focus-visible {
+  outline-color: #ff0;
 }

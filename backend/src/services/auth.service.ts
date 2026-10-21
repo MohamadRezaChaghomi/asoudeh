@@ -28,6 +28,7 @@ const OTP_IP_REQUEST_LIMIT = 10;
 const REGISTRATION_LIFETIME_SECONDS = 5 * 60;
 const ACCESS_TOKEN_LIFETIME_SECONDS = 15 * 60;
 const REFRESH_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+const ACCOUNT_DELETION_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 const OTP_MESSAGE = 'اگر شماره همراه معتبر باشد، کد تأیید ارسال می‌شود.';
 
 export interface AuthTokens {
@@ -154,6 +155,14 @@ async function createSession(
   familyId: string = generateId(),
   now: Date = new Date(),
 ): Promise<AuthTokens> {
+  const activeUser = await User.exists({
+    _id: new mongoose.Types.ObjectId(userId),
+    deletionScheduledAt: null,
+  });
+  if (!activeUser) {
+    throw new HttpError(409, 'ACCOUNT_DELETION_PENDING', 'این حساب در صف حذف قرار دارد.');
+  }
+
   const refreshToken = generateOpaqueToken();
   const session = await AuthSession.create({
     userId: new mongoose.Types.ObjectId(userId),
@@ -345,6 +354,14 @@ export async function verifyOtp(
   const user = await User.findOne({ phone });
 
   if (user) {
+    if (user.deletionScheduledAt) {
+      throw new HttpError(
+        409,
+        'ACCOUNT_DELETION_PENDING',
+        'این حساب در صف حذف قرار دارد و امکان ورود ندارد.',
+      );
+    }
+
     const consumed = await OtpChallenge.findOneAndDelete({
       _id: challenge._id,
       otpHash: challenge.otpHash,
@@ -459,6 +476,18 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
     throw new HttpError(401, 'SESSION_EXPIRED', 'نشست منقضی شده است. دوباره وارد شوید.');
   }
 
+  const activeUser = await User.exists({
+    _id: current.userId,
+    deletionScheduledAt: null,
+  });
+  if (!activeUser) {
+    await AuthSession.updateMany(
+      { familyId: current.familyId, revokedAt: null },
+      { $set: { revokedAt: now } },
+    );
+    throw new HttpError(401, 'SESSION_INVALID', 'این حساب دیگر فعال نیست.');
+  }
+
   const nextRefreshToken = generateOpaqueToken();
   const nextTokenHash = hashAuthValue('refresh-token', nextRefreshToken);
   const successor = await AuthSession.create({
@@ -557,4 +586,75 @@ export async function updateProfile(
   }
 
   return mapProfile(user);
+}
+
+export async function scheduleAccountDeletion(
+  userId: string,
+  code: string,
+): Promise<{ scheduledFor: string }> {
+  const user = await User.findById(userId).select('phone deletionScheduledAt').lean();
+  if (!user?.phone) {
+    throw new HttpError(404, 'ACCOUNT_NOT_FOUND', 'حساب کاربری پیدا نشد.');
+  }
+  if (user.deletionScheduledAt) {
+    throw new HttpError(409, 'ACCOUNT_DELETION_PENDING', 'این حساب از قبل در صف حذف است.');
+  }
+
+  const now = new Date();
+  const phoneHash = hashAuthValue('phone', user.phone);
+  const challenge = await OtpChallenge.findOne({ phoneHash });
+  if (challenge?.blockedUntil && challenge.blockedUntil > now) {
+    throw new HttpError(
+      429,
+      'OTP_TEMPORARILY_BLOCKED',
+      'تلاش‌های کد تأیید موقتاً مسدود شده‌اند. کمی بعد دوباره تلاش کنید.',
+      retryAfterSeconds(challenge.blockedUntil, now),
+    );
+  }
+  if (
+    !challenge?.otpHash ||
+    !challenge.codeExpiresAt ||
+    challenge.codeExpiresAt <= now ||
+    challenge.failedAttempts >= 5
+  ) {
+    throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
+  }
+
+  const submittedHash = hashOtp(user.phone, code);
+  if (!secureStringEqual(challenge.otpHash, submittedHash)) {
+    await recordFailedAttempt(phoneHash, challenge.otpHash, now);
+  }
+
+  const consumed = await OtpChallenge.findOneAndDelete({
+    _id: challenge._id,
+    otpHash: challenge.otpHash,
+    codeExpiresAt: { $gt: now },
+    failedAttempts: { $lt: 5 },
+    $or: [{ blockedUntil: null }, { blockedUntil: { $lte: now } }],
+  });
+  if (!consumed) {
+    throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
+  }
+
+  const scheduledFor = new Date(now.getTime() + ACCOUNT_DELETION_GRACE_PERIOD_MS);
+  const marked = await User.findOneAndUpdate(
+    { _id: user._id, deletionScheduledAt: null },
+    {
+      $set: {
+        deletionRequestedAt: now,
+        deletionScheduledAt: scheduledFor,
+      },
+    },
+    { new: true },
+  ).lean();
+  if (!marked) {
+    throw new HttpError(409, 'ACCOUNT_DELETION_PENDING', 'این حساب دیگر فعال نیست.');
+  }
+
+  await AuthSession.updateMany(
+    { userId: user._id, revokedAt: null },
+    { $set: { revokedAt: now } },
+  );
+
+  return { scheduledFor: scheduledFor.toISOString() };
 }

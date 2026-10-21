@@ -7,7 +7,7 @@ export default function HomePage() {
         <p className="mb-2 text-sm text-asoudeh-teal">پروژه آسوده</p>
         <h1 className="text-3xl font-bold text-asoudeh-navy">مدیریت مالی ساده و قابل اعتماد</h1>
         <p className="mt-4 text-slate-600">
-          ورود و پروفایل کاربر آماده‌اند؛ قابلیت‌های مالی دیگر هنوز در حال توسعه هستند.
+          درآمدها، هزینه‌ها، بودجه‌ها و یادآورها را در یک محیط فارسی و دسترس‌پذیر مدیریت کنید.
         </p>
         <Link
           href="/login"

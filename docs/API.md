@@ -37,6 +37,11 @@ Requires the refresh cookie and CSRF header. Success: `{ success: true, data: { 
 ### `POST /api/v1/auth/logout`
 Requires the CSRF cookie/header pair. Success: `{ success: true, message }`; session-family revocation is attempted and auth cookies are cleared. Access tokens linked to a revoked or rotated session are rejected on subsequent protected requests.
 
+### `POST /api/v1/auth/account-deletion`
+Requires the access cookie, configured Origin, CSRF cookie/header pair, and `{ "code": "012345" }`. First request a code using `POST /api/v1/auth/otp/request` for the authenticated profile’s phone. A valid, unused OTP schedules permanent deletion exactly 30 days later, immediately revokes all account sessions, blocks further authenticated access (including caregiver reads), and clears the browser’s authentication cookies. Login with a pending-deletion phone returns `409 ACCOUNT_DELETION_PENDING`.
+
+The backend worker checks due accounts at startup and every 60 seconds. It removes the user’s sessions, categories, transactions, budgets, reminders and completion history, caregiver links, audit events, and phone-bound OTP data before deleting the user record. Purging is idempotent and retries on a later check after a failure. The current API does not provide cancellation. Verify the `deletionScheduledAt` index is safely deployed before production use. No SMS provider is connected, so the code can only be delivered by the explicitly enabled development simulator; production requests fail with `503 OTP_DELIVERY_UNAVAILABLE`.
+
 ### `GET /api/v1/auth/csrf`
 Requires the configured Origin and returns `{ success: true, data: { csrfToken } }` while setting the matching CSRF cookie. The frontend keeps this token in memory only.
 
@@ -57,7 +62,7 @@ Requires the access cookie, configured Origin, and CSRF cookie/header pair. At l
 
 `displayName` is trimmed and 1–80 characters; `birthYear` is optional/null or a Solar Hijri year from 1300 through the current year; `initialBalance` is an integer non-negative safe number in toman; `fontScale` is one of `1`, `1.25`, `1.5`, `2`; `highContrast` is boolean. Success: `{ success: true, data: { profile } }`.
 
-All state-changing authentication and profile requests require the exact configured `CLIENT_URL` Origin. Cookie-authenticated requests also require the CSRF cookie echoed in `X-CSRF-Token`. Common failures include `400 VALIDATION_ERROR` or `OTP_INVALID`, `401 AUTHENTICATION_REQUIRED`/`SESSION_INVALID`/`SESSION_EXPIRED`/`REFRESH_TOKEN_REUSED`, `403 ORIGIN_REQUIRED`/`ORIGIN_NOT_ALLOWED`/`CSRF_VALIDATION_FAILED`, `409 ACCOUNT_ALREADY_EXISTS`, `429 OTP_RATE_LIMITED`/`OTP_TEMPORARILY_BLOCKED`, and `503 AUTH_NOT_CONFIGURED`/`OTP_DELIVERY_UNAVAILABLE`. Rate-limit responses include `Retry-After` when available. Errors use `{ success: false, error: { code, message, details? } }`.
+All state-changing authentication and profile requests require the exact configured `CLIENT_URL` Origin. Cookie-authenticated requests also require the CSRF cookie echoed in `X-CSRF-Token`. Common failures include `400 VALIDATION_ERROR` or `OTP_INVALID`, `401 AUTHENTICATION_REQUIRED`/`SESSION_INVALID`/`SESSION_EXPIRED`/`REFRESH_TOKEN_REUSED`, `403 ORIGIN_REQUIRED`/`ORIGIN_NOT_ALLOWED`/`CSRF_VALIDATION_FAILED`, `409 ACCOUNT_ALREADY_EXISTS`/`ACCOUNT_DELETION_PENDING`, `429 OTP_RATE_LIMITED`/`OTP_TEMPORARILY_BLOCKED`, and `503 AUTH_NOT_CONFIGURED`/`OTP_DELIVERY_UNAVAILABLE`. Rate-limit responses include `Retry-After` when available. Errors use `{ success: false, error: { code, message, details? } }`.
 
 ### `GET /api/v1/categories`
 Requires the access cookie. Returns the authenticated user’s personal categories and system categories (`userId: null`) as `{ success: true, data: { categories } }`. Each item contains `id`, `name`, `type`, `icon`, `isActive`, and `isDefault`. No system categories are seeded by this API.
@@ -83,7 +88,7 @@ Requires the access cookie, configured Origin, and CSRF cookie/header pair. A pe
 Requires the access cookie, configured Origin, and CSRF cookie/header pair. The endpoint is intentionally disabled: for an existing category owned by the authenticated user it returns `409 CATEGORY_DELETION_UNAVAILABLE` and leaves the category and its transactions unchanged. A category belonging to another user or a missing category returns `404 CATEGORY_NOT_FOUND`. Safe deletion requires a transaction-capable MongoDB replica set (or an equivalent schema/workflow that prevents concurrent references) and a confirmed type-correct fallback for income transactions; the current specification names “متفرقه” for reassignment but does not define an income fallback.
 
 ### `GET /api/v1/transactions`
-Requires the access cookie. Lists only the authenticated user’s non-deleted transactions, newest date first, 20 items per page by default. Optional query parameters are `type` (`income` or `expense`), `categoryId`, `from`, `to`, `page` (default `1`, maximum `10,000`), and `pageSize` (default `20`, maximum `100`). Date filters use `YYYY-MM-DD`, and both range boundaries are inclusive. Each transaction contains `id`, `type`, `amount`, `categoryId`, `categoryName`, `categoryIcon`, `date`, and `note`. The response includes `{ data: { transactions, pagination: { page, pageSize, totalItems, totalPages } } }`; an empty list has `totalPages: 0`.
+Requires the access cookie. Lists only the authenticated user’s non-deleted transactions, newest date first, 20 items per page by default. Optional query parameters are `type` (`income` or `expense`), `categoryId`, `from`, `to`, `page` (default `1`, maximum `10,000`), and `pageSize` (default `20`, maximum `100`). Date filters use `YYYY-MM-DD`, and both range boundaries are inclusive. Each transaction contains `id`, `type`, `amount`, `categoryId`, `categoryName`, `categoryIcon`, `date`, and `note`. Category display data is resolved only from the owner’s categories or system categories; an invalid legacy reference is shown as `دسته‌بندی ناموجود`. The response includes `{ data: { transactions, pagination: { page, pageSize, totalItems, totalPages } } }`; an empty list has `totalPages: 0`.
 
 ### `POST /api/v1/transactions`
 Requires the access cookie, configured Origin, and CSRF cookie/header pair. Request body:
@@ -146,7 +151,26 @@ Requires the access cookie. Returns only data belonging to the authenticated use
 - `recentTransactions`: up to five non-deleted transactions, newest first, with category display data.
 - `upcomingReminders`: up to five active, not-yet-completed reminders with due dates from today through seven days ahead, inclusive. Monthly occurrences use Jalali dates, retain the original intended day when clamping short months, and are hidden for a month once completed.
 
-Monthly sums omit soft-deleted transactions and use exact decimal aggregation. Empty results are returned as zero totals and empty arrays. This endpoint displays stored reminder records only; reminder creation, editing, scheduling, and notification delivery are not implemented.
+Monthly sums omit soft-deleted transactions and use exact decimal aggregation. Empty results are returned as zero totals and empty arrays. The dashboard displays stored reminder records only; reminder creation/editing are provided by the separate reminder API. No scheduled notification delivery is implemented.
+
+### `GET /api/v1/reports/monthly?month=MM-YYYY`
+Requires the access cookie. The required `month` is a validated Solar Hijri month key. The response contains current-month income, expenses, transaction count, expense totals grouped by category with percentage shares, and a comparison with the previous Jalali month’s expenses. Aggregations include only the authenticated owner’s non-deleted transactions. Amount totals are integer strings; percentage change is `null` when the previous month had no expense total. Success: `{ success: true, data: { report } }`.
+
+Category names are resolved only for categories owned by the report owner or system categories. Totals referencing unavailable legacy categories remain included in the expense total but are grouped under the generic `دسته‌بندی ناموجود` entry without exposing another user’s category metadata.
+
+### Caregiver access
+All routes below require the access cookie. State-changing requests also require the configured Origin and CSRF cookie/header pair.
+
+- `GET /api/v1/caregiver/links` lists invitations/access links created by the current user.
+- `POST /api/v1/caregiver/links` accepts `{ "phone": "09xxxxxxxxx", "permissions": ["VIEW_SUMMARY", "VIEW_TRANSACTIONS", "VIEW_REPORTS"] }`. Choose one or more explicit permissions. The invitation stays pending until an account registered to the invited phone accepts it. An active or pending duplicate returns `409 CAREGIVER_LINK_EXISTS`.
+- `DELETE /api/v1/caregiver/links/:id` revokes an owned invitation or active link. Read access is denied on the next request after revocation; repeating a revoke for the same owned link is idempotent.
+- `GET /api/v1/caregiver/invitations` lists pending invitations addressed to the authenticated account’s verified phone. `PATCH /api/v1/caregiver/invitations/:id` accepts `{ "decision": "accept" }` or `{ "decision": "reject" }`; only the matching phone can respond.
+- `GET /api/v1/caregiver/seniors` lists active read-only access links accepted by the current user.
+- `GET /api/v1/caregiver/seniors/:seniorId/summary` requires `VIEW_SUMMARY` and returns current-month financial totals only, without transaction details.
+- `GET /api/v1/caregiver/seniors/:seniorId/transactions` requires `VIEW_TRANSACTIONS` and accepts the transaction list query filters.
+- `GET /api/v1/caregiver/seniors/:seniorId/reports/monthly?month=MM-YYYY` requires `VIEW_REPORTS`.
+
+Permission failures return `403 CAREGIVER_PERMISSION_REQUIRED`; absent, unaccepted, revoked, or cross-user links return `404` without exposing the senior’s data. Caregiver access never grants write operations. Legacy links without a verified phone-bound acceptance are not treated as authorization. Invitation, response, revocation, and data-view events are recorded in `auditLogs`. The application has no SMS provider: it records invitations but does not notify the invited phone, so the user must communicate the invitation through another channel. The `active_caregiver_phone_unique` database index prevents duplicate active/pending invitations; verify existing records and deploy this index safely before production use.
 
 Unknown routes return HTTP 404 with `{ success: false, error: { code: "NOT_FOUND", message: "Route not found" } }`. Unexpected errors return HTTP 500 with a generic public message; implementation details are not included in the response.
 
@@ -156,14 +180,6 @@ The following endpoint shapes are planned only. The current backend does not reg
 
 ### Categories
 - No additional category routes are planned here; `DELETE /api/v1/categories/:id` is registered but intentionally returns `409 CATEGORY_DELETION_UNAVAILABLE` as described above.
-
-### Reports
-- `GET /api/v1/reports/summary`
-
-### Caregiver
-- `GET /api/v1/caregiver/links`
-- `POST /api/v1/caregiver/links`
-- `DELETE /api/v1/caregiver/links/:id`
 
 Response convention:
 `{ success, data, message, meta }`

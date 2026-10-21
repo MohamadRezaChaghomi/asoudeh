@@ -30,6 +30,19 @@ test('creates, edits, and deletes a monthly budget using live API responses', as
   let createPayload: Record<string, unknown> | undefined;
   let updatePayload: Record<string, unknown> | undefined;
 
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: '64b000000000000000000099',
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
   await page.route('**/api/v1/auth/csrf', async (route) => {
     await route.fulfill({ json: { success: true, data: { csrfToken } } });
   });

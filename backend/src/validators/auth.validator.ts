@@ -43,6 +43,12 @@ export const verifyOtpSchema = z.object({
   code: z.string().regex(/^\d{6}$/, 'کد تأیید باید ۶ رقم باشد.'),
 });
 
+export const accountDeletionSchema = z
+  .object({
+    code: z.string().regex(/^\d{6}$/, 'کد تأیید باید ۶ رقم باشد.'),
+  })
+  .strict();
+
 export const completeRegistrationSchema = z.object({
   displayName: displayNameSchema,
 });
@@ -65,5 +71,6 @@ export const updateProfileSchema = z
 
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type AccountDeletionInput = z.infer<typeof accountDeletionSchema>;
 export type CompleteRegistrationInput = z.infer<typeof completeRegistrationSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

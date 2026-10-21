@@ -24,6 +24,21 @@ interface TransactionRecord {
   note?: string | null;
 }
 
+interface ListedTransactionRecord {
+  _id: mongoose.Types.ObjectId;
+  type: TransactionType;
+  amount: number;
+  categoryId: mongoose.Types.ObjectId;
+  date: Date;
+  note?: string | null;
+}
+
+interface TransactionCategoryRecord {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  icon?: string;
+}
+
 export interface TransactionResponse {
   id: string;
   type: TransactionType;
@@ -122,19 +137,41 @@ export async function listTransactions(
 
   const [transactions, totalItems] = await Promise.all([
     Transaction.find(filter)
-      .populate<{ categoryId: TransactionRecord['categoryId'] }>({
-        path: 'categoryId',
-        select: 'name icon',
-      })
       .sort({ date: -1, _id: -1 })
       .skip((filters.page - 1) * filters.pageSize)
       .limit(filters.pageSize)
-      .lean(),
+      .lean<ListedTransactionRecord[]>(),
     Transaction.countDocuments(filter),
   ]);
+  const categories = transactions.length
+    ? await Category.find({
+        _id: { $in: transactions.map(({ categoryId }) => categoryId) },
+        $or: [
+          { userId: new mongoose.Types.ObjectId(userId) },
+          { userId: null },
+        ],
+      })
+        .select('name icon')
+        .lean<TransactionCategoryRecord[]>()
+    : [];
+  const categoryById = new Map(
+    categories.map((category) => [category._id.toString(), category]),
+  );
 
   return {
-    transactions: transactions.map((transaction) => toTransactionResponse(transaction)),
+    transactions: transactions.map((transaction) => {
+      const category = categoryById.get(transaction.categoryId.toString());
+      return {
+        id: transaction._id.toString(),
+        type: transaction.type,
+        amount: transaction.amount,
+        categoryId: transaction.categoryId.toString(),
+        categoryName: category?.name ?? 'دسته‌بندی ناموجود',
+        categoryIcon: category?.icon ?? 'wallet',
+        date: transaction.date.toISOString().slice(0, 10),
+        note: transaction.note ?? '',
+      };
+    }),
     pagination: {
       page: filters.page,
       pageSize: filters.pageSize,

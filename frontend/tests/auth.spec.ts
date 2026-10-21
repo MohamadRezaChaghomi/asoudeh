@@ -103,6 +103,73 @@ test('loads and updates profile accessibility preferences in Persian RTL', async
   await expect(page.locator('html')).toHaveCSS('font-size', '24px');
 });
 
+test('applies saved accessibility preferences across dashboard reloads and resets on public navigation', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            ...profile,
+            accessibilitySettings: { fontScale: 1.5, highContrast: true },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/reports/monthly**', async (route) => {
+    const month = new URL(route.request().url()).searchParams.get('month') ?? '01-1405';
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          report: {
+            monthKey: month,
+            totals: { income: '0', expenses: '0', transactionCount: 0 },
+            comparison: {
+              previousMonthKey: '12-1404',
+              previousExpenses: '0',
+              expenseChange: '0',
+              expenseChangePercentage: null,
+            },
+            expensesByCategory: [],
+          },
+        },
+      },
+    });
+  });
+
+  await page.goto('/reports');
+  await expect.poll(() =>
+    page.evaluate(() => ({
+      fontSize: getComputedStyle(document.documentElement).fontSize,
+      highContrast: document.documentElement.dataset.highContrast,
+    })),
+  ).toEqual({ fontSize: '24px', highContrast: 'true' });
+  await page.keyboard.press('Tab');
+  expect(
+    await page.evaluate(() => getComputedStyle(document.activeElement!).outlineColor),
+  ).toBe('rgb(255, 255, 0)');
+
+  await page.reload();
+  await expect.poll(() =>
+    page.evaluate(() => ({
+      fontSize: getComputedStyle(document.documentElement).fontSize,
+      highContrast: document.documentElement.dataset.highContrast,
+    })),
+  ).toEqual({ fontSize: '24px', highContrast: 'true' });
+
+  await page.goto('/login');
+  await expect.poll(() =>
+    page.evaluate(() => ({
+      fontSize: getComputedStyle(document.documentElement).fontSize,
+      highContrast: document.documentElement.dataset.highContrast,
+    })),
+  ).toEqual({ fontSize: '16px', highContrast: undefined });
+});
+
 test('refreshes an expired access session and retries the profile request', async ({ page }) => {
   let profileRequests = 0;
   let refreshRequests = 0;
@@ -133,4 +200,49 @@ test('refreshes an expired access session and retries the profile request', asyn
   await expect(page.getByLabel('نام نمایشی')).toHaveValue('مریم آسوده');
   expect(profileRequests).toBe(2);
   expect(refreshRequests).toBe(1);
+});
+
+test('requires OTP and explicit confirmation before scheduling account deletion', async ({
+  page,
+}) => {
+  let deletionCode = '';
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({ json: { success: true, data: { profile } } });
+  });
+  await page.route('**/api/v1/auth/csrf', async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { csrfToken: 'deletion-csrf-token' } },
+    });
+  });
+  await page.route('**/api/v1/auth/otp/request', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({ phone: profile.phone });
+    await route.fulfill({
+      json: { success: true, data: { developmentOtp: '123456' } },
+    });
+  });
+  await page.route('**/api/v1/auth/account-deletion', async (route) => {
+    deletionCode = (route.request().postDataJSON() as { code: string }).code;
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { scheduledFor: '2026-11-20T00:00:00.000Z' },
+        message: 'درخواست حذف ثبت شد؛ دسترسی حساب فوراً بسته و داده‌ها پس از ۳۰ روز پاک می‌شوند.',
+      },
+    });
+  });
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'ارسال کد تأیید به شماره حساب' }).click();
+  await expect(page.getByRole('status')).toContainText('123456');
+  const confirmButton = page.getByRole('button', { name: 'تأیید حذف حساب' });
+  await expect(confirmButton).toBeDisabled();
+  await page.getByLabel('کد تأیید شش‌رقمی').fill('۱۲۳۴۵۶');
+  await page.getByLabel(/می‌دانم دسترسی فوراً بسته می‌شود/).check();
+  await expect(confirmButton).toBeEnabled();
+  const deletionRequest = page.waitForRequest('**/api/v1/auth/account-deletion');
+  await confirmButton.click();
+  await deletionRequest;
+
+  await expect.poll(() => deletionCode).toBe('123456');
+  await expect(page).toHaveURL(/\/login$/);
 });

@@ -44,6 +44,13 @@ Recorded: 2026-10-21
 - Display names are trimmed and limited to 1–80 characters. Birth year is optional and, when supplied, must be an Iranian Solar Hijri year from 1300 through the current Solar Hijri year.
 - Initial balance is a non-negative safe integer in toman. Accessibility text scale is restricted to 100%, 125%, 150%, or 200%; high contrast is boolean.
 
+### Account deletion
+
+- Recorded: 2026-10-21. A 30-day delay between a valid OTP-confirmed deletion request and permanent data purge was selected.
+- The request immediately blocks authenticated access and revokes all sessions. The OTP is single-use and must be issued to the phone number stored on the authenticated profile.
+- A backend worker checks at startup and once per minute. Purge operations are idempotent, delete account-owned financial/reminder records and related caregiver/audit/OTP records first, and remove the user last; a failed collection delete is logged and retried on a later worker pass.
+- The API currently provides no cancellation route. Production OTP delivery is still unavailable until an SMS provider is configured.
+
 ## Category management checkpoint
 
 Recorded: 2026-10-21
@@ -93,3 +100,30 @@ Recorded: 2026-10-21
 - Reminder deletion is soft archival (`deletedAt`, `isActive: false`); edits and archival never remove completion history. Amounts, when present, are positive safe integer toman values.
 - The pre-existing schema allowed `yearly`, but FR-13 permits only `none` and `monthly`. Existing yearly values are retained and remain readable; new and updated recurrence values accept only specified types. Completion for legacy yearly records fails explicitly with `409 LEGACY_REMINDER_RECURRENCE_UNSUPPORTED`. No database was inspected or migrated.
 - Deploy the `ReminderCompletion` unique index before serving completion requests. The code declares the index and isolated tests initialize/verify it; production index creation must follow the operator’s safe index-deployment process. No production index or data migration was run.
+
+## Monthly reports and caregiver access
+
+- Monthly reports use the existing `MM-YYYY` Solar Hijri key and transaction date boundaries. They show exact integer-string income/expense sums, count, expense totals by category, and expense comparison with the previous Jalali month. Percentage change is `null` when the previous month has no expenses rather than presenting an undefined or infinite percentage.
+- Caregiver roles are relationship-based; a user can simultaneously own an account and act as a caregiver. The model keeps the existing boolean permission representation for compatibility, while the API exposes the specification’s explicit `VIEW_SUMMARY`, `VIEW_TRANSACTIONS`, and `VIEW_REPORTS` permissions. New invitations require an explicit, non-empty permission set.
+- An invitation is bound to a normalized Iranian mobile number and only that account can accept/reject it. The account phone is taken from the authenticated user record, not from the request. Caregiver requests check an active relationship and the exact permission on every read; writes are not exposed. Revocation changes link status so subsequent reads fail.
+- Legacy active links without a stored invited phone and accepted response timestamp fail closed and cannot authorize reads; this avoids granting access based on the scaffold’s default permissions.
+- Invitation, decision, revocation, and caregiver data-view actions are written to `AuditLog` without recording sensitive transaction content or phone numbers.
+- The unique partial `active_caregiver_phone_unique` index prevents multiple pending/active invitations for one senior and phone. Isolated tests verify it. Before production index rollout, check for duplicate existing records and build it using the deployment’s reviewed index process; no production database/index was accessed or changed.
+- SMS delivery for caregiver invitations is not integrated. The UI explains that invitation notification must currently happen out of band; no delivery is claimed.
+
+## Report category privacy
+
+- Report and transaction category labels are loaded only for the authenticated owner or system categories. If legacy/corrupt records reference another user’s category, the financial transaction remains in the owner-scoped total but the private category label is replaced with a generic unavailable-category label.
+
+## Accessibility preference application
+
+- Font scale and high-contrast preferences are loaded from the authenticated profile for dashboard routes and applied across navigation and full reloads. Settings applies changes immediately; leaving the authenticated route group resets document-level styles so a later public/login page does not inherit the prior account’s presentation.
+- High-contrast mode uses a yellow keyboard-focus outline and brighter income/expense text. A WCAG/Lighthouse score and assistive-technology usability evaluation have not yet been measured.
+
+## PWA and offline transaction drafts
+
+- The web app manifest provides install metadata and a same-origin SVG icon. The service worker is registered only in production and caches only the generic offline page and icon; it does not cache navigations, authenticated pages, API responses, or financial data.
+- Offline navigation falls back to a static Persian page that contains no account information. It links back to the application so an explicitly saved transaction draft can be restored after connectivity returns.
+- Draft persistence is off by default and requires an explicit checkbox. When enabled, the draft is stored in `sessionStorage` under the authenticated profile ID, not in a shared key or persistent local storage. It is available only in that browser tab/session and matching account, and is removed when the user opts out or a transaction is saved. Drafts are not submitted automatically.
+- A saved draft can remain in the browser session after logout, but another account cannot load it because the key is scoped to the server-provided profile ID. Closing the tab/session clears it. No authenticated offline access or background synchronization is provided.
+- The old `/transactions/new` placeholder redirects to the implemented `/transactions` workflow so existing links do not land on an unfinished page.

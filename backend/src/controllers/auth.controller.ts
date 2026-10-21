@@ -10,6 +10,7 @@ import {
   requestOtp as requestOtpService,
   revokeRefreshSession,
   rotateRefreshToken,
+  scheduleAccountDeletion as scheduleAccountDeletionService,
   updateProfile,
   verifyOtp as verifyOtpService,
 } from '../services/auth.service.js';
@@ -17,6 +18,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
 import type {
   CompleteRegistrationInput,
+  AccountDeletionInput,
   RequestOtpInput,
   UpdateProfileInput,
   VerifyOtpInput,
@@ -195,5 +197,26 @@ export const patchCurrentProfile = [
       req.body as UpdateProfileInput,
     );
     res.json({ success: true, data: { profile } });
+  }),
+];
+
+export const scheduleAccountDeletion = [
+  requireCsrf,
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new HttpError(401, 'AUTHENTICATION_REQUIRED', 'برای ادامه وارد حساب خود شوید.');
+    }
+
+    const result = await scheduleAccountDeletionService(
+      req.user.userId,
+      (req.body as AccountDeletionInput).code,
+    );
+    clearAuthCookies(res);
+    res.json({
+      success: true,
+      data: result,
+      message: 'درخواست حذف ثبت شد؛ دسترسی حساب فوراً بسته و داده‌ها پس از ۳۰ روز پاک می‌شوند.',
+    });
   }),
 ];

@@ -45,6 +45,13 @@ export default function SettingsPage() {
   const [highContrast, setHighContrast] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletionCodeRequested, setDeletionCodeRequested] = useState(false);
+  const [deletionOtpSending, setDeletionOtpSending] = useState(false);
+  const [deletionCode, setDeletionCode] = useState('');
+  const [deletionConfirmed, setDeletionConfirmed] = useState(false);
+  const [deletionSaving, setDeletionSaving] = useState(false);
+  const [deletionError, setDeletionError] = useState('');
+  const [deletionNotice, setDeletionNotice] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -131,6 +138,46 @@ export default function SettingsPage() {
       setError(errorMessage(logoutError));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function requestDeletionCode() {
+    setDeletionError('');
+    setDeletionNotice('');
+    setDeletionOtpSending(true);
+    try {
+      const response = await api.post('/auth/otp/request', { phone: profile?.phone });
+      setDeletionCodeRequested(true);
+      setDeletionCode('');
+      const developmentOtp = response.data.data.developmentOtp as string | undefined;
+      setDeletionNotice(
+        developmentOtp
+          ? `קוד האימות לסביבת הפיתוח: ${developmentOtp}`
+          : 'אם השירות זמין, קוד אימות נשלח למספר הטלפון של החשבון.',
+      );
+    } catch (requestError) {
+      setDeletionError(errorMessage(requestError));
+    } finally {
+      setDeletionOtpSending(false);
+    }
+  }
+
+  async function confirmAccountDeletion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeletionError('');
+    setDeletionNotice('');
+    setDeletionSaving(true);
+    try {
+      await ensureCsrfToken();
+      const response = await api.post('/auth/account-deletion', {
+        code: toAsciiDigits(deletionCode).trim(),
+      });
+      setDeletionNotice(response.data.message ?? 'درخواست حذف حساب ثبت شد.');
+      router.replace('/login');
+    } catch (deletionErrorValue) {
+      setDeletionError(errorMessage(deletionErrorValue));
+    } finally {
+      setDeletionSaving(false);
     }
   }
 
@@ -260,6 +307,83 @@ export default function SettingsPage() {
             {saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
           </button>
         </form>
+      </section>
+      <section className="app-panel mx-auto mt-5 max-w-2xl rounded-2xl border border-red-200 bg-white p-6 shadow-sm sm:p-8">
+        <h2 className="text-xl font-bold text-red-800">حذف حساب کاربری</h2>
+        <p className="app-muted mt-2">
+          پس از تأیید کد، دسترسی حساب فوراً بسته می‌شود و همه داده‌ها پس از ۳۰ روز به‌طور دائمی پاک می‌شوند.
+          این درخواست قابل بازگشت نیست.
+        </p>
+        {!deletionCodeRequested ? (
+          <button
+            className="mt-4 min-h-12 rounded-lg border border-red-700 px-5 font-semibold text-red-800 disabled:opacity-60"
+            disabled={deletionOtpSending || deletionSaving || saving}
+            onClick={() => void requestDeletionCode()}
+            type="button"
+          >
+            {deletionOtpSending ? 'در حال ارسال کد…' : 'ارسال کد تأیید به شماره حساب'}
+          </button>
+        ) : (
+          <form className="mt-4 space-y-4" onSubmit={confirmAccountDeletion}>
+            <button
+              className="min-h-12 rounded-lg border border-red-700 px-5 font-semibold text-red-800 disabled:opacity-60"
+              disabled={deletionOtpSending || deletionSaving || saving}
+              onClick={() => void requestDeletionCode()}
+              type="button"
+            >
+              {deletionOtpSending ? 'در حال ارسال کد…' : 'ارسال دوباره کد تأیید'}
+            </button>
+            <div>
+              <label className="mb-2 block font-medium" htmlFor="accountDeletionCode">
+                کد تأیید شش‌رقمی
+              </label>
+              <input
+                autoComplete="one-time-code"
+                className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
+                dir="ltr"
+                id="accountDeletionCode"
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(event) => setDeletionCode(event.target.value)}
+                pattern="[0-9۰-۹٠-٩]{6}"
+                required
+                value={deletionCode}
+              />
+            </div>
+            <label className="flex min-h-12 items-center gap-3 font-medium" htmlFor="confirmAccountDeletion">
+              <input
+                checked={deletionConfirmed}
+                className="size-5"
+                id="confirmAccountDeletion"
+                onChange={(event) => setDeletionConfirmed(event.target.checked)}
+                type="checkbox"
+              />
+              می‌دانم دسترسی فوراً بسته می‌شود و داده‌ها پس از ۳۰ روز پاک می‌شوند.
+            </label>
+            <button
+              className="min-h-12 rounded-lg bg-red-800 px-5 font-semibold text-white disabled:opacity-60"
+              disabled={
+                deletionSaving ||
+                saving ||
+                !deletionConfirmed ||
+                !/^[0-9۰-۹٠-٩]{6}$/.test(deletionCode)
+              }
+              type="submit"
+            >
+              {deletionSaving ? 'در حال ثبت درخواست…' : 'تأیید حذف حساب'}
+            </button>
+          </form>
+        )}
+        {deletionError && (
+          <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">
+            {deletionError}
+          </p>
+        )}
+        {deletionNotice && (
+          <p className="mt-4 rounded-lg bg-green-50 p-3 text-green-800" role="status">
+            {deletionNotice}
+          </p>
+        )}
       </section>
     </main>
   );

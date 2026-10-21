@@ -256,6 +256,31 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
     );
   });
 
+  it('does not disclose another owner’s category metadata for a legacy transaction reference', async () => {
+    const transaction = await Transaction.create({
+      userId: new mongoose.Types.ObjectId(owner.userId),
+      type: 'expense',
+      amount: 5_000,
+      categoryId: new mongoose.Types.ObjectId(otherCategoryId),
+      date: new Date('2024-05-13T00:00:00.000Z'),
+      note: `Legacy cross-owner category ${suffix}`,
+    });
+    transactionIds.push(transaction._id);
+
+    const response = await authenticatedGet('/api/v1/transactions', owner);
+    expect(response.status).toBe(200);
+    const listed = response.body.data.transactions.find(
+      (item: { id: string }) => item.id === transaction.id,
+    );
+    expect(listed).toMatchObject({
+      id: transaction.id,
+      amount: 5_000,
+      categoryName: 'دسته‌بندی ناموجود',
+      categoryIcon: 'wallet',
+    });
+    expect(JSON.stringify(listed)).not.toContain(`Other ${suffix}`);
+  });
+
   it('returns stable pages of twenty transactions with pagination metadata', async () => {
     const paginationCategory = await Category.create({
       userId: new mongoose.Types.ObjectId(owner.userId),

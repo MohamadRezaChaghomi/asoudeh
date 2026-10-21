@@ -6,10 +6,12 @@ import { env } from './config/env.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import authRoutes, { profileRouter } from './routes/auth.routes.js';
 import budgetRoutes from './routes/budgets.routes.js';
+import caregiverRoutes from './routes/caregiver.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import reminderRoutes from './routes/reminders.routes.js';
+import reportRoutes from './routes/reports.routes.js';
 import transactionRoutes from './routes/transactions.routes.js';
 
 const app = express();
@@ -26,8 +28,10 @@ app.get('/', (req, res) => {
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/budgets', budgetRoutes);
+app.use('/api/v1/caregiver', caregiverRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/reminders', reminderRoutes);
+app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1', profileRouter);

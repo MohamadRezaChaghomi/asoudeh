@@ -21,6 +21,19 @@ test('creates, completes, and archives a monthly reminder while showing persiste
   let updatePayload: Record<string, unknown> | undefined;
   const reminderId = '64b000000000000000000040';
 
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: '64b000000000000000000099',
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
   await page.route('**/api/v1/auth/csrf', async (route) => {
     await route.fulfill({ json: { success: true, data: { csrfToken } } });
   });

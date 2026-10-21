@@ -44,6 +44,47 @@ interface PendingUndo {
   undoExpiresAt: string;
 }
 
+interface TransactionDraft {
+  version: 1;
+  type: TransactionType;
+  amount: string;
+  categoryId: string;
+  date: string;
+  note: string;
+  step: 1 | 2 | 3;
+}
+
+function isTransactionDraft(value: unknown): value is TransactionDraft {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('version' in value) ||
+    value.version !== 1 ||
+    !('type' in value) ||
+    (value.type !== 'income' && value.type !== 'expense') ||
+    !('amount' in value) ||
+    typeof value.amount !== 'string' ||
+    !('categoryId' in value) ||
+    typeof value.categoryId !== 'string' ||
+    !('date' in value) ||
+    typeof value.date !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value.date) ||
+    !('note' in value) ||
+    typeof value.note !== 'string' ||
+    !('step' in value) ||
+    (value.step !== 1 && value.step !== 2 && value.step !== 3)
+  ) {
+    return false;
+  }
+  try {
+    getJalaliParts(value.date);
+    return value.date <= todayDate();
+  } catch (error) {
+    if (error instanceof RangeError) return false;
+    throw error;
+  }
+}
+
 interface ApiErrorBody {
   error?: { message?: string };
 }
@@ -176,6 +217,10 @@ function JalaliDatePicker({
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const [userId, setUserId] = useState<string>();
+  const [draftReady, setDraftReady] = useState(false);
+  const [saveDraftLocally, setSaveDraftLocally] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -219,7 +264,7 @@ export default function TransactionsPage() {
         (selectedCategory.type === type || selectedCategory.type === 'both'),
     );
 
-  const loadData = useCallback(async (requestedPage = page): Promise<void> => {
+  const loadData = useCallback(async (requestedPage = 1): Promise<void> => {
     const [transactionResponse, categoryResponse] = await Promise.all([
       api.get<{
         success: true;
@@ -237,7 +282,7 @@ export default function TransactionsPage() {
     setTransactions(result.transactions);
     setPagination(result.pagination);
     setCategories(categoryResponse.data.data.categories);
-  }, [page]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -284,7 +329,44 @@ export default function TransactionsPage() {
     async function initialize() {
       setLoading(true);
       try {
+        let draftError = '';
+        const profileResponse = await api.get<{
+          success: true;
+          data: { profile: { id: string } };
+        }>('/me');
+        if (!active) return;
+        const currentUserId = profileResponse.data.data.profile.id;
+        if (!/^[0-9a-f]{24}$/i.test(currentUserId)) {
+          throw new Error('شناسهٔ حساب از سرور معتبر نیست.');
+        }
+        setUserId(currentUserId);
+        try {
+          const key = `asoudeh.transactionDraft.v1.${currentUserId}`;
+          const storedDraft = window.sessionStorage.getItem(key);
+          if (storedDraft) {
+            const draft: unknown = JSON.parse(storedDraft);
+            if (!isTransactionDraft(draft)) {
+              window.sessionStorage.removeItem(key);
+              draftError = 'پیش‌نویس ذخیره‌شده معتبر نبود و حذف شد.';
+            } else {
+              setType(draft.type);
+              setAmount(draft.amount);
+              setCategoryId(draft.categoryId);
+              setDate(draft.date);
+              setNote(draft.note);
+              setStep(draft.step);
+              setSaveDraftLocally(true);
+              setNotice('پیش‌نویس محلی این حساب بازیابی شد؛ هنوز در سرور ثبت نشده است.');
+            }
+          }
+        } catch (storageError) {
+          console.error('Unable to restore the opted-in transaction draft.', storageError);
+          draftError = 'خواندن پیش‌نویس محلی ممکن نشد؛ اطلاعات سرور همچنان در دسترس است.';
+        }
+        setDraftReady(true);
         await loadData();
+        if (!active) return;
+        if (draftError) setError(draftError);
       } catch (loadError) {
         if (!active) return;
         if (axios.isAxiosError(loadError) && loadError.response?.status === 401) {
@@ -302,6 +384,41 @@ export default function TransactionsPage() {
       active = false;
     };
   }, [loadData, router]);
+
+  useEffect(() => {
+    const updateOnline = () => setIsOnline(navigator.onLine);
+    updateOnline();
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady || !userId) return;
+    const key = `asoudeh.transactionDraft.v1.${userId}`;
+    try {
+      if (saveDraftLocally && !editingId) {
+        const draft: TransactionDraft = {
+          version: 1,
+          type,
+          amount,
+          categoryId,
+          date,
+          note,
+          step,
+        };
+        window.sessionStorage.setItem(key, JSON.stringify(draft));
+      } else {
+        window.sessionStorage.removeItem(key);
+      }
+    } catch (storageError) {
+      console.error('Unable to save the opted-in transaction draft.', storageError);
+      setError('ذخیرهٔ پیش‌نویس در این نشست مرورگر ممکن نشد.');
+    }
+  }, [amount, categoryId, date, draftReady, editingId, note, saveDraftLocally, step, type, userId]);
 
   useEffect(() => {
     if (!activeCategories.some((category) => category.id === categoryId)) {
@@ -349,9 +466,11 @@ export default function TransactionsPage() {
     setDate(todayDate());
     setNote('');
     setStep(1);
+    setSaveDraftLocally(false);
   }
 
   function startEditing(transaction: Transaction) {
+    setSaveDraftLocally(false);
     setEditingId(transaction.id);
     setType(transaction.type);
     setAmount(formatAmount(transaction.amount));
@@ -426,14 +545,22 @@ export default function TransactionsPage() {
       } else {
         await api.post('/transactions', payload);
       }
-      if (isEditing) {
-        await loadData(page);
-      } else {
+      resetForm();
+      const refreshPage = isEditing ? page : 1;
+      if (!isEditing) {
         setPage(1);
-        await loadData(1);
+      }
+      try {
+        await loadData(refreshPage);
+      } catch (refreshError) {
+        if (axios.isAxiosError(refreshError) && refreshError.response?.status === 401) {
+          router.replace('/login');
+          return;
+        }
+        setError('تراکنش ذخیره شد، اما تازه‌سازی فهرست ممکن نشد. دوباره صفحه را بارگذاری کنید.');
+        return;
       }
       setNotice(isEditing ? 'تراکنش ویرایش شد.' : 'تراکنش ثبت شد.');
-      resetForm();
     } catch (saveError) {
       if (axios.isAxiosError(saveError) && saveError.response?.status === 401) {
         router.replace('/login');
@@ -673,6 +800,29 @@ export default function TransactionsPage() {
             ))}
           </ol>
           <form className="mt-5 space-y-4" onSubmit={handleFormSubmit}>
+            {!isOnline && (
+              <p className="rounded-lg bg-amber-50 p-3 text-amber-950" role="status">
+                اتصال اینترنت برقرار نیست. ثبت یا ویرایش تراکنش تا اتصال دوباره انجام نمی‌شود.
+              </p>
+            )}
+            {!editingId && (
+              <div className="rounded-lg bg-slate-50 p-3">
+                <label className="flex items-start gap-3 font-medium" htmlFor="saveTransactionDraft">
+                  <input
+                    checked={saveDraftLocally}
+                    className="mt-1"
+                    disabled={!userId}
+                    id="saveTransactionDraft"
+                    onChange={(event) => setSaveDraftLocally(event.target.checked)}
+                    type="checkbox"
+                  />
+                  ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر
+                </label>
+                <p className="app-muted mt-2 text-sm">
+                  این گزینه خاموش است مگر اینکه خودتان فعالش کنید. پیش‌نویس فقط در sessionStorage همین مرورگر و برای این حساب ذخیره می‌شود؛ تا ثبت موفق باقی می‌ماند و با پایان نشست مرورگر پاک می‌شود.
+                </p>
+              </div>
+            )}
             {step === 1 && (
               <>
                 <div>
