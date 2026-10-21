@@ -54,7 +54,7 @@
 | stage و بازبینی patch | PASS | فقط ۵۳ فایل مرتبط stage؛ diff و اسکن فایل‌های محرمانه بازبینی شدند. |
 | commit | PASS | `490d80e` با trailer هم‌نویس ساخته شد؛ به‌روزرسانی نهایی این handover جداگانه ثبت می‌شود. |
 | push | PASS | commit `490d80e` روی `origin/main` تأیید شد؛ به‌روزرسانی نهایی handover هنوز push می‌شود. |
-| اجرای محلی frontend/backend | PARTIAL | frontend روی `http://localhost:3000` و backend روی `http://localhost:5000` با پایگاه تازه و محلی اجرا هستند؛ `AUTH_HASH_SECRET` در env محلی موجود نیست و OTP fail-closed می‌ماند. |
+| اجرای محلی frontend/backend | PASS | هر دو روی URLهای محلی با پایگاه تازه اجرا و health-checked شدند؛ بنا به درخواست کاربر اکنون متوقف‌اند. `AUTH_HASH_SECRET` در env محلی موجود نیست و OTP fail-closed می‌ماند. |
 | health check و URLها | PASS | پاسخ frontend `/login` با HTTP 200 و backend `/api/v1/health` با HTTP 200 تأیید شد. |
 
 ## تصمیم‌ها و محدودیت‌های مهم
@@ -97,7 +97,7 @@ npm run build:frontend
 
 - شاخه `main` هنگام آغاز برابر `e26b01d` بود و پس از fetch بدون واگرایی ماند.
 - commit پیاده‌سازی `490d80e` با پیام `feat: complete caregiver reports PWA and account deletion` روی `origin/main` push و تأیید شد. فایل‌های env و خروجی Playwright commit نشده‌اند.
-- به‌روزرسانی نهایی handover پس از تأیید راه‌اندازی محلی، در انتظار commit و push مستندات است.
+- commit مستندات وضعیت محلی در ادامهٔ این گردش کار ثبت و push می‌شود.
 - تغییرات تحویل قبلی و جاری در commit ۵۳ فایل مرتبط حفظ شدند. فهرست زیر وضعیت تغییرها هنگام شروع این اجرا را نشان می‌دهد:
 
 تغییرکرده:
@@ -117,8 +117,8 @@ npm run build:frontend
 ## وضعیت راه‌اندازی محلی
 
 - MongoDB محلی روی `127.0.0.1:27017` با فرایند `mongod` فعال است.
-- Frontend در `http://localhost:3000` و backend در `http://localhost:5000` پاسخ می‌دهند. `GET /login` و `GET /api/v1/health` هر دو HTTP 200 داده‌اند؛ لاگ‌ها خطای startup نشان ندادند.
-- Backend فعلی با override موقت فرایند به پایگاه تازه و خالی `asoudeh_manual_20261021` وصل است؛ فایل `.env` تغییر نکرده است.
+- Frontend در `http://localhost:3000` و backend در `http://localhost:5000` اجرا و تأیید شدند. `GET /login` و `GET /api/v1/health` هر دو HTTP 200 داده‌اند؛ لاگ‌ها خطای startup نشان ندادند. هر دو فرایند بنا به درخواست کاربر متوقف و پورت‌های 3000/5000 آزاد شدند.
+- Backend با override موقت فرایند به پایگاه تازه و خالی `asoudeh_manual_20261021` وصل شد؛ فایل `.env` تغییر نکرده است. MongoDB محلی برای استفادهٔ بعدی روشن ماند.
 - `AUTH_HASH_SECRET` در `backend/.env` وجود ندارد. احراز هویت/OTP به علت fail-closed بودن HMAC تا تنظیم secret توسط مالک محیط قابل تست نیست؛ secret ساخته یا در فایل نوشته نشده است.
 - یک شروع اولیه backend پیش از بررسی امن نام پایگاه موجود در `.env` انجام شد. طبقه‌بندی فقط نشان داد URI به host محلی می‌رسد اما نام پایگاه در فهرست مجاز توسعه/تست نبود؛ backend فوراً متوقف و با پایگاه تازه جایگزین شد. Worker حذف حساب در startup اجرا می‌شود، بنابراین نمی‌توان تأیید کرد آیا آن اجرای کوتاه رکورد سررسیدشده‌ای را پاک کرده است یا خیر. فقط health endpoint درخواست شد؛ پیش از استفاده مجدد از آن پایگاه، مالک محیط باید وضعیت/backup محلی را بررسی کند. داده آن پایگاه خوانده یا چاپ نشد.
 
