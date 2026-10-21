@@ -14,6 +14,12 @@ const jalaliDateFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn'
   day: 'numeric',
 });
 
+export interface JalaliDateParts {
+  year: number;
+  month: number;
+  day: number;
+}
+
 function dateParts(
   formatter: Intl.DateTimeFormat,
   date: Date,
@@ -91,6 +97,28 @@ export function getJalaliMonthRange(year: number, month: number): Omit<JalaliMon
   };
 }
 
+export function getJalaliDateParts(date: Date): JalaliDateParts {
+  if (Number.isNaN(date.getTime())) {
+    throw new RangeError('Invalid date.');
+  }
+  const parts = dateParts(jalaliDateFormatter, date);
+  return { year: parts.year, month: parts.month, day: parts.day };
+}
+
+export function formatJalaliMonthKey(year: number, month: number): string {
+  if (
+    !Number.isInteger(year) ||
+    year < 1200 ||
+    year > 1600 ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new RangeError('Invalid Jalali month.');
+  }
+  return `${String(month).padStart(2, '0')}-${year}`;
+}
+
 export function getCurrentJalaliMonthRange(now = new Date()): JalaliMonthRange {
   const tehranParts = dateParts(tehranDateFormatter, now);
   const today = asUtcDate(Date.UTC(tehranParts.year, tehranParts.month - 1, tehranParts.day));
@@ -104,4 +132,21 @@ export function getCurrentJalaliMonthRange(now = new Date()): JalaliMonthRange {
 
 export function formatUtcDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+export function getMonthlyOccurrenceDate(
+  anchorDate: Date,
+  year: number,
+  month: number,
+): Date | undefined {
+  const anchorParts = getJalaliDateParts(anchorDate);
+  if (year < anchorParts.year || (year === anchorParts.year && month < anchorParts.month)) {
+    return undefined;
+  }
+
+  const range = getJalaliMonthRange(year, month);
+  const daysInMonth =
+    (range.endDateExclusive.getTime() - range.startDate.getTime()) / DAY_IN_MS;
+  const day = Math.min(anchorParts.day, daysInMonth);
+  return new Date(range.startDate.getTime() + (day - 1) * DAY_IN_MS);
 }

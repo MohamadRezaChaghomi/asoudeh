@@ -9,6 +9,7 @@ import budgetRoutes from './routes/budgets.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import healthRoutes from './routes/health.routes.js';
+import reminderRoutes from './routes/reminders.routes.js';
 import transactionRoutes from './routes/transactions.routes.js';
 
 const app = express();
@@ -26,6 +27,7 @@ app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/budgets', budgetRoutes);
 app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/reminders', reminderRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1', profileRouter);

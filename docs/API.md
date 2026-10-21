@@ -121,13 +121,30 @@ Requires the access cookie, configured Origin, and CSRF cookie/header pair. Acce
 ### `DELETE /api/v1/budgets/:id`
 Requires the access cookie, configured Origin, and CSRF cookie/header pair. Physically deletes only a budget owned by the authenticated user. An inaccessible or already deleted budget returns `404 BUDGET_NOT_FOUND`. Success: `{ success: true, message: "بودجه حذف شد." }`.
 
+### `GET /api/v1/reminders`
+Requires the access cookie. Returns the authenticated user’s non-deleted reminders and the current Solar Hijri `monthKey` (`MM-YYYY`, for example `07-1405`). Reminder fields include `id`, `title`, the original `date` (`YYYY-MM-DD`), `nextDueDate`, `recurrence`, optional `amount` in toman, `isActive`, and `isCompleted`. A monthly reminder’s completion state applies only to the returned current month; a non-recurring reminder remains completed after it is deactivated. Existing legacy `yearly` records remain readable but cannot be newly created.
+
+### `POST /api/v1/reminders`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Request body: `{ "title": "قبض برق", "date": "2026-10-25", "amount": 850000, "recurrence": "monthly" }`. `title` is trimmed and must contain 1–120 characters; `date` must be a valid Gregorian date-only value in `YYYY-MM-DD`; `amount` is optional and, when present, a positive safe integer in toman no greater than 1,000,000,000,000; `recurrence` must be `none` or `monthly`. Success: HTTP 201 with `{ success: true, data: { reminder } }`. Ownership is derived from the authenticated identity.
+
+### `PATCH /api/v1/reminders/:id`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Accepts a non-empty subset of `title`, `date`, `amount`, and `recurrence`, subject to creation validation. Set `amount` to `null` to clear it. Other users’ reminders, archived reminders, and invalid IDs return `404 REMINDER_NOT_FOUND` or `400 VALIDATION_ERROR`. A legacy `yearly` reminder is preserved as-is unless the owner explicitly changes it to `none` or `monthly`. Success: `{ success: true, data: { reminder } }`.
+
+### `POST /api/v1/reminders/:id/complete`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair; send an empty JSON object. The server determines the current Jalali month in `Asia/Tehran`; clients cannot supply an owner or completion month. Success: `{ success: true, data: { completion: { id, reminderId, monthKey, completedAt } } }`. Repeating a monthly completion in the same month returns its existing record. A unique `(reminderId, monthKey)` index prevents duplicate history records under concurrent requests. A monthly reminder is actionable again next Jalali month without deleting the previous month’s history. Completing a `none` reminder archives it after recording completion; retries in later months return the original completion and keep it inactive. Legacy `yearly` reminders return `409 LEGACY_REMINDER_RECURRENCE_UNSUPPORTED` and are not modified.
+
+### `DELETE /api/v1/reminders/:id`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Archives only a reminder owned by the authenticated user by setting its deletion time and inactive state; completion history is retained. Success: `{ success: true, message: "یادآور بایگانی شد." }`.
+
+Monthly recurrence preserves the Jalali day of the original `date`. If a target month is shorter, its last day is used for that month only; later months are recalculated from the original date. The dashboard lists only active, not-yet-completed occurrences due from today through seven days ahead (inclusive), using the same occurrence and completion rules.
+
 ### `GET /api/v1/dashboard`
 Requires the access cookie. Returns only data belonging to the authenticated user:
 
 - `period`: the current Solar Hijri year/month and its Gregorian `startDate` and exclusive `endDateExclusive` date boundaries. The current day and reminder window use the `Asia/Tehran` time zone.
 - `balance`: `initialBalance` as a number and `income`, `expenses`, and `remaining` as integer strings to preserve exact arithmetic. `remaining` is calculated as the profile’s initial balance plus current Solar Hijri month income minus current Solar Hijri month expenses.
 - `recentTransactions`: up to five non-deleted transactions, newest first, with category display data.
-- `upcomingReminders`: up to five active reminders with due dates from today through seven days ahead, inclusive.
+- `upcomingReminders`: up to five active, not-yet-completed reminders with due dates from today through seven days ahead, inclusive. Monthly occurrences use Jalali dates, retain the original intended day when clamping short months, and are hidden for a month once completed.
 
 Monthly sums omit soft-deleted transactions and use exact decimal aggregation. Empty results are returned as zero totals and empty arrays. This endpoint displays stored reminder records only; reminder creation, editing, scheduling, and notification delivery are not implemented.
 
@@ -139,12 +156,6 @@ The following endpoint shapes are planned only. The current backend does not reg
 
 ### Categories
 - No additional category routes are planned here; `DELETE /api/v1/categories/:id` is registered but intentionally returns `409 CATEGORY_DELETION_UNAVAILABLE` as described above.
-
-### Reminders
-- `GET /api/v1/reminders`
-- `POST /api/v1/reminders`
-- `PATCH /api/v1/reminders/:id`
-- `DELETE /api/v1/reminders/:id`
 
 ### Reports
 - `GET /api/v1/reports/summary`

@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import Category from '../models/Category.js';
-import Reminder from '../models/Reminder.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
+import { getUpcomingReminders } from './reminders.service.js';
 import { HttpError } from '../utils/httpError.js';
 import { decimalIntegerToBigInt } from '../utils/financialAmount.js';
 import {
@@ -11,8 +11,6 @@ import {
 } from '../utils/jalaliMonth.js';
 
 type TransactionType = 'income' | 'expense';
-type ReminderRecurrence = 'none' | 'monthly' | 'yearly';
-
 interface MonthlyTotal {
   _id: TransactionType;
   amount: { toString(): string };
@@ -29,13 +27,6 @@ interface PopulatedTransaction {
   };
   date: Date;
   note?: string | null;
-}
-
-interface UpcomingReminder {
-  _id: mongoose.Types.ObjectId;
-  title: string;
-  date: Date;
-  recurrence: ReminderRecurrence;
 }
 
 export interface DashboardResponse {
@@ -66,17 +57,20 @@ export interface DashboardResponse {
     id: string;
     title: string;
     date: string;
-    recurrence: ReminderRecurrence;
+    recurrence: 'none' | 'monthly' | 'yearly';
+    amount?: number;
   }>;
 }
 
-export async function getDashboard(userId: string): Promise<DashboardResponse> {
+export async function getDashboard(
+  userId: string,
+  now = new Date(),
+): Promise<DashboardResponse> {
   const ownerId = new mongoose.Types.ObjectId(userId);
-  const { year, month, startDate, endDateExclusive, today } =
-    getCurrentJalaliMonthRange();
-  const remindersEndExclusive = new Date(today.getTime() + 8 * 24 * 60 * 60 * 1000);
+  const { year, month, startDate, endDateExclusive } =
+    getCurrentJalaliMonthRange(now);
 
-  const [user, totals, recentTransactions, reminders] = await Promise.all([
+  const [user, totals, recentTransactions, upcomingReminders] = await Promise.all([
     User.findById(ownerId).select('initialBalance').lean(),
     Transaction.aggregate<MonthlyTotal>([
       {
@@ -103,15 +97,7 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
       .sort({ date: -1, _id: -1 })
       .limit(5)
       .lean(),
-    Reminder.find({
-      userId: ownerId,
-      isActive: true,
-      date: { $gte: today, $lt: remindersEndExclusive },
-    })
-      .select('title date recurrence')
-      .sort({ date: 1, _id: 1 })
-      .limit(5)
-      .lean(),
+    getUpcomingReminders(userId, now),
   ]);
 
   if (!user) {
@@ -159,11 +145,6 @@ export async function getDashboard(userId: string): Promise<DashboardResponse> {
       date: formatUtcDateOnly(transaction.date),
       note: transaction.note ?? '',
     })),
-    upcomingReminders: (reminders as UpcomingReminder[]).map((reminder) => ({
-      id: reminder._id.toString(),
-      title: reminder.title,
-      date: formatUtcDateOnly(reminder.date),
-      recurrence: reminder.recurrence,
-    })),
+    upcomingReminders,
   };
 }

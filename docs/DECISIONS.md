@@ -83,3 +83,13 @@ Recorded: 2026-10-21
 - `warning` begins at 80% and `exceeded` at 100%; percentages are rounded to one decimal place for display. Remaining amount may be negative when spending exceeds the limit.
 - Budget creation enforces one budget per user/category/month in both service behavior and the database unique index. Deletion removes only the budget record and does not modify transactions or categories.
 - The earlier scaffold schema stored `period`, `startDate`, and `endDate`; this implementation replaces those unused fields with `monthKey`. No live database was inspected or migrated. Before deploying against any database that may contain scaffold-era budget documents, verify that they are disposable or perform a reviewed migration to `monthKey`; do not assume existing records are compatible.
+
+## Reminder management checkpoint
+
+- Reminder management follows FR-13: title, due date, optional amount, no-repeat/monthly recurrence, upcoming display within seven days, and completion. No SMS, email, push delivery, or background scheduling is implied.
+- Completion history is stored separately from reminders with `reminderId`, authenticated `userId`, the existing `MM-YYYY` Jalali month key, and server-generated `completedAt`. The unique `(reminderId, monthKey)` index makes completion idempotent and prevents concurrent duplicates. The server determines the month using the `Asia/Tehran` calendar date; clients cannot choose the completion period.
+- Completing a monthly reminder applies only to that Jalali month. It becomes actionable in the next month, while previous month completion records remain unchanged. Completing a `none` reminder stores history and deactivates it permanently.
+- Monthly occurrences are recalculated from the original due date’s Jalali day. If the target month lacks that day, use that month’s final day without changing the original anchor.
+- Reminder deletion is soft archival (`deletedAt`, `isActive: false`); edits and archival never remove completion history. Amounts, when present, are positive safe integer toman values.
+- The pre-existing schema allowed `yearly`, but FR-13 permits only `none` and `monthly`. Existing yearly values are retained and remain readable; new and updated recurrence values accept only specified types. Completion for legacy yearly records fails explicitly with `409 LEGACY_REMINDER_RECURRENCE_UNSUPPORTED`. No database was inspected or migrated.
+- Deploy the `ReminderCompletion` unique index before serving completion requests. The code declares the index and isolated tests initialize/verify it; production index creation must follow the operator’s safe index-deployment process. No production index or data migration was run.

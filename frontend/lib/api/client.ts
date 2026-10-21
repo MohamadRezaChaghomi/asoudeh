@@ -39,6 +39,7 @@ api.interceptors.response.use(
     const isRefreshableRequest =
       config?.url?.startsWith('/me') ||
       config?.url?.startsWith('/categories') ||
+      config?.url?.startsWith('/reminders') ||
       config?.url?.startsWith('/transactions') ||
       config?.url?.startsWith('/dashboard');
 
