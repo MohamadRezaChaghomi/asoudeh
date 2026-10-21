@@ -52,10 +52,10 @@
 | frontend tests/build | PASS | typecheck/lint/build موفق؛ ۱۴ E2E و آزمون PWA production موفق. |
 | محدودیت‌ها و آمادگی production | PARTIAL | SMS واقعی، لغو حذف، استقرار ایندکس‌ها، WCAG و deployment هنوز تأیید نشده‌اند. |
 | stage و بازبینی patch | PASS | فقط ۵۳ فایل مرتبط stage؛ diff و اسکن فایل‌های محرمانه بازبینی شدند. |
-| commit | PARTIAL | commit هنوز ایجاد نشده است. |
-| push | PARTIAL | هنوز push نشده؛ fetch نشان داد upstream بدون واگرایی است. |
-| اجرای محلی frontend/backend | PARTIAL | منتظر commit/push نهایی است. |
-| health check و URLها | PARTIAL | هنوز از فرایندهای محلی در حال اجرا تأیید نشده‌اند. |
+| commit | PASS | `490d80e` با trailer هم‌نویس ساخته شد؛ به‌روزرسانی نهایی این handover جداگانه ثبت می‌شود. |
+| push | PASS | commit `490d80e` روی `origin/main` تأیید شد؛ به‌روزرسانی نهایی handover هنوز push می‌شود. |
+| اجرای محلی frontend/backend | PARTIAL | frontend روی `http://localhost:3000` و backend روی `http://localhost:5000` با پایگاه تازه و محلی اجرا هستند؛ `AUTH_HASH_SECRET` در env محلی موجود نیست و OTP fail-closed می‌ماند. |
+| health check و URLها | PASS | پاسخ frontend `/login` با HTTP 200 و backend `/api/v1/health` با HTTP 200 تأیید شد. |
 
 ## تصمیم‌ها و محدودیت‌های مهم
 
@@ -95,8 +95,10 @@ npm run build:frontend
 
 ## Git و فایل‌های محافظت‌شده
 
-- شاخه `main`، هنگام آغاز برابر `e26b01d` (`feat(reminders): add reminder completion functionality and related API endpoints`) و با `origin/main` همگام بود؛ پس از fetch نیز پیش از commit با upstream برابر ماند.
-- تغییرات تحویل قبلی و تغییرات جاری حذف حساب حفظ شدند. ۵۳ فایل مرتبط پس از بازبینی به‌طور صریح stage شده‌اند؛ هنوز commit یا push نشده‌اند. فایل‌های زیر بخشی از همان دامنه‌اند:
+- شاخه `main` هنگام آغاز برابر `e26b01d` بود و پس از fetch بدون واگرایی ماند.
+- commit پیاده‌سازی `490d80e` با پیام `feat: complete caregiver reports PWA and account deletion` روی `origin/main` push و تأیید شد. فایل‌های env و خروجی Playwright commit نشده‌اند.
+- به‌روزرسانی نهایی handover پس از تأیید راه‌اندازی محلی، در انتظار commit و push مستندات است.
+- تغییرات تحویل قبلی و جاری در commit ۵۳ فایل مرتبط حفظ شدند. فهرست زیر وضعیت تغییرها هنگام شروع این اجرا را نشان می‌دهد:
 
 تغییرکرده:
 
@@ -112,6 +114,14 @@ npm run build:frontend
 
 تست E2E حذف حساب به سطح فایل منتقل شد. `loadData` در صفحه تراکنش از callback وابسته به شماره صفحه به تابع پایدار با صفحهٔ پیش‌فرض ۱ تبدیل شد تا تغییر صفحه موجب اجرای مجدد و ناخواستهٔ فرایند بازیابی draft نشود. تست draft اکنون پس از reload برای آماده‌شدن رابط انتظار می‌کشد؛ رفتار پاک‌سازی پیش‌نویس نامعتبر و جداسازی حساب‌ها بررسی شد.
 
+## وضعیت راه‌اندازی محلی
+
+- MongoDB محلی روی `127.0.0.1:27017` با فرایند `mongod` فعال است.
+- Frontend در `http://localhost:3000` و backend در `http://localhost:5000` پاسخ می‌دهند. `GET /login` و `GET /api/v1/health` هر دو HTTP 200 داده‌اند؛ لاگ‌ها خطای startup نشان ندادند.
+- Backend فعلی با override موقت فرایند به پایگاه تازه و خالی `asoudeh_manual_20261021` وصل است؛ فایل `.env` تغییر نکرده است.
+- `AUTH_HASH_SECRET` در `backend/.env` وجود ندارد. احراز هویت/OTP به علت fail-closed بودن HMAC تا تنظیم secret توسط مالک محیط قابل تست نیست؛ secret ساخته یا در فایل نوشته نشده است.
+- یک شروع اولیه backend پیش از بررسی امن نام پایگاه موجود در `.env` انجام شد. طبقه‌بندی فقط نشان داد URI به host محلی می‌رسد اما نام پایگاه در فهرست مجاز توسعه/تست نبود؛ backend فوراً متوقف و با پایگاه تازه جایگزین شد. Worker حذف حساب در startup اجرا می‌شود، بنابراین نمی‌توان تأیید کرد آیا آن اجرای کوتاه رکورد سررسیدشده‌ای را پاک کرده است یا خیر. فقط health endpoint درخواست شد؛ پیش از استفاده مجدد از آن پایگاه، مالک محیط باید وضعیت/backup محلی را بررسی کند. داده آن پایگاه خوانده یا چاپ نشد.
+
 ## اقدام بعدی
 
-پس از بازبینی نهایی staged diff، commit توصیفی بسازید و push عادی را فقط در صورت fast-forward بودن branch انجام دهید. سپس backend و frontend محلی را اجرا و health/URL واقعی را تأیید کنید. پیش از production، SMS واقعی، سیاست لغو حذف، rollout ایندکس‌ها، استقرار امن شاخص‌ها، ارزیابی دسترس‌پذیری و آزمون عملیاتی لازم‌اند. حذف دسته همچنان تا تعیین fallback درآمد و topology تراکنشی غیرفعال بماند.
+برای تست ورود و حذف حساب، مالک محیط باید `AUTH_HASH_SECRET` را با مقدار random و مستقل حداقل ۳۲ بایتی در محیط محلی پیکربندی و backend را restart کند؛ مقدار آن را در chat/commit ننویسد. از پایگاه تازهٔ محلی استفاده کنید، نه URI فعلی `.env`. پیش از production، SMS واقعی، تصمیم درباره لغو حذف، rollout ایندکس‌ها، استقرار امن شاخص‌ها، ارزیابی دسترس‌پذیری و آزمون عملیاتی لازم‌اند. حذف دسته همچنان تا تعیین fallback درآمد و topology تراکنشی غیرفعال بماند.
