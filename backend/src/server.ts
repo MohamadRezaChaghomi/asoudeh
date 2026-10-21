@@ -2,7 +2,7 @@ import app from './app.js';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   await connectDB();
   app.listen(env.port, () => {
     console.log(`Asoudeh API running on http://localhost:${env.port}`);

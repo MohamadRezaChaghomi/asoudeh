@@ -6,9 +6,14 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.*
 !.env.example
 *.log
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/

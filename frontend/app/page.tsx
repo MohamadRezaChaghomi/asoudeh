@@ -7,7 +7,7 @@ export default function HomePage() {
         <p className="mb-2 text-sm text-asoudeh-teal">پروژه آسوده</p>
         <h1 className="text-3xl font-bold text-asoudeh-navy">مدیریت مالی ساده و قابل اعتماد</h1>
         <p className="mt-4 text-slate-600">
-          اسکلت اولیه پروژه آماده است. توسعه را از احراز هویت و سپس تراکنش‌ها شروع کن.
+          ورود و پروفایل کاربر آماده‌اند؛ قابلیت‌های مالی دیگر هنوز در حال توسعه هستند.
         </p>
         <Link
           href="/login"

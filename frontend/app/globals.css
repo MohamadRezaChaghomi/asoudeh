@@ -5,6 +5,7 @@
 :root {
   --background: #f8fafc;
   --foreground: #172033;
+  --font-scale: 100%;
 }
 
 * {
@@ -13,6 +14,7 @@
 
 html {
   direction: rtl;
+  font-size: var(--font-scale);
 }
 
 body {
@@ -20,6 +22,36 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Tahoma, Arial, sans-serif;
+}
+
+html[data-high-contrast='true'] {
+  --background: #000;
+  --foreground: #fff;
+}
+
+html[data-high-contrast='true'] .app-panel {
+  border-color: #fff;
+  background: #111;
+  color: #fff;
+}
+
+html[data-high-contrast='true'] .app-muted {
+  color: #fff;
+}
+
+html[data-high-contrast='true'] .app-panel .text-asoudeh-navy {
+  color: #fff;
+}
+
+html[data-high-contrast='true'] .app-panel input,
+html[data-high-contrast='true'] .app-panel select {
+  border-color: #fff;
+  color: #fff;
+}
+
+html[data-high-contrast='true'] .app-panel option {
+  background: #111;
+  color: #fff;
 }
 
 button,

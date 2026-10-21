@@ -1,5 +1,6 @@
-export function healthCheck(req, res) {
-  res.json({
+import type { RequestHandler } from 'express';
+
+export const healthCheck: RequestHandler = (_req, res) => res.json({
     success: true,
     data: {
       status: 'ok',
@@ -7,4 +8,3 @@ export function healthCheck(req, res) {
       timestamp: new Date().toISOString(),
     },
   });
-}

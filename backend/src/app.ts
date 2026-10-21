@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import authRoutes, { profileRouter } from './routes/auth.routes.js';
 import healthRoutes from './routes/health.routes.js';
 
 const app = express();
@@ -18,6 +19,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1/health', healthRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', profileRouter);
 
 app.use(notFound);
 app.use(errorHandler);
