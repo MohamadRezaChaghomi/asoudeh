@@ -7,12 +7,15 @@ import OtpRateLimit from '../models/OtpRateLimit.js';
 import User from '../models/User.js';
 import {
   generateId,
+  generateOtp,
   generateOpaqueToken,
   hashAuthValue,
   hashOtp,
+  normalizeIranianMobile,
   secureStringEqual,
 } from '../utils/authCrypto.js';
 import { HttpError } from '../utils/httpError.js';
+import { sendSmsIrOtp, SmsIrProviderError } from './smsIrProvider.js';
 import type {
   CompleteRegistrationInput,
   UpdateProfileInput,
@@ -28,6 +31,7 @@ const REGISTRATION_LIFETIME_SECONDS = 5 * 60;
 const ACCESS_TOKEN_LIFETIME_SECONDS = 15 * 60;
 const REFRESH_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 const ACCOUNT_DELETION_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+const OTP_SEND_LOCK_MS = 15 * 1000;
 const OTP_MESSAGE = 'اگر شماره همراه معتبر باشد، کد تأیید ارسال می‌شود.';
 
 export interface AuthTokens {
@@ -39,6 +43,9 @@ export interface AuthTokens {
 export interface OtpRequestResult {
   message: string;
   developmentOtp?: string;
+  developmentQuickLogin?: boolean;
+  deliveryMode: 'development' | 'sms';
+  resendAfterSeconds: number;
 }
 
 export type OtpVerificationResult =
@@ -218,10 +225,11 @@ function mapProfile(user: {
 
 export async function requestOtp(phone: string, ipAddress: string): Promise<OtpRequestResult> {
   const now = new Date();
-  await consumeRateLimit('phone', phone, OTP_PHONE_REQUEST_LIMIT, now);
-  await consumeRateLimit('ip', ipAddress, OTP_IP_REQUEST_LIMIT, now);
-
-  const phoneHash = hashAuthValue('phone', phone);
+  const normalizedPhone = normalizeIranianMobile(phone);
+  if (!normalizedPhone) {
+    throw new HttpError(400, 'INVALID_PHONE', 'شماره همراه معتبر ایرانی وارد کنید.');
+  }
+  const phoneHash = hashAuthValue('phone', normalizedPhone);
   const current = await OtpChallenge.findOne({ phoneHash });
 
   if (current?.blockedUntil && current.blockedUntil > now) {
@@ -233,39 +241,162 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
     );
   }
 
-  if (!env.otpDevSimulatorEnabled || env.nodeEnv !== 'development') {
+  const resendCooldownMs = env.otpResendCooldownSeconds * 1000;
+  if (current?.lastSentAt && now.getTime() - current.lastSentAt.getTime() < resendCooldownMs) {
     throw new HttpError(
-      503,
-      'OTP_DELIVERY_UNAVAILABLE',
-      'در حال حاضر امکان ارسال کد تأیید وجود ندارد.',
+      429,
+      'OTP_RATE_LIMITED',
+      'برای ارسال دوباره کد کمی صبر کنید.',
+      retryAfterSeconds(new Date(current.lastSentAt.getTime() + resendCooldownMs), now),
     );
   }
 
-  const code = env.otpDevFallbackCode;
+  const useDevelopmentSimulator =
+    env.nodeEnv === 'development' && env.otpDevSimulatorEnabled;
+  if (!useDevelopmentSimulator && env.smsIrMode !== 'production') {
+    throw new HttpError(
+      503,
+      'SMSIR_SANDBOX_UNAVAILABLE',
+      'حالت sandbox در مستندات رسمی SMS.ir تأیید نشده است؛ برای توسعه از شبیه‌ساز و برای ارسال واقعی پس از تأیید، حالت production را انتخاب کنید.',
+    );
+  }
+
+  const code = useDevelopmentSimulator ? env.otpDevFallbackCode : generateOtp();
+  const codeHash = hashOtp(normalizedPhone, code);
+  await consumeRateLimit('phone', normalizedPhone, OTP_PHONE_REQUEST_LIMIT, now);
+  await consumeRateLimit('ip', ipAddress, OTP_IP_REQUEST_LIMIT, now);
+
+  const requestId = generateId();
+  const lockExpiresAt = new Date(now.getTime() + OTP_SEND_LOCK_MS);
+  let challengeId = '';
+  try {
+    const challenge = await OtpChallenge.findOneAndUpdate(
+      {
+        phoneHash,
+        $and: [
+          {
+            $or: [
+              { lastSentAt: null },
+              { lastSentAt: { $lte: new Date(now.getTime() - resendCooldownMs) } },
+            ],
+          },
+          {
+            $or: [
+              { sendLockExpiresAt: null },
+              { sendLockExpiresAt: { $lte: now } },
+            ],
+          },
+        ],
+      },
+      {
+        $set: { sendLockId: requestId, sendLockExpiresAt: lockExpiresAt },
+        $setOnInsert: {
+          phone: normalizedPhone,
+          phoneHash,
+          deleteAt: new Date(now.getTime() + OTP_LIFETIME_MS + OTP_BLOCK_MS),
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+    if (!challenge) {
+      throw new HttpError(
+        429,
+        'OTP_RATE_LIMITED',
+        'درخواست کد در حال پردازش است؛ کمی بعد دوباره تلاش کنید.',
+        Math.ceil(OTP_SEND_LOCK_MS / 1000),
+      );
+    }
+    challengeId = String(challenge._id);
+  } catch (error) {
+    if (!isDuplicateKey(error)) throw error;
+    throw new HttpError(
+      429,
+      'OTP_RATE_LIMITED',
+      'درخواست کد در حال پردازش است؛ کمی بعد دوباره تلاش کنید.',
+      Math.ceil(OTP_SEND_LOCK_MS / 1000),
+    );
+  }
+
   const resetAttempts =
     !current?.attemptWindowStartedAt ||
     now.getTime() - current.attemptWindowStartedAt.getTime() >= OTP_ATTEMPT_WINDOW_MS;
 
-  await OtpChallenge.findOneAndUpdate(
-    { phoneHash },
-    {
-      $set: {
-        phone,
-        otpHash: hashOtp(phone, code),
-        deliveryMode: 'development',
-        codeExpiresAt: new Date(now.getTime() + OTP_LIFETIME_MS),
-        verifiedAt: null,
-        deleteAt: new Date(now.getTime() + OTP_BLOCK_MS + OTP_LIFETIME_MS),
-        ...(resetAttempts
-          ? { failedAttempts: 0, attemptWindowStartedAt: null, blockedUntil: null }
-          : {}),
-      },
-      $setOnInsert: { phoneHash },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
+  try {
+    if (!useDevelopmentSimulator) {
+      await sendSmsIrOtp(normalizedPhone, code);
+    }
 
-  return { message: OTP_MESSAGE, developmentOtp: code };
+    const updatedChallenge = await OtpChallenge.findOneAndUpdate(
+      {
+        _id: challengeId,
+        sendLockId: requestId,
+      },
+      {
+        $set: {
+          phone: normalizedPhone,
+          otpHash: codeHash,
+          deliveryMode: useDevelopmentSimulator ? 'development' : 'sms',
+          lastSentAt: now,
+          codeExpiresAt: new Date(now.getTime() + OTP_LIFETIME_MS),
+          verifiedAt: null,
+          deleteAt: new Date(now.getTime() + OTP_BLOCK_MS + OTP_LIFETIME_MS),
+          ...(resetAttempts
+            ? { failedAttempts: 0, attemptWindowStartedAt: null, blockedUntil: null }
+            : {}),
+        },
+        $unset: { sendLockId: 1, sendLockExpiresAt: 1 },
+      },
+      { new: true },
+    );
+    if (!updatedChallenge) {
+      throw new HttpError(
+        503,
+        'OTP_DELIVERY_UNAVAILABLE',
+        'ثبت درخواست کد انجام نشد؛ دوباره تلاش کنید.',
+      );
+    }
+  } catch (error) {
+    await OtpChallenge.updateOne(
+      { _id: challengeId, sendLockId: requestId },
+      { $unset: { sendLockId: 1, sendLockExpiresAt: 1 } },
+    );
+
+    if (error instanceof SmsIrProviderError) {
+      console.error('SMS.ir OTP request failed.', {
+        correlationId: requestId,
+        category: error.category,
+        ...(error.httpStatus ? { httpStatus: error.httpStatus } : {}),
+      });
+      const configurationFailure = [
+        'missing_api_key',
+        'invalid_template_id',
+        'missing_parameter_name',
+        'invalid_base_url',
+      ].includes(error.category);
+      const message = configurationFailure
+        ? 'تنظیمات SMS.ir ناقص یا نامعتبر است؛ API key، template ID، نام پارامتر و نشانی API را بررسی کنید.'
+        : 'ارسال کد تأیید انجام نشد. تنظیمات SMS.ir یا وضعیت سرویس را بررسی کنید.';
+      throw new HttpError(
+        503,
+        configurationFailure ? 'SMSIR_CONFIGURATION_ERROR' : 'OTP_DELIVERY_UNAVAILABLE',
+        message,
+      );
+    }
+    throw error;
+  }
+
+  return {
+    message: OTP_MESSAGE,
+    deliveryMode: useDevelopmentSimulator ? 'development' : 'sms',
+    ...(useDevelopmentSimulator ? { developmentOtp: code } : {}),
+    ...(useDevelopmentSimulator &&
+    env.otpDevQuickLoginEnabled &&
+    env.nodeEnv === 'development' &&
+    normalizedPhone === env.otpDevQuickLoginPhone
+      ? { developmentQuickLogin: true }
+      : {}),
+    resendAfterSeconds: env.otpResendCooldownSeconds,
+  };
 }
 
 async function recordFailedAttempt(

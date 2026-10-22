@@ -80,10 +80,17 @@ export const requestOtp = [
       success: true,
       data: {
         message: result.message,
+        resendAfterSeconds: result.resendAfterSeconds,
         ...(env.nodeEnv === 'development' &&
         env.otpDevSimulatorEnabled &&
         result.developmentOtp
           ? { developmentOtp: result.developmentOtp }
+          : {}),
+        ...(env.nodeEnv === 'development' &&
+        env.otpDevSimulatorEnabled &&
+        env.otpDevQuickLoginEnabled &&
+        result.developmentQuickLogin
+          ? { developmentQuickLogin: true }
           : {}),
       },
     });

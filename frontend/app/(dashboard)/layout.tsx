@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
+import { AppShell } from '@/components/layout/AppShell';
 
 interface AccessibilityProfile {
   accessibilitySettings: {
@@ -63,13 +64,13 @@ export default function DashboardLayout({
   }, [pathname, router]);
 
   return (
-    <>
+    <AppShell>
       {error && (
         <p className="mx-auto max-w-6xl px-5 pt-4 text-red-800" role="alert">
           {error}
         </p>
       )}
       {children}
-    </>
+    </AppShell>
   );
 }

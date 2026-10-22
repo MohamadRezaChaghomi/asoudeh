@@ -1,5 +1,139 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import { useEffect, useState, type ReactNode } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  BadgeDollarSign,
+  ChartNoAxesCombined,
+  CircleUserRound,
+  HandCoins,
+  LayoutDashboard,
+  Moon,
+  PiggyBank,
+  Settings,
+  Sun,
+  UsersRound,
+  WalletCards,
+} from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
+
+const navigation = [
+  { href: '/dashboard', label: 'نمای کلی', icon: LayoutDashboard },
+  { href: '/transactions', label: 'تراکنش‌ها', icon: WalletCards },
+  { href: '/categories', label: 'دسته‌ها', icon: BadgeDollarSign },
+  { href: '/budgets', label: 'بودجه‌ها', icon: PiggyBank },
+  { href: '/reminders', label: 'یادآورها', icon: HandCoins },
+  { href: '/reports', label: 'گزارش‌ها', icon: ChartNoAxesCombined },
+  { href: '/caregiver', label: 'همراهان', icon: UsersRound },
+  { href: '/settings', label: 'تنظیمات', icon: Settings },
+];
+
+function BrandMark() {
+  return (
+    <span className="brand-mark" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </span>
+  );
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
-  return <div className="min-h-screen bg-slate-50">{children}</div>;
+  const pathname = usePathname();
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem('asoudeh.theme');
+    const nextTheme = savedTheme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = nextTheme;
+    setTheme(nextTheme);
+  }, []);
+
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = nextTheme;
+    window.localStorage.setItem('asoudeh.theme', nextTheme);
+    setTheme(nextTheme);
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="app-sidebar" aria-label="ناوبری اصلی">
+        <Link className="app-brand" href="/dashboard" aria-label="آسوده، نمای کلی">
+          <BrandMark />
+          <span>
+            <strong>آسوده</strong>
+            <small>همراه مالی شما</small>
+          </span>
+        </Link>
+
+        <p className="sidebar-eyebrow">مدیریت مالی</p>
+        <nav className="sidebar-nav">
+          {navigation.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                aria-current={active ? 'page' : undefined}
+                className={cn('sidebar-link', active && 'is-active')}
+                href={href}
+                key={href}
+              >
+                <Icon aria-hidden="true" size={19} strokeWidth={1.8} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-note">
+          <span className="sidebar-note-icon" aria-hidden="true">
+            <CircleUserRound size={18} />
+          </span>
+          <p>اطلاعات مالی شما خصوصی و فقط در اختیار خودتان است.</p>
+        </div>
+      </aside>
+
+      <div className="app-workspace">
+        <header className="app-topbar">
+          <div className="topbar-context">
+            <span className="topbar-kicker">فضای شخصی</span>
+            <span className="topbar-divider" aria-hidden="true" />
+            <span className="topbar-current">
+              {navigation.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
+                ?.label ?? 'آسوده'}
+            </span>
+          </div>
+          <button
+            aria-label={theme === 'dark' ? 'فعال‌کردن پوسته روشن' : 'فعال‌کردن پوسته تیره'}
+            className="theme-toggle"
+            onClick={toggleTheme}
+            type="button"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{theme === 'dark' ? 'پوسته روشن' : 'پوسته تیره'}</span>
+          </button>
+        </header>
+
+        <div className="app-content">{children}</div>
+      </div>
+
+      <nav className="mobile-nav" aria-label="ناوبری اصلی">
+        {navigation.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              aria-current={active ? 'page' : undefined}
+              className={cn('mobile-nav-link', active && 'is-active')}
+              href={href}
+              key={href}
+            >
+              <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
 }

@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../app.js';
 import { env } from '../config/env.js';
 import AuthSession from '../models/AuthSession.js';
@@ -16,8 +16,16 @@ import { connectDB } from '../config/db.js';
 const testMongoUri = process.env.TEST_MONGODB_URI;
 const originalNodeEnv = env.nodeEnv;
 const originalSimulatorSetting = env.otpDevSimulatorEnabled;
+const originalQuickLoginSetting = env.otpDevQuickLoginEnabled;
+const originalQuickLoginPhone = env.otpDevQuickLoginPhone;
 const originalFallbackCode = env.otpDevFallbackCode;
+const originalResendCooldownSeconds = env.otpResendCooldownSeconds;
 const originalAuthHashSecret = env.authHashSecret;
+const originalSmsIrMode = env.smsIrMode;
+const originalSmsIrApiKey = env.smsIrApiKey;
+const originalSmsIrTemplateId = env.smsIrTemplateId;
+const originalSmsIrBaseUrl = env.smsIrBaseUrl;
+const originalSmsIrOtpParameterName = env.smsIrOtpParameterName;
 const origin = env.clientUrl;
 const testPhones: string[] = [];
 const testIps = new Set<string>();
@@ -111,6 +119,17 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
   beforeEach(() => {
     env.nodeEnv = 'development';
     env.otpDevSimulatorEnabled = true;
+    env.otpDevQuickLoginEnabled = false;
+    env.otpResendCooldownSeconds = 0;
+    env.smsIrMode = 'sandbox';
+    env.smsIrApiKey = originalSmsIrApiKey;
+    env.smsIrTemplateId = originalSmsIrTemplateId;
+    env.smsIrBaseUrl = originalSmsIrBaseUrl;
+    env.smsIrOtpParameterName = originalSmsIrOtpParameterName;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   afterAll(async () => {
@@ -126,8 +145,16 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     }
     env.nodeEnv = originalNodeEnv;
     env.otpDevSimulatorEnabled = originalSimulatorSetting;
+    env.otpDevQuickLoginEnabled = originalQuickLoginSetting;
+    env.otpDevQuickLoginPhone = originalQuickLoginPhone;
     env.otpDevFallbackCode = originalFallbackCode;
+    env.otpResendCooldownSeconds = originalResendCooldownSeconds;
     env.authHashSecret = originalAuthHashSecret;
+    env.smsIrMode = originalSmsIrMode;
+    env.smsIrApiKey = originalSmsIrApiKey;
+    env.smsIrTemplateId = originalSmsIrTemplateId;
+    env.smsIrBaseUrl = originalSmsIrBaseUrl;
+    env.smsIrOtpParameterName = originalSmsIrOtpParameterName;
     if (mongoose.connection.readyState === 1) {
       await User.deleteMany({ phone: { $in: testPhones } });
       await OtpChallenge.deleteMany({ phoneHash: { $in: phoneHashes } });
@@ -212,6 +239,126 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(JSON.stringify(productionResponse.body)).not.toMatch(/\d{6}/);
     expect(JSON.stringify(productionResponse.body)).not.toContain('developmentOtp');
     expect(replayedInProduction.status).toBe(400);
+  });
+
+  it('marks only the configured development phone for quick login', async () => {
+    const quickLoginPhone = await createUniquePhone();
+    env.otpDevQuickLoginEnabled = true;
+    env.otpDevQuickLoginPhone = quickLoginPhone;
+
+    const enabled = await otpRequest(quickLoginPhone);
+    const otherPhone = await createUniquePhone();
+    const notEnabled = await otpRequest(otherPhone);
+
+    expect(enabled.status).toBe(200);
+    expect(enabled.body.data.developmentQuickLogin).toBe(true);
+    expect(notEnabled.status).toBe(200);
+    expect(notEnabled.body.data.developmentQuickLogin).toBeUndefined();
+
+    env.nodeEnv = 'production';
+    const productionPhone = await createUniquePhone();
+    env.otpDevQuickLoginPhone = productionPhone;
+    const productionResponse = await otpRequest(productionPhone);
+    expect(productionResponse.status).toBe(503);
+    expect(productionResponse.body.data?.developmentQuickLogin).toBeUndefined();
+  });
+
+  it('verifies an accepted SMS.ir challenge and never returns the real OTP', async () => {
+    const phone = await createUniquePhone();
+    let sentCode = '';
+    env.otpDevSimulatorEnabled = false;
+    env.smsIrMode = 'production';
+    env.smsIrApiKey = 'test-only-smsir-key';
+    env.smsIrTemplateId = '12345';
+    env.smsIrBaseUrl = 'https://api.sms.ir/v1';
+    env.smsIrOtpParameterName = 'OTP';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(async (_input, init) => {
+        const requestBody = JSON.parse(String(init?.body)) as {
+          mobile: string;
+          templateId: number;
+          parameters: Array<{ name: string; value: string }>;
+        };
+        expect(requestBody.mobile).toBe(phone);
+        expect(requestBody.templateId).toBe(12345);
+        expect(requestBody.parameters[0]?.name).toBe('OTP');
+        sentCode = requestBody.parameters[0]?.value ?? '';
+        return new Response(
+          JSON.stringify({ status: 1, message: 'OK', data: { messageId: 17, cost: 1 } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }),
+    );
+
+    const sent = await otpRequest(phone);
+    expect(sent.status).toBe(200);
+    expect(sent.body.data.developmentOtp).toBeUndefined();
+    expect(JSON.stringify(sent.body)).not.toContain(sentCode);
+    expect(sentCode).toMatch(/^\d{6}$/);
+
+    const challenge = await OtpChallenge.findOne({
+      phoneHash: hashAuthValue('phone', phone),
+    }).lean();
+    expect(challenge?.deliveryMode).toBe('sms');
+    expect(challenge?.otpHash).toBe(hashAuthValue('otp', `${phone}\0${sentCode}`));
+
+    const verified = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: sentCode });
+    expect(verified.status).toBe(200);
+    expect(verified.body.data.registrationRequired).toBe(true);
+  });
+
+  it('does not persist or accept a new OTP when SMS.ir rejects the request', async () => {
+    const phone = await createUniquePhone();
+    env.otpDevSimulatorEnabled = false;
+    env.smsIrMode = 'production';
+    env.smsIrApiKey = 'test-only-smsir-key';
+    env.smsIrTemplateId = '12345';
+    env.smsIrBaseUrl = 'https://api.sms.ir/v1';
+    env.smsIrOtpParameterName = 'OTP';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify({ status: 0, message: 'private failure details' }), {
+          status: 200,
+        }),
+      ),
+    );
+
+    const sent = await otpRequest(phone);
+    expect(sent.status).toBe(503);
+    expect(JSON.stringify(sent.body)).not.toContain('private failure details');
+    const challenge = await OtpChallenge.findOne({
+      phoneHash: hashAuthValue('phone', phone),
+    }).lean();
+    expect(challenge?.otpHash).toBeNull();
+
+    const verified = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: env.otpDevFallbackCode });
+    expect(verified.status).toBe(400);
+  });
+
+  it('enforces and reports the resend cooldown on the server', async () => {
+    const phone = await createUniquePhone();
+    env.otpResendCooldownSeconds = 60;
+
+    try {
+      const initialRequest = await otpRequest(phone);
+      const earlyResend = await otpRequest(phone);
+
+      expect(initialRequest.status).toBe(200);
+      expect(initialRequest.body.data.resendAfterSeconds).toBe(60);
+      expect(earlyResend.status).toBe(429);
+      expect(earlyResend.body.error.code).toBe('OTP_RATE_LIMITED');
+      expect(earlyResend.headers['retry-after']).toBe('60');
+    } finally {
+      env.otpResendCooldownSeconds = 0;
+    }
   });
 
   it('limits OTP requests to three per phone in a rolling 15-minute window', async () => {

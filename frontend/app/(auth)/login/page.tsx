@@ -4,11 +4,21 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
+import { clearPendingOtpFlow, savePendingOtpFlow } from '@/lib/auth/otpFlow';
 
-type LoginStep = 'phone' | 'code' | 'register';
+const DEVELOPMENT_QUICK_LOGIN_PHONE = '09120000000';
 
 interface ApiErrorBody {
   error?: { message?: string };
+}
+
+interface OtpRequestResponse {
+  data: {
+    developmentOtp?: string;
+    developmentQuickLogin?: boolean;
+    registrationRequired?: boolean;
+    resendAfterSeconds?: number;
+  };
 }
 
 function toAsciiDigits(value: string): string {
@@ -33,21 +43,22 @@ function errorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
     return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
   }
+  if (error instanceof Error) return error.message;
   return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<LoginStep>('phone');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [developmentOtp, setDevelopmentOtp] = useState<string>();
+  const [phone, setPhone] = useState(
+    process.env.NODE_ENV === 'development' ? DEVELOPMENT_QUICK_LOGIN_PHONE : '',
+  );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function requestCode(event?: FormEvent<HTMLFormElement>) {
-    event?.preventDefault();
+  async function requestCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (loading) return;
+
     setError('');
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) {
@@ -57,53 +68,53 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/otp/request', { phone: normalizedPhone });
-      setPhone(normalizedPhone);
-      setDevelopmentOtp(response.data.data.developmentOtp);
-      setStep('code');
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setLoading(false);
-    }
-  }
+      const response = await api.post<OtpRequestResponse>(
+        '/auth/otp/request',
+        { phone: normalizedPhone },
+      );
+      const requestData = response.data.data;
+      const resendAfterSeconds =
+        typeof requestData?.resendAfterSeconds === 'number'
+          ? requestData.resendAfterSeconds
+          : 60;
+      const resendAvailableAt = Date.now() + resendAfterSeconds * 1000;
 
-  async function verifyCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    const normalizedCode = toAsciiDigits(code).replace(/\s/g, '');
-    if (!/^\d{6}$/.test(normalizedCode)) {
-      setError('کد تأیید باید شامل ۶ رقم باشد.');
-      return;
-    }
+      if (
+        requestData?.developmentQuickLogin === true &&
+        typeof requestData.developmentOtp === 'string'
+      ) {
+        const verification = await api.post<OtpRequestResponse>('/auth/otp/verify', {
+          phone: normalizedPhone,
+          code: requestData.developmentOtp,
+        });
 
-    setLoading(true);
-    try {
-      const response = await api.post('/auth/otp/verify', {
-        phone,
-        code: normalizedCode,
-      });
-      if (response.data.data.registrationRequired) {
-        setStep('register');
+        if (verification.data.data?.registrationRequired) {
+          savePendingOtpFlow({
+            phone: normalizedPhone,
+            resendAvailableAt,
+            step: 'register',
+          });
+          router.push('/verify-otp');
+          return;
+        }
+
+        clearPendingOtpFlow();
+        router.replace('/settings');
         return;
       }
-      router.push('/settings');
-    } catch (verifyError) {
-      setError(errorMessage(verifyError));
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function completeRegistration(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await api.post('/auth/register/complete', { displayName });
-      router.push('/settings');
-    } catch (registrationError) {
-      setError(errorMessage(registrationError));
+      savePendingOtpFlow({
+        phone: normalizedPhone,
+        ...(process.env.NODE_ENV === 'development' &&
+        typeof requestData?.developmentOtp === 'string'
+          ? { developmentOtp: requestData.developmentOtp }
+          : {}),
+        resendAvailableAt,
+        step: 'code',
+      });
+      router.push('/verify-otp');
+    } catch (requestError) {
+      setError(errorMessage(requestError));
     } finally {
       setLoading(false);
     }
@@ -116,97 +127,29 @@ export default function LoginPage() {
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">ورود به آسوده</h1>
         <p className="app-muted mt-2">با شماره همراه خود وارد شوید یا حساب بسازید.</p>
 
-        {step === 'phone' && (
-          <form className="mt-6 space-y-4" onSubmit={requestCode}>
-            <label className="block font-medium" htmlFor="phone">
-              شماره همراه
-            </label>
-            <input
-              autoComplete="tel"
-              className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
-              dir="ltr"
-              id="phone"
-              inputMode="tel"
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="۰۹۱۲۱۲۳۴۵۶۷"
-              required
-              value={phone}
-            />
-            <button
-              className="w-full rounded-lg bg-asoudeh-navy px-4 font-semibold text-white disabled:opacity-60"
-              disabled={loading}
-              type="submit"
-            >
-              {loading ? 'در حال ارسال…' : 'دریافت کد تأیید'}
-            </button>
-          </form>
-        )}
-
-        {step === 'code' && (
-          <form className="mt-6 space-y-4" onSubmit={verifyCode}>
-            <p className="app-muted">کد شش‌رقمی ارسال‌شده به {phone} را وارد کنید.</p>
-            {process.env.NODE_ENV === 'development' && developmentOtp && (
-              <p className="rounded-lg bg-amber-50 p-3 text-amber-900" role="status">
-                کد شبیه‌ساز توسعه: <bdi dir="ltr">{developmentOtp}</bdi>
-              </p>
-            )}
-            <label className="block font-medium" htmlFor="otp">
-              کد تأیید
-            </label>
-            <input
-              autoComplete="one-time-code"
-              className="w-full rounded-lg border border-slate-300 bg-transparent px-4 text-center text-xl tracking-[0.4em]"
-              dir="ltr"
-              id="otp"
-              inputMode="numeric"
-              maxLength={6}
-              onChange={(event) => setCode(event.target.value)}
-              pattern="[0-9۰-۹٠-٩]{6}"
-              required
-              value={code}
-            />
-            <button
-              className="w-full rounded-lg bg-asoudeh-navy px-4 font-semibold text-white disabled:opacity-60"
-              disabled={loading}
-              type="submit"
-            >
-              {loading ? 'در حال بررسی…' : 'تأیید و ادامه'}
-            </button>
-            <button
-              className="w-full rounded-lg border border-slate-300 px-4 font-medium disabled:opacity-60"
-              disabled={loading}
-              onClick={() => void requestCode()}
-              type="button"
-            >
-              ارسال دوباره کد
-            </button>
-          </form>
-        )}
-
-        {step === 'register' && (
-          <form className="mt-6 space-y-4" onSubmit={completeRegistration}>
-            <p className="app-muted">برای ساخت حساب، نام نمایشی خود را وارد کنید.</p>
-            <label className="block font-medium" htmlFor="displayName">
-              نام نمایشی
-            </label>
-            <input
-              autoComplete="name"
-              className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
-              id="displayName"
-              maxLength={80}
-              onChange={(event) => setDisplayName(event.target.value)}
-              required
-              value={displayName}
-            />
-            <button
-              className="w-full rounded-lg bg-asoudeh-navy px-4 font-semibold text-white disabled:opacity-60"
-              disabled={loading}
-              type="submit"
-            >
-              {loading ? 'در حال ساخت حساب…' : 'ساخت حساب'}
-            </button>
-          </form>
-        )}
+        <form className="mt-6 space-y-4" onSubmit={requestCode}>
+          <label className="block font-medium" htmlFor="phone">
+            شماره همراه
+          </label>
+          <input
+            autoComplete="tel"
+            className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
+            dir="ltr"
+            id="phone"
+            inputMode="tel"
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="۰۹۱۲۱۲۳۴۵۶۷"
+            required
+            value={phone}
+          />
+          <button
+            className="w-full rounded-lg bg-asoudeh-navy px-4 font-semibold text-white disabled:opacity-60"
+            disabled={loading}
+            type="submit"
+          >
+            {loading ? 'در حال ارسال…' : 'دریافت کد تأیید'}
+          </button>
+        </form>
 
         {error && (
           <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">

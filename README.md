@@ -2,7 +2,7 @@
 
 Asoudeh is a Persian, right-to-left personal finance web application designed to make everyday money management approachable for older adults and people with limited experience using financial software. It supports personal transactions, budgets, reminders, monthly reports, and optional read-only caregiver access.
 
-> **Development status:** This repository is not production-ready. No production deployment or real SMS provider is configured. OTP login in a local environment is available only through an explicitly enabled development simulator.
+> **Development status:** This repository is not production-ready. A server-side SMS.ir Verify adapter is implemented, but no account credentials/template are configured and no live delivery has been verified. Local OTP login is available through an explicitly enabled development simulator.
 
 ## Product capabilities
 
@@ -77,9 +77,13 @@ The frontend is at <http://localhost:3000>. The API is at <http://localhost:5000
 
 ### Local OTP without an SMS provider
 
-The project does not send real SMS messages. To exercise authentication locally, set `NODE_ENV=development` and explicitly set `OTP_DEV_SIMULATOR_ENABLED=true` in the backend's local environment file. The simulator uses `OTP_DEV_FALLBACK_CODE` (default `123456`) and exposes it only in the development response so the login UI can display it.
+For local development, set `NODE_ENV=development`, `OTP_DEV_SIMULATOR_ENABLED=true`, and `OTP_DEV_QUICK_LOGIN_ENABLED=true` in the backend's local environment file. The login page is prefilled with `09120000000`; submitting that number automatically sends the simulator's default OTP (`123456`) to the backend verification endpoint, so no code entry is required. A new account still needs a display name once. Other phone numbers continue through the normal OTP verification screen.
 
-The development OTP is single-use, expires after five minutes, is stored as a keyed digest, and retains the application's rate and attempt limits. It is not an automatic fallback when a production SMS delivery fails. Never enable the simulator outside local development or use its fixed code with shared or production data. More detail is in [environment setup](docs/ENVIRONMENT.md).
+The development OTP is single-use, expires after five minutes, is stored as a keyed digest, and retains the application's rate and attempt limits. Resends have a server-enforced cooldown (60 seconds by default). Quick login is accepted only for `OTP_DEV_QUICK_LOGIN_PHONE` (default `09120000000`) and only when `NODE_ENV=development`; the server still verifies and consumes the OTP before issuing a session. It is not an automatic fallback when a production SMS delivery fails. Never enable the simulator or quick login outside local development or use them with shared or production data. More detail is in [environment setup](docs/ENVIRONMENT.md).
+
+SMS.ir OTP delivery is server-side and requires account-specific API key, approved Verify template ID, and exact template parameter name. The adapter does not send in `SMSIR_MODE=sandbox` because the published official OpenAPI does not document a sandbox endpoint or behavior. Real paid delivery requires explicitly setting `SMSIR_MODE=production`; no live SMS has been sent or tested. See [SMS.ir setup](docs/SMSIR_SETUP.md).
+
+For regular numbers, an accepted OTP request navigates to `/verify-otp`. The pending phone and development-only simulator code are kept in the current tab's session storage so refresh can recover the form; this client-side state never authenticates a user. Only successful backend OTP verification issues an authenticated session.
 
 ## Checks and tests
 
@@ -106,7 +110,7 @@ Available root scripts are declared in the root `package.json`. Backend and fron
 
 ## Known limitations
 
-- **Production OTP delivery is unavailable:** no SMS provider is connected. Production OTP requests fail closed instead of returning a development code.
+- **Production OTP delivery is not configured:** SMS.ir credentials and an approved template are missing. Production requests fail closed instead of returning a development code.
 - **Category deletion is intentionally unavailable:** the registered delete route returns `409 CATEGORY_DELETION_UNAVAILABLE`; safely reassigning transactions requires a transaction-capable database topology or an equivalent safe workflow, and a confirmed income fallback.
 - **No reminder or caregiver invitation delivery:** reminders are shown in the app, and caregiver invitations must be communicated out of band.
 - **Account deletion cannot currently be cancelled:** access is revoked immediately and permanent purge is scheduled for 30 days later.
