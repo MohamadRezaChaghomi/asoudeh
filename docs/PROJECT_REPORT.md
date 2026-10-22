@@ -147,14 +147,14 @@ Relevant test locations include [backend tests](../backend/src/tests), [frontend
 
 At the start of the current OTP review, `main` and `origin/main` both pointed to `b67d78c` (`feat: complete local development and project docs`). The verified remote is `https://github.com/MohamadRezaChaghomi/asoudeh.git`. The committed history includes the authentication/backend foundation, transaction and dashboard work, budgets, reminders, caregiver/report/PWA/account-deletion milestones, local OTP simulator, readiness checks, pagination fix, and project documentation.
 
-The current OTP-flow changes are **not committed or pushed**:
+At the time of the OTP-flow review, the following changes were pending:
 
 - Root cause correction and separate verification page: `frontend/app/(auth)/login/page.tsx`, `frontend/app/(auth)/verify-otp/page.tsx`, and `frontend/lib/auth/otpFlow.ts`.
 - OTP regression tests: `frontend/tests/auth.spec.ts`.
 - Resend cooldown configuration and atomic server enforcement: `backend/.env.example`, `backend/src/config/env.ts`, `backend/src/controllers/auth.controller.ts`, `backend/src/models/OtpChallenge.ts`, `backend/src/services/auth.service.ts`, and `backend/src/tests/auth.api.test.ts`.
 - Current documentation updates: [README](../README.md), [API](./API.md), [decisions](./DECISIONS.md), [environment](./ENVIRONMENT.md), this report, and [handover](./PROJECT_HANDOVER.md).
 
-No commit or push was made for this OTP-flow task.
+The pending OTP/session changes, transaction search, speech control, dependency updates, tests, and documentation were subsequently committed together as `f2618c1` (`feat: harden sessions and expand accessibility`). The commit was not pushed.
 
 ## Recommended next steps
 

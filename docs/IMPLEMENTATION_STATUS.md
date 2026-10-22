@@ -47,4 +47,4 @@
 | UI/RTL و تم | پیاده‌سازی‌شده ولی نیازمند ارزیابی دستی | suite Edge مسیرها/تم را پاس کرد؛ contrast measurement، ۲۰۰٪ zoom و WCAG 2.2 AA certification اجرا نشده‌اند. |
 | تست‌های اجراشده | تکمیل و تأییدشده در محدودهٔ اجراشده | Backend: ۱۱۳ پاس؛ Edge Playwright: ۲۸ پاس، ۱ skip؛ Jalali: ۳ پاس؛ backend/frontend typecheck و lint، backend build و frontend production build همگی پاس شدند. WCAG/production/live-SMS هنوز خارج از موارد تأییدشده‌اند. |
 | قابلیت‌های بعدی | انجام‌نشده/نیازمند تصمیم | recurring transactions، CSV/Excel export، notification delivery، chatbot، category deletion امن، WCAG و usability study در این مرحله پیاده‌سازی/تأیید نشده‌اند. |
-| Commit و push | انجام‌نشده | طبق درخواست commit پس از build نهایی و بررسی فایل‌های stage انجام می‌شود؛ push ممنوع مگر با درخواست صریح. |
+| Commit و push | commit انجام شد، push انجام نشد | commit `f2618c1` با پیام `feat: harden sessions and expand accessibility` ساخته شد؛ working tree پس از commit پاک بود. |

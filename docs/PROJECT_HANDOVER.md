@@ -12,7 +12,7 @@
 - وابستگی‌های backend به Vitest `4.1.12` و Vite `7.3.7` به‌روزرسانی شدند؛ audit کامل backend صفر آسیب‌پذیری گزارش کرد. در frontend، override سازگار PostCSS `8.5.31` آسیب‌پذیری‌های production را رفع کرد و `npm audit --omit=dev` صفر نتیجه داد. audit کامل frontend هنوز ۹ هشدار dev-only (۷ high، ۲ moderate) در زنجیرهٔ Tailwind/Next lint دارد؛ رفع پیشنهادی نیازمند ارتقای عمده است و فعلاً انجام نشده است.
 - آخرین اجرای کامل backend: Vitest **۱۱۳ تست موفق** روی MongoDB محلی مجزای `asoudeh_test`؛ backend typecheck، lint و build موفق. frontend typecheck/lint و production build موفق؛ Edge Playwright **۲۸ موفق، ۱ skip**؛ تست تاریخ شمسی **۳ موفق**. build frontend پس از افزودن جست‌وجوی تراکنش و خواندن متن با موفقیت انجام شد.
 - SMS واقعی، دسترس‌پذیری WCAG 2.2 AA، screen reader واقعی، zoom ۲۰۰٪، production، آزمون usability و index rollout تأیید نشده‌اند. API key یا اطلاعات قالب SMS.ir لازم است از مالک سامانه و خارج از مخزن دریافت شود.
-- تغییرات این مرحله هنوز commit نشده‌اند؛ دستور پیوست commit را درخواست می‌کند، اما پیش از آن باید build frontend نهایی، `git diff --check`، فهرست staging و منشأ همهٔ تغییرات pending دوباره بررسی شود. Push انجام نشود.
+- تغییرات در commit `f2618c1` با پیام `feat: harden sessions and expand accessibility` ثبت شدند؛ working tree پس از commit پاک بود. Push انجام نشده و فقط با درخواست صریح انجام شود.
 
 ## یکپارچه‌سازی رابط کاربری (به‌روزرسانی 2026-10-22)
 
@@ -72,9 +72,9 @@
 | P1 | حذف دسته و انتقال تراکنش‌ها به fallback | عمداً غیرفعال است؛ تضمین هم‌زمانی بدون topology تراکنشی ممکن نیست و PDF برای fallback درآمد ابهام دارد. | تصمیم‌گیری درباره fallback درآمد و استفاده از replica set یا workflow معادل؛ آزمون هم‌زمانی و عدم از دست‌رفتن داده پیش از فعال‌سازی. |
 | P1 برای بهره‌برداری | تحویل OTP از SMS.ir | adapter پیاده‌سازی و mock-tested است؛ key، template ID و نام متغیر حساب هنوز فراهم نیست؛ SMS زنده تأیید نشده. | واردکردن تنظیمات در `backend/.env`، تأیید دسترسی/اعتبار/الگو و مجوز صریح یک تست به شمارهٔ خود؛ simulator فقط برای development. |
 | P2 | WCAG 2.2 AA، کنتراست، لمس و کاربردپذیری | پوسته واکنش‌گرا، تم روشن/تیره، focus، reduced motion و تنظیمات اندازه متن/کنتراست موجودند؛ ارزیابی Lighthouse/assistive technology و آزمون واقعی کاربران انجام نشده. | اجرای ارزیابی دستی و خودکار، ثبت نتیجه و رفع موارد بحرانی؛ ادعای AA فقط پس از بررسی کامل. |
-| P2 | تأیید browser و PWA/E2E | با Edge و ۲ worker: ۲۳ آزمون توسعه موفق و آزمون PWA production در اجرای development عمداً skip شد. تست shell واکنش‌گرا و persistence اضافه شده است؛ Chromium Playwright در این محیط در دسترس نیست. | اجرای ماتریس مرورگرهای پشتیبانی‌شده و بررسی نصب PWA/تجربه کاربری روی دستگاه واقعی. |
+| P2 | تأیید browser و PWA/E2E | با Edge و ۲ worker: ۲۸ آزمون موفق و یک آزمون PWA production-only در اجرای development عمداً skip شد؛ جست‌وجو/مرتب‌سازی تراکنش و کنترل گفتار نیز تست شدند. | اجرای ماتریس مرورگرهای پشتیبانی‌شده و بررسی نصب PWA/تجربه کاربری روی دستگاه واقعی. |
 | P2 | راه‌اندازی production و شاخص‌ها | هیچ deployment یا شاخصی در production اجرا/بررسی نشده است. شاخص‌های یکتای reminder completion و caregiver باید پیش از ترافیک واقعی ایمن rollout شوند. | بررسی داده‌های موجود و اجرای rollout شاخص‌ها توسط اپراتور روی replica set مناسب؛ سپس health check و smoke test. |
-| P3 / خارج از MVP | OCR، Voice، Chatbot و اعلان‌های SMS/email/push | در scope نسخه فعلی پیاده‌سازی نشده‌اند. | فقط در صورت تصمیم محصول برای فاز بعدی. |
+| P3 / خارج از MVP | OCR، chatbot و اعلان‌های SMS/email/push | پیاده‌سازی نشده‌اند. خواندن اختیاری متن صفحه با Web Speech API افزوده شده، اما voice واقعی فارسی و همزیستی با screen reader ارزیابی نشده‌اند. | فقط در صورت تصمیم محصول برای فاز بعدی؛ قابلیت گفتار نیازمند آزمون واقعی مرورگر/سیستم است. |
 
 ## چک‌لیست تکمیل گردش کار
 
@@ -83,11 +83,11 @@
 | بررسی مخزن و worktree | PASS | شاخه `main`، تغییرات قبلی حفظ شد؛ envهای محلی ignore هستند. |
 | تطبیق specification و checkpoint | PASS | مستندات و PDF با پیاده‌سازی و تصمیم‌های ثبت‌شده تطبیق داده شدند. |
 | حذف حساب و مهلت ۳۰روزه | PASS | OTP یک‌بارمصرف، قطع نشست و دسترسی فوری، worker و آزمون API. |
-| backend tests/typecheck/lint/build | PASS | همه بررسی‌های backend موفق؛ اکنون ۹۵ تست API/unit در دیتابیس ایزوله. |
-| frontend tests/build | PASS | typecheck/lint/build موفق؛ در آخرین اجرای Edge با ۲ worker، ۲۳ E2E موفق و یک آزمون PWA production-only عمداً skip شد. |
+| backend tests/typecheck/lint/build | PASS | همه بررسی‌های backend موفق؛ ۱۱۳ تست API/unit در دیتابیس ایزوله. |
+| frontend tests/build | PASS | typecheck/lint/build موفق؛ در آخرین اجرای Edge با ۲ worker، ۲۸ E2E موفق و یک آزمون PWA production-only عمداً skip شد. |
 | محدودیت‌ها و آمادگی production | PARTIAL | SMS واقعی، لغو حذف، استقرار ایندکس‌ها، WCAG و deployment هنوز تأیید نشده‌اند. |
 | بازبینی قبلی و commit/push | PASS | commit `b67d78c` شامل simulator توسعه، readiness، صفحه‌بندی و مستندات قبلی به `origin/main` push شد. |
-| بازبینی فعلی OTP | PASS | علت ناوبری بازتولید و اصلاح شد؛ changes این milestone هنوز commit/push نشده‌اند. |
+| بازبینی فعلی OTP و ادامهٔ توسعه | PASS | اصلاح OTP و تغییرات نشست/قابلیت‌ها در `f2618c1` commit شدند؛ push انجام نشده است. |
 | اجرای محلی frontend/backend | PASS | هر دو روی URLهای محلی با پایگاه تازه اجرا و health-checked شدند؛ بنا به درخواست کاربر اکنون متوقف‌اند. `AUTH_HASH_SECRET` در env محلی موجود نیست و OTP fail-closed می‌ماند. |
 | health check و URLها | PASS | پاسخ frontend `/login` با HTTP 200 و backend `/api/v1/health` با HTTP 200 تأیید شد. |
 
@@ -107,11 +107,11 @@
 - `npm run typecheck` — موفق (backend و frontend؛ پس از اصلاح صفحه‌بندی).
 - `npm run lint` — موفق (backend و frontend؛ پس از اصلاح صفحه‌بندی).
 - `npm run build:backend` — موفق در همین نوبت بازبینی.
-- `npm run test:backend` — پس از افزودن cooldown مجدد OTP، ۹۵ تست از ۱۵ فایل موفق؛ URIهای تست فقط به MongoDB محلی ایزولهٔ `asoudeh_test` اشاره داشتند.
+- `npm run test:backend` — ۱۱۳ تست از ۱۵ فایل موفق؛ URIهای تست فقط به MongoDB محلی ایزولهٔ `asoudeh_test` اشاره داشتند.
 - `npm --prefix backend run typecheck`, `npm --prefix backend run lint` و `npm --prefix backend run build` — پس از افزودن readiness endpoint موفق.
 - `npm --prefix frontend run test:jalali` — ۳ موفق، صفر ناموفق. Node برای type stripping هشدار آزمایشی داد.
 - `npm run build:frontend` — build production موفق؛ Next.js بارگذاری `.env.local` را گزارش کرد، اما محتوای آن باز یا چاپ نشد.
-- Playwright با Microsoft Edge — مجموعه توسعه: ۲۲ موفق و یک skip؛ آزمون‌های OTP شامل درخواست/ناوبری، direct route، refresh، API/network error، کد نامعتبر، ثبت‌نام و ورود کاربر موجود است. آزمون PWA در حالت production جداگانه: یک موفق و یک skip (آزمون dev).
+- Playwright با Microsoft Edge — مجموعه توسعه: ۲۸ موفق و یک skip؛ آزمون‌های OTP و تراکنش شامل درخواست/ناوبری، direct route، refresh، API/network error، جست‌وجو/مرتب‌سازی و کنترل گفتار هستند. آزمون PWA production-only در اجرای development عمداً skip شد.
 - بازتولید پیش از اصلاح — آزمون browser شکست را با URL واقعی `/login` به‌جای `/verify-otp` نشان داد؛ پس از اصلاح آزمون کامل browser موفق شد.
 - Production deployment، اتصال SMS واقعی، WCAG/Lighthouse و usability study — اجرا/تأیید نشده‌اند.
 
@@ -133,7 +133,7 @@ npm run build:frontend
 
 - شاخه `main` و `origin/main` در شروع milestone OTP روی `b67d78c` (`feat: complete local development and project docs`) همگام بودند.
 - پیاده‌سازی جامع قبلی در `490d80e` ثبت شده و مستندات وضعیت محلی در `a82fe18` و `58eb74a` قرار دارند.
-- تغییرات جاری OTP در login/verification page، helper session storage، backend resend cooldown، تست‌ها و مستندات هنوز commit یا push نشده‌اند. تغییرات pagination، readiness و simulator قبلی در `b67d78c` ثبت شده‌اند. فایل‌های env واقعی در این کار باز یا تغییر داده نشده‌اند.
+- تغییرات OTP و ادامهٔ توسعه در `f2618c1` با پیام `feat: harden sessions and expand accessibility` ثبت شده‌اند؛ push نشده‌اند. تغییرات pagination، readiness و simulator قبلی در `b67d78c` ثبت شده‌اند. فایل‌های env واقعی در این کار باز یا تغییر داده نشده‌اند.
 - پایدارشدن `loadData` برای جلوگیری از اجرای مجدد ناخواستهٔ بازیابی draft قبلاً اعمال شده بود؛ اصلاح جاری تضمین می‌کند دکمه‌های صفحه‌بندی علاوه بر تغییر state، داده صفحهٔ درخواستی را نیز بارگذاری کنند.
 
 ## وضعیت راه‌اندازی محلی
