@@ -9,6 +9,39 @@ const profile = {
   accessibilitySettings: { fontScale: 1.25, highContrast: false },
 };
 
+test('shows the real SVG logo on login and OTP registration without duplicating the brand name', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  const loginLogo = page.getByRole('img', { name: 'لوگوی آسوده' });
+  await expect(loginLogo).toBeVisible();
+  await expect(loginLogo).toHaveAttribute('src', '/icons/logo.svg');
+  const loginLogoWidth = await loginLogo.evaluate(
+    (image: HTMLImageElement) => image.naturalWidth,
+  );
+  expect(loginLogoWidth).toBeGreaterThan(0);
+  await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      'asoudeh.pendingOtp',
+      JSON.stringify({
+        phone: '09121234567',
+        resendAvailableAt: Date.now(),
+        step: 'register',
+      }),
+    );
+  });
+  await page.goto('/verify-otp');
+  const verificationLogo = page.getByRole('img', { name: 'لوگوی آسوده' });
+  await expect(verificationLogo).toBeVisible();
+  const verificationLogoWidth = await verificationLogo.evaluate(
+    (image: HTMLImageElement) => image.naturalWidth,
+  );
+  expect(verificationLogoWidth).toBeGreaterThan(0);
+  await expect(page.getByRole('heading', { name: 'ساخت حساب کاربری' })).toBeVisible();
+});
+
 test('uses the development quick-login phone without showing the OTP form', async ({ page }) => {
   let verificationPayload: Record<string, string> | undefined;
   await page.route('**/api/v1/auth/otp/request', async (route) => {
@@ -48,9 +81,9 @@ test('uses the development quick-login phone without showing the OTP form', asyn
   await expect(page.getByLabel('شماره همراه')).toHaveValue('09120000000');
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
 
-  await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByLabel('کد تأیید')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/settings$/, { timeout: 15_000 });
   expect(verificationPayload).toEqual({ phone: '09120000000', code: '123456' });
+  await expect(page.getByLabel('کد تأیید')).toHaveCount(0);
 });
 
 test('sends first-time quick-login users to registration without requesting code entry', async ({

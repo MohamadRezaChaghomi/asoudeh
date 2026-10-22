@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 
 type Permission = 'VIEW_SUMMARY' | 'VIEW_TRANSACTIONS' | 'VIEW_REPORTS';
@@ -205,9 +206,7 @@ export default function CaregiverPage() {
         {notice && <p className="rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status">{notice}</p>}
 
         {loading ? (
-          <p aria-busy="true" className="app-panel rounded-2xl p-6" role="status">
-            در حال بارگذاری دسترسی‌ها…
-          </p>
+          <PageSkeleton label="در حال بارگذاری دسترسی‌ها…" showHeader={false} variant="caregiver" />
         ) : (
           <>
             <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

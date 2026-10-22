@@ -140,3 +140,90 @@ test('creates, edits, and deletes a monthly budget using live API responses', as
   await expect(page.getByRole('status')).toContainText('بودجه حذف شد.');
   await expect(page.getByText('برای این ماه هنوز بودجه‌ای ثبت نشده است.')).toBeVisible();
 });
+
+test('refreshes an expired session and retries loading budgets', async ({ page }) => {
+  const csrfToken = 'budget-refresh-csrf-token';
+  let budgetGets = 0;
+  let refreshRequests = 0;
+
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: 'budget-refresh-user',
+            displayName: 'کاربر آزمایشی',
+            phone: '09120000000',
+            birthYear: null,
+            initialBalance: 0,
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/auth/csrf', async (route) => {
+    await route.fulfill({ json: { success: true, data: { csrfToken } } });
+  });
+  await page.route('**/api/v1/auth/refresh', async (route) => {
+    refreshRequests += 1;
+    await route.fulfill({
+      json: { success: true, data: { refreshed: true, csrfToken: 'new-csrf-token' } },
+    });
+  });
+  await page.route('**/api/v1/categories**', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          categories: [
+            {
+              id: 'budget-refresh-category',
+              name: 'هزینه',
+              type: 'expense',
+              icon: 'wallet',
+              isActive: true,
+            },
+          ],
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/budgets**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+
+    budgetGets += 1;
+    if (budgetGets === 1) {
+      await route.fulfill({
+        status: 401,
+        json: {
+          success: false,
+          error: { code: 'SESSION_EXPIRED', message: 'نشست منقضی شد.' },
+        },
+      });
+      return;
+    }
+
+    const monthKey = new URL(route.request().url()).searchParams.get('month') ?? '';
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          monthKey,
+          period: { startDate: '2026-09-23', endDateExclusive: '2026-10-23' },
+          budgets: [],
+        },
+      },
+    });
+  });
+
+  await page.goto('/budgets');
+
+  await expect(page.getByRole('heading', { name: 'بودجه‌ها', exact: true })).toBeVisible();
+  expect(budgetGets).toBe(2);
+  expect(refreshRequests).toBe(1);
+});

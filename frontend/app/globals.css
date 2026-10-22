@@ -17,6 +17,8 @@
   --surface: #fffefa;
   --surface-raised: #ffffff;
   --surface-muted: #f0f1eb;
+  --skeleton-base: #e5e9e3;
+  --skeleton-highlight: #f7f8f5;
   --text: #1c2925;
   --text-muted: #65736b;
   --text-subtle: #839087;
@@ -61,6 +63,8 @@ html[data-theme='dark'] {
   --surface: #19231f;
   --surface-raised: #202b26;
   --surface-muted: #222e28;
+  --skeleton-base: #29372f;
+  --skeleton-highlight: #3a4a40;
   --text: #edf2ed;
   --text-muted: #b4c0b7;
   --text-subtle: #91a197;
@@ -210,68 +214,76 @@ html[data-high-contrast='true'] :focus-visible {
 
 .app-brand {
   display: flex;
-  min-height: 3.5rem;
   align-items: center;
-  gap: 0.8rem;
-  padding-inline: 0.55rem;
+  justify-content: center;
+  padding-inline: 0.25rem;
   text-decoration: none;
 }
 
-.app-brand > span:last-child {
-  display: grid;
-  line-height: 1.35;
-}
-
-.app-brand strong {
-  color: var(--brand-900);
-  font-size: 1.2rem;
-  font-weight: 850;
-  letter-spacing: -0.04em;
-}
-
-.app-brand small {
-  margin-top: 0.12rem;
-  color: var(--text-muted);
-  font-size: 0.73rem;
-}
-
-.brand-mark {
+.brand-logo-frame {
   display: inline-flex;
-  width: 2.65rem;
-  height: 2.65rem;
+  flex: 0 0 auto;
+  aspect-ratio: 3 / 2;
   align-items: center;
   justify-content: center;
-  gap: 0.16rem;
-  border-radius: 0.95rem;
-  background: var(--brand-900);
-  transform: rotate(-7deg);
-}
-
-.brand-mark span {
-  width: 0.28rem;
+  padding: 0.28rem 0.45rem;
+  overflow: hidden;
+  border: 1px solid rgb(16 46 39 / 9%);
   border-radius: 1rem;
-  background: #e6c48b;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
 }
 
-.brand-mark span:nth-child(1) {
-  height: 0.75rem;
+.brand-logo-frame--sidebar {
+  width: min(100%, 10rem);
 }
 
-.brand-mark span:nth-child(2) {
-  height: 1.2rem;
+.brand-logo-frame--auth {
+  width: 9rem;
 }
 
-.brand-mark span:nth-child(3) {
-  height: 0.95rem;
+.brand-logo-frame--landing {
+  width: 11rem;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .sidebar-eyebrow {
-  margin: 2.2rem 0 0.7rem;
+  margin: 1.4rem 0 0.7rem;
   padding-inline: 0.8rem;
   color: var(--text-subtle);
   font-size: 0.7rem;
   font-weight: 750;
   letter-spacing: 0.04em;
+}
+
+.skeleton-block {
+  display: block;
+  max-width: 100%;
+  background:
+    linear-gradient(
+      100deg,
+      var(--skeleton-base) 20%,
+      var(--skeleton-highlight) 40%,
+      var(--skeleton-base) 60%
+    );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-list > * + * {
+  border-color: var(--border);
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .sidebar-nav {

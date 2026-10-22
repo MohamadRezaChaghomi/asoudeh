@@ -13,9 +13,12 @@ import {
   PiggyBank,
   Settings,
   Sun,
+  Volume2,
+  VolumeX,
   UsersRound,
   WalletCards,
 } from 'lucide-react';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { cn } from '@/lib/utils/cn';
 
 const navigation = [
@@ -28,16 +31,6 @@ const navigation = [
   { href: '/caregiver', label: 'همراهان', icon: UsersRound },
   { href: '/settings', label: 'تنظیمات', icon: Settings },
 ];
-
-function BrandMark() {
-  return (
-    <span className="brand-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
-}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -121,11 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="app-sidebar" aria-label="ناوبری اصلی">
         <Link className="app-brand" href="/dashboard" aria-label="آسوده، نمای کلی">
-          <BrandMark />
-          <span>
-            <strong>آسوده</strong>
-            <small>همراه مالی شما</small>
-          </span>
+          <BrandLogo size="sidebar" />
         </Link>
 
         <p className="sidebar-eyebrow">مدیریت مالی</p>
@@ -180,6 +169,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={togglePageSpeech}
             type="button"
           >
+            {isSpeaking ? (
+              <VolumeX aria-hidden="true" size={18} />
+            ) : (
+              <Volume2 aria-hidden="true" size={18} />
+            )}
             <span>{isSpeaking ? 'توقف خواندن' : 'خواندن متن صفحه'}</span>
           </button>
           <p className="sr-only" id="page-reader-status" aria-atomic="true" aria-live="polite">

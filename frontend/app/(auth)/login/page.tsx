@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { api } from '@/lib/api/client';
 import { clearPendingOtpFlow, savePendingOtpFlow } from '@/lib/auth/otpFlow';
 
@@ -55,6 +56,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const requestInFlight = useRef(false);
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -66,7 +68,7 @@ export default function LoginPage() {
 
   async function requestCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (loading) return;
+    if (requestInFlight.current) return;
 
     setError('');
     const normalizedPhone = normalizePhone(phone);
@@ -75,6 +77,7 @@ export default function LoginPage() {
       return;
     }
 
+    requestInFlight.current = true;
     setLoading(true);
     try {
       const response = await api.post<OtpRequestResponse>(
@@ -125,6 +128,7 @@ export default function LoginPage() {
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
+      requestInFlight.current = false;
       setLoading(false);
     }
   }
@@ -132,8 +136,9 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-5">
       <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <BrandLogo className="mx-auto mb-5" size="auth" />
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
-        <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">ورود به آسوده</h1>
+        <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">ورود به حساب کاربری</h1>
         <p className="app-muted mt-2">با شماره همراه خود وارد شوید یا حساب بسازید.</p>
 
         {notice && (

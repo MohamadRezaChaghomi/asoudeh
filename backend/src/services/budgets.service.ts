@@ -86,9 +86,9 @@ function toBudgetResponse(
     remainingAmount: (limitAmount - spentAmount).toString(),
     percentageUsed,
     status:
-      percentageUsed >= 100
+      spentAmount >= limitAmount
         ? 'exceeded'
-        : percentageUsed >= 80
+        : spentAmount * 100n >= limitAmount * 80n
           ? 'warning'
           : 'normal',
   };

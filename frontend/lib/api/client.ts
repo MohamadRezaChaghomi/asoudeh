@@ -40,6 +40,7 @@ api.interceptors.response.use(
       config?.url?.startsWith('/auth/activity') ||
       config?.url?.startsWith('/me') ||
       config?.url?.startsWith('/categories') ||
+      config?.url?.startsWith('/budgets') ||
       config?.url?.startsWith('/reminders') ||
       config?.url?.startsWith('/transactions') ||
       config?.url?.startsWith('/reports') ||

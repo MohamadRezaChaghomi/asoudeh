@@ -590,5 +590,30 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Budget API', () => {
       (item: { id: string }) => item.id === budget.id,
     );
     expect(calculated.spentAmount).toBe('1050');
+
+    const thresholdCategoryId = await createCategory(owner, 'Threshold');
+    const thresholdBudget = await createApiBudget(thresholdCategoryId, 25_000);
+    const thresholdTransaction = await Transaction.create({
+      userId: new mongoose.Types.ObjectId(owner.userId),
+      type: 'expense',
+      amount: 24_990,
+      categoryId: new mongoose.Types.ObjectId(thresholdCategoryId),
+      date: today,
+    });
+    transactionIds.push(thresholdTransaction._id);
+
+    const thresholdList = await authenticatedGet(
+      `/api/v1/budgets?month=${monthKey}`,
+      owner,
+    );
+    const thresholdCalculation = thresholdList.body.data.budgets.find(
+      (item: { id: string }) => item.id === thresholdBudget.id,
+    );
+    expect(thresholdCalculation).toMatchObject({
+      spentAmount: '24990',
+      remainingAmount: '10',
+      percentageUsed: 100,
+      status: 'warning',
+    });
   });
 });

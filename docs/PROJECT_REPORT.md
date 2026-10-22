@@ -26,6 +26,10 @@ The repository includes the original requirements in [SPECIFICATION.pdf](./SPECI
 
 The backend separates routes, controllers, services, models, and validators. Feature route/service/model files are located in [backend/src/routes](../backend/src/routes), [backend/src/services](../backend/src/services), and [backend/src/models](../backend/src/models). The frontend pages and components are under [frontend/app](../frontend/app), with API clients and shared utilities under `frontend/lib`.
 
+The frontend uses the actual horizontal wordmark at [frontend/public/icons/logo.svg](../frontend/public/icons/logo.svg) through the reusable [BrandLogo component](../frontend/components/brand/BrandLogo.tsx). It is used in the dashboard sidebar, login, OTP verification/registration, and public landing page; the separate visible brand label was removed from the sidebar and login heading. The SVG has a viewBox and vector paths, with no script, embedded raster image, or external href; a white frame preserves contrast in both themes. The square [asoudeh.svg app icon](../frontend/public/icons/asoudeh.svg) remains in the PWA manifest for its distinct icon purpose.
+
+The baseline review found asynchronous loading states implemented as isolated text messages and pages owning their data/state directly. The largest routes are transactions (about 1,134 lines), reminders (508), budgets (477), and settings (390). This task adds the reusable [PageSkeleton component](../frontend/components/ui/PageSkeleton.tsx) with per-screen layouts, an accessible status announcement, theme-aware shimmer, and reduced-motion support; it is used on dashboard, transactions, categories, budgets, reports, reminders, caregiver, and settings loading paths. Existing feature pages remain responsible for their API and domain state. A wholesale split of the large transaction/reminder pages is deliberately left as follow-up work to avoid a broad, riskier rewrite of stable financial flows.
+
 ```mermaid
 flowchart LR
     Browser[Next.js Persian / RTL client] -->|HTTP, cookies, Origin and CSRF| API[Express API]
@@ -61,7 +65,7 @@ Status meanings:
 | Account creation and authentication | **PARTIALLY IMPLEMENTED** | Passwordless OTP registration/login, refresh-token rotation/reuse detection, logout, CSRF and Origin checks, profile editing, a dedicated OTP route, a backend-enforced resend cooldown, and ten-minute server-side idle expiry are implemented. Activity renewal uses an authenticated CSRF-protected endpoint. The development simulator is opt-in only. Real SMS is absent, so production OTP delivery is unavailable. |
 | Development OTP simulator | **IMPLEMENTED** | When explicitly enabled in development, the default local code is `123456` (configurable). The configured quick-login phone can submit this code automatically through the normal verification API; the challenge remains single-use, expires after five minutes, is stored as a keyed digest, and remains subject to rate and attempt limits. It is not a fallback for a failing production provider. |
 | Profile and accessibility preferences | **IMPLEMENTED** | Profile fields include display name, optional birth year and initial balance; font scaling and high-contrast preferences are persisted and applied in the client. |
-| Shared visual system and application navigation | **PARTIALLY IMPLEMENTED** | Dashboard routes share a responsive RTL shell, eight linked destinations, CSS design tokens, persisted light/dark themes, visible focus styles, and reduced-motion support. A font stack is provided without bundling an unverified font asset. Responsive behavior and theme persistence have a Playwright regression test; WCAG conformance, screen-reader behavior, contrast measurements, and real-user usability remain unverified. |
+| Shared visual system and application navigation | **PARTIALLY IMPLEMENTED** | Dashboard routes share a responsive RTL shell, eight linked destinations, a single reusable real SVG brand logo, CSS design tokens, persisted light/dark themes, visible focus styles, reduced-motion support, and reusable page-shaped loading skeletons. A font stack is provided without bundling an unverified font asset. Logo rendering, skeleton transitions, responsive behavior, and theme persistence have Playwright regression coverage; WCAG conformance, real screen-reader behavior, contrast measurements, and real-user usability remain unverified. |
 | Browser text-to-speech | **PARTIALLY IMPLEMENTED** | A user-initiated control reads visible page text using a Persian voice from the browser/system Speech Synthesis API and provides an explicit stop control. Unsupported browsers or missing Persian voices produce a Persian status message. Browser tests use a stubbed voice; availability, pronunciation, privacy behavior, and assistive-technology interaction on real devices remain unverified. The speech engine may be implemented by the browser or operating system, so processing location depends on the user’s environment. |
 | Account deletion | **PARTIALLY IMPLEMENTED** | A fresh OTP schedules permanent deletion 30 days later and immediately revokes access; a worker checks at startup and every 60 seconds. Purge is idempotent and retries after failures. There is currently no cancellation API, and production OTP delivery remains unavailable. See [account-deletion service](../backend/src/services/accountDeletion.service.ts). |
 | Personal/system categories | **PARTIALLY IMPLEMENTED** | Listing, personal category creation/editing, and activation controls are available. A guarded, development-only command seeds system categories. Physical deletion and transaction reassignment are intentionally disabled; the route returns `409 CATEGORY_DELETION_UNAVAILABLE`. Safe activation needs a transaction-capable topology or equivalent workflow and a confirmed income fallback. |
@@ -128,16 +132,19 @@ The following checks were run against the local development/test setup after the
 | Check | Result |
 | --- | --- |
 | Backend API/unit suite (Vitest 4.1.12) | **113 passed** using the isolated local `asoudeh_test` database; includes idle-session expiry/activity, refresh reuse, OTP, transactions, literal search/sort, and error-response regression checks. |
-| TypeScript typechecks | Backend and frontend typechecks passed after the session, error-handling, dependency, and transaction-search changes. |
-| Lint | Backend and frontend lint passed. |
+| TypeScript typechecks | Backend and frontend typechecks passed after the prior feature work; frontend typecheck also passed after the logo, skeleton, and duplicate-submit changes. |
+| Lint | Backend and frontend lint passed after the prior feature work; frontend lint passed again after the current UI/auth changes. |
 | Backend production build | Passed after backend dependency and error-handler changes. |
-| Frontend production build | Passed after the transaction search and text-to-speech UI changes; `/transactions` is included as a generated static route. |
+| Frontend production build | Passed after the logo, skeleton, and duplicate-submit changes; `/transactions` remains a generated static route. |
 | Jalali date tests | **3 passed.** |
-| Playwright development suite (Edge, 2 workers) | **28 passed, 1 skipped.** This includes OTP, transaction search/sort and existing financial workflows, the responsive shell/theme, and mocked Persian speech/stop and no-voice behavior. The production-only PWA test is intentionally skipped in development mode. |
+| Playwright development suite (Edge, 1 worker) | **30 passed, 1 skipped.** This includes auth, financial workflows, the shared logo, skeleton transitions, the responsive shell/theme, and mocked Persian speech behavior. The production-only PWA test is intentionally skipped in development mode. |
+| Focused logo/skeleton/OTP E2E (Edge, 1 worker) | **5 passed.** SVG loading in login/OTP, pending and completed budget loading, quick login, registration routing, and duplicate-submit protection were checked. |
 | Playwright production PWA check (Edge) | Previously recorded as **1 passed, 1 skipped**; this does not establish production deployment readiness. |
 | Live frontend/backend OTP smoke test (Edge) | Passed against the actual local frontend and API: OTP request, `/verify-otp`, verification, registration, authenticated settings/profile fetch, and HttpOnly access/refresh cookies. It used a unique local temporary database, which was removed afterward. |
 
 The Playwright suite uses intercepted API responses for application workflows; speech tests stub the browser voice API and do not validate a real Persian voice. The separate earlier live smoke test exercised frontend/backend registration on an isolated database. SMS.ir tests mock all HTTP requests. **Real SMS delivery was not tested; SMS.ir account credentials and approved template values are not configured.** Full WCAG 2.2 AA, screen-reader, 200% zoom, real-voice pronunciation, and representative-user checks remain unverified.
+
+The current UI/auth validation commands were `npm run typecheck:frontend`, `npm run lint:frontend`, `npm --prefix frontend run test:jalali`, `npm run build:frontend`, and the frontend-local Playwright CLI with `--workers=1`. The full serial Playwright suite completed with 30 passed and one production-only skip after a parallel cold-development run timed out under server load.
 
 The database test uses a dedicated local URI and refuses unsupported remote or credential-bearing targets. The regular backend suite skips the database integration test when its dedicated test URI is absent. Refer to [environment setup](./ENVIRONMENT.md) before running it.
 
@@ -155,6 +162,8 @@ At the time of the OTP-flow review, the following changes were pending:
 - Current documentation updates: [README](../README.md), [API](./API.md), [decisions](./DECISIONS.md), [environment](./ENVIRONMENT.md), this report, and [handover](./PROJECT_HANDOVER.md).
 
 The pending OTP/session changes, transaction search, speech control, dependency updates, tests, and documentation were subsequently committed together as `f2618c1` (`feat: harden sessions and expand accessibility`). The commit was not pushed.
+
+The current logo, skeleton, and OTP duplicate-submit guard changes remain local and uncommitted, as requested. No dependency manifest or backend file was changed in this UI task.
 
 ## Recommended next steps
 
@@ -177,3 +186,9 @@ The pending OTP/session changes, transaction search, speech control, dependency 
 - [Roadmap](./ROADMAP.md)
 - [Project handover](./PROJECT_HANDOVER.md)
 - [Original product specification](./SPECIFICATION.pdf)
+
+## Latest independent audit (2026-10-22)
+
+The current checkout was rechecked against the original functional requirements, existing API/tests and runtime behavior. The review found and fixed three defects: a rounded budget percentage could incorrectly select `exceeded` while a positive balance remained; budget requests were missing the shared expired-session refresh retry; and the page-reader control had no visible content on mobile. Regression coverage now includes the exact 24,990/25,000 budget boundary, budget retry after a 401, and the mobile speech icon.
+
+Final validation for that audit: backend Vitest **113 passed across 16 files** on the dedicated local test database; Jalali tests **3 passed**; serial Edge development E2E **31 passed, 1 production-only skip**; the separate production PWA test **1 passed, 1 dev-only skip**; backend/frontend typecheck, lint, and production builds passed. Production dependency audits reported zero for backend and frontend. The full frontend audit still reports **9 development-only advisories (7 high, 2 moderate)**; a breaking Tailwind 4 migration was not applied without a compatibility plan. See [requirement-level evidence](./REQUIREMENTS_TRACEABILITY.md) and the [full audit report](./QUALITY_AUDIT_REPORT.md) for exact scope, failures/retries, and residual limitations.

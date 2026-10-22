@@ -122,6 +122,8 @@ There is no `LICENSE` file in the repository. No deployment URL, demo, screensho
 ## Documentation
 
 - [Project engineering report](docs/PROJECT_REPORT.md)
+- [Requirements traceability](docs/REQUIREMENTS_TRACEABILITY.md)
+- [Quality audit report](docs/QUALITY_AUDIT_REPORT.md)
 - [API contract](docs/API.md)
 - [Environment setup and safe database testing](docs/ENVIRONMENT.md)
 - [Development guide](docs/DEVELOPMENT.md)

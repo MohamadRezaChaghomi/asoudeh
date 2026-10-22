@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 
 interface Profile {
@@ -183,8 +184,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6" aria-busy="true">
-        <p role="status">در حال بارگذاری پروفایل…</p>
+      <main className="min-h-screen p-5 sm:p-6">
+        <PageSkeleton label="در حال بارگذاری پروفایل…" variant="settings" />
       </main>
     );
   }

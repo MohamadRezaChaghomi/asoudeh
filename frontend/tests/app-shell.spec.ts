@@ -76,6 +76,62 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(page.locator('.app-sidebar')).toBeVisible();
   await expect(mobileNavigation).toBeHidden();
   await expect(page.getByRole('link', { name: 'گزارش‌ها' })).toBeVisible();
+  const logo = page.getByRole('img', { name: 'لوگوی آسوده' });
+  await expect(logo).toBeVisible();
+  const logoWidth = await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth);
+  expect(logoWidth).toBeGreaterThan(0);
+  const logoBackground = await logo.evaluate(
+    (image) => getComputedStyle(image.parentElement!).backgroundColor,
+  );
+  expect(logoBackground).toBe('rgb(255, 255, 255)');
+});
+
+test('shows a page-shaped budget skeleton while data is loading and removes it after success', async ({
+  page,
+}) => {
+  let releaseBudgetResponse!: () => void;
+  const budgetResponse = new Promise<void>((resolve) => {
+    releaseBudgetResponse = resolve;
+  });
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: 'skeleton-user',
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/categories', async (route) => {
+    await route.fulfill({ json: { success: true, data: { categories: [] } } });
+  });
+  await page.route('**/api/v1/budgets**', async (route) => {
+    await budgetResponse;
+    const monthKey = new URL(route.request().url()).searchParams.get('month') ?? '';
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          monthKey,
+          period: { startDate: '2026-09-23', endDateExclusive: '2026-10-23' },
+          budgets: [],
+        },
+      },
+    });
+  });
+
+  await page.goto('/budgets');
+  const loadingStatus = page.locator('[role="status"]');
+  await expect(loadingStatus).toHaveCount(1);
+  await expect(loadingStatus).toHaveText('در حال بارگذاری بودجه‌ها…');
+  expect(await page.locator('.skeleton-block').count()).toBeGreaterThan(10);
+  releaseBudgetResponse();
+  await expect(loadingStatus).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'بودجه‌ها', exact: true })).toBeVisible();
 });
 
 test('reads visible page text with a Persian system voice and can stop speech', async ({ page }) => {
@@ -131,6 +187,8 @@ test('reads visible page text with a Persian system voice and can stop speech', 
 
   await page.goto('/budgets');
   const readButton = page.getByRole('button', { name: 'خواندن متن صفحه' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(readButton.locator('svg')).toBeVisible();
   await readButton.click();
   await expect(page.getByRole('button', { name: 'توقف خواندن' })).toHaveAttribute(
     'aria-pressed',

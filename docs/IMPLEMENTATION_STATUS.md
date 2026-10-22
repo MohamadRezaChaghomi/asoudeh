@@ -45,6 +45,35 @@
 | وابستگی‌های backend | تکمیل و تأییدشده | Vitest `4.1.12` و Vite `7.3.7` نصب شدند؛ audit کامل backend صفر آسیب‌پذیری و suite/build/lint/typecheck موفق. |
 | وابستگی‌های frontend | نیمه‌تمام | PostCSS `8.5.31` برای Next `15.5.28` override شده؛ audit production صفر است. audit کامل هنوز ۹ هشدار development-only (۷ high، ۲ moderate) در Tailwind/Next lint گزارش می‌کند؛ رفع بدون migration عمده نیازمند بررسی است. |
 | UI/RTL و تم | پیاده‌سازی‌شده ولی نیازمند ارزیابی دستی | suite Edge مسیرها/تم را پاس کرد؛ contrast measurement، ۲۰۰٪ zoom و WCAG 2.2 AA certification اجرا نشده‌اند. |
-| تست‌های اجراشده | تکمیل و تأییدشده در محدودهٔ اجراشده | Backend: ۱۱۳ پاس؛ Edge Playwright: ۲۸ پاس، ۱ skip؛ Jalali: ۳ پاس؛ backend/frontend typecheck و lint، backend build و frontend production build همگی پاس شدند. WCAG/production/live-SMS هنوز خارج از موارد تأییدشده‌اند. |
+| تست‌های اجرای مرحلهٔ قبلی | تکمیل و تأییدشده در محدودهٔ اجراشده | Backend: ۱۱۳ پاس؛ Edge Playwright: ۲۸ پاس، ۱ skip؛ Jalali: ۳ پاس؛ backend/frontend typecheck و lint، backend build و frontend production build همگی پاس شدند. WCAG/production/live-SMS هنوز خارج از موارد تأییدشده‌اند. |
 | قابلیت‌های بعدی | انجام‌نشده/نیازمند تصمیم | recurring transactions، CSV/Excel export، notification delivery، chatbot، category deletion امن، WCAG و usability study در این مرحله پیاده‌سازی/تأیید نشده‌اند. |
 | Commit و push | commit انجام شد، push انجام نشد | commit `f2618c1` با پیام `feat: harden sessions and expand accessibility` ساخته شد؛ working tree پس از commit پاک بود. |
+
+## برند و زیرساخت loading UI (2026-10-22)
+
+| نیاز | وضعیت | شواهد و محدودیت |
+| --- | --- | --- |
+| لوگوی واقعی در پوسته و صفحات عمومی/ورود | تکمیل‌شده | `frontend/public/icons/logo.svg` (برداری، نسبت ۳:۲) در sidebar، ورود، OTP/ثبت‌نام و صفحهٔ اصلی با `BrandLogo` استفاده می‌شود؛ alt فارسی دارد و روی قاب سفید ثابت در هر دو پوسته نمایش داده می‌شود. SVG در آزمون مرورگر با ابعاد طبیعی غیرصفر بارگذاری شد. |
+| تکرار نام برند | اصلاح‌شده | متن بصری جداگانه از کنار لوگوی sidebar حذف شد و عنوان ورود به «ورود به حساب کاربری» تغییر کرد. برای بازیابی رمز صفحه‌ای در routeهای فعلی وجود ندارد. |
+| loading برای صفحات داده‌محور | پیاده‌سازی‌شده | `PageSkeleton` برای داشبورد، تراکنش‌ها، دسته‌ها، بودجه، گزارش، یادآور، caregiver و تنظیمات؛ skeletonهای تصویری از screen reader پنهان‌اند و متن وضعیت زنده دارند. پوسته‌ها از design tokens تم استفاده می‌کنند و motion سراسری موجود `prefers-reduced-motion` را رعایت می‌کند. |
+| معماری و وابستگی‌ها | بهبود محدود و هدفمند | `BrandLogo` و `PageSkeleton` مؤلفه‌های مشترک جدیدند؛ هیچ package اضافه نشده است. صفحه‌های بزرگ تراکنش/یادآور همچنان state، دریافت داده و منطق دامنه را یکجا دارند و refactor گسترده عمداً خارج از این مرحله است. |
+| بررسی مرورگری این تغییر | تکمیل و موفق | Edge Playwright کل مجموعه را با ۱ worker اجرا کرد: ۳۰ پاس و ۱ skip تولیدمحور؛ آزمون‌های هدفمند لوگو/skeleton/OTP نیز ۵ پاس شدند. تست تاریخ شمسی ۳ پاس، typecheck و lint frontend و production build نیز موفق شدند. اجرای اولیهٔ suite با ۲ worker به‌دلیل cold compile/timeouts شکست خورد و پس از گرم‌شدن مسیرها به‌صورت سریال موفق شد. |
+| Git | تغییرات محلی، بدون commit/push | commitهای قبلی `120f2a2` و `f2618c1` حفظ شدند؛ این درخواست commit یا push نمی‌خواهد. |
+
+## ممیزی مستقل نهایی (2026-10-22)
+
+این بخش وضعیت تازه‌ترِ همان checkout را ثبت می‌کند و نتایج تاریخی بالا را جایگزین می‌کند:
+
+| هدف | وضعیت نهایی | شواهد/محدودیت |
+|---|---|---|
+| محاسبه وضعیت بودجه | تکمیل و آزمون‌شده | وضعیت هشدار/تجاوز اکنون با مقایسهٔ دقیق `BigInt` انتخاب می‌شود؛ آزمون API برای مصرف ۲۴٬۹۹۰ از سقف ۲۵٬۰۰۰ باقی‌ماندهٔ مثبت را تأیید می‌کند. |
+| بازیابی نشست در درخواست بودجه | اصلاح و آزمون‌شده | `/budgets` به فهرست درخواست‌های قابل retry پس از refresh نشست اضافه شد؛ E2E انقضای 401، یک refresh و موفقیت retry را تأیید می‌کند. |
+| کنترل گفتار در موبایل | اصلاح و آزمون‌شده | آیکون شروع/توقف خواندن کنار نام دسترس‌پذیر فارسی در عرض ۳۹۰px دیده می‌شود. |
+| Backend | تکمیل و تأیید در محدودهٔ تست | typecheck و lint موفق؛ build موفق؛ **۱۱۳ تست از ۱۶ فایل موفق** روی پایگاه محلی مجزای `asoudeh_test`. |
+| Frontend | تکمیل و تأیید در محدودهٔ تست | typecheck/lint/build موفق؛ Jalali **۳ پاس**؛ Edge E2E ترتیبی **۳۱ پاس، ۱ skip تولیدمحور**؛ آزمون production PWA **۱ پاس، ۱ skip مخصوص توسعه**. |
+| وابستگی‌ها | محدودیت توسعه | audit کامل backend و audit تولیدی هر دو frontend صفر آسیب‌پذیری گزارش کردند؛ audit کامل frontend همچنان ۹ هشدار dev-only (۷ high، ۲ moderate) دارد. |
+| ممیزی امنیتی مستقل | بدون یافته در محدودهٔ بازبینی‌شده | بازبین امنیتی read-only آسیب‌پذیری مشخصی گزارش نکرد؛ این نتیجه گواهی امنیتی یا آزمون نفوذ نیست. |
+| محیط تولید و دسترس‌پذیری | تأییدنشده/مسدود | SMS واقعی، rollout ایندکس و worker روی محیط production، WCAG 2.2 AA، screen reader واقعی و آزمون usability انجام نشده‌اند. |
+| Git | تغییرات محلی، بدون commit/push | شاخه `main` در `120f2a2` و همگام با upstream باقی ماند؛ تغییرات قبلی و اصلاحات جاری حفظ شده‌اند. |
+
+مدارک جزئی هر requirement و دستور/نتیجهٔ دقیق در [REQUIREMENTS_TRACEABILITY.md](./REQUIREMENTS_TRACEABILITY.md) و [QUALITY_AUDIT_REPORT.md](./QUALITY_AUDIT_REPORT.md) است.

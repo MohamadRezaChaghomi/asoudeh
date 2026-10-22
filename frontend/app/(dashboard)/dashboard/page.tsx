@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api } from '@/lib/api/client';
 
 type TransactionType = 'income' | 'expense';
@@ -100,8 +101,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6" aria-busy="true">
-        <p role="status">در حال بارگذاری وضعیت مالی…</p>
+      <main className="min-h-screen p-5 sm:p-6">
+        <PageSkeleton label="در حال بارگذاری وضعیت مالی…" variant="dashboard" />
       </main>
     );
   }

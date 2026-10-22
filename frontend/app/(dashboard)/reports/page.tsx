@@ -13,6 +13,7 @@ import {
   YAxis,
 } from 'recharts';
 import axios from 'axios';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api } from '@/lib/api/client';
 import { getJalaliParts, getTehranTodayIso, jalaliToGregorianIso } from '@/lib/jalaliDate';
 
@@ -211,9 +212,7 @@ export default function ReportsPage() {
         )}
 
         {loading ? (
-          <p aria-busy="true" className="app-panel rounded-2xl p-6" role="status">
-            در حال آماده‌سازی گزارش این ماه…
-          </p>
+          <PageSkeleton label="در حال آماده‌سازی گزارش این ماه…" showHeader={false} variant="reports" />
         ) : report ? (
           <>
             <section className="grid gap-4 sm:grid-cols-3" aria-label="جمع‌های ماهانه">
