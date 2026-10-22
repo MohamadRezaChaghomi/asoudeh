@@ -7,7 +7,7 @@ import app from '../app.js';
 import { connectDB } from '../config/db.js';
 import { env } from '../config/env.js';
 import AuditLog from '../models/AuditLog.js';
-import AuthSession from '../models/AuthSession.js';
+import AuthSession, { AUTH_SESSION_IDLE_TIMEOUT_MS } from '../models/AuthSession.js';
 import Budget from '../models/Budget.js';
 import CaregiverLink from '../models/CaregiverLink.js';
 import Category from '../models/Category.js';
@@ -79,6 +79,7 @@ async function createIdentity(name: string): Promise<TestIdentity> {
     familyId: randomUUID(),
     tokenHash: randomBytes(32).toString('hex'),
     expiresAt: new Date(Date.now() + 60_000),
+    idleExpiresAt: new Date(Date.now() + AUTH_SESSION_IDLE_TIMEOUT_MS),
   });
   sessionIds.push(session._id);
   return {
@@ -308,6 +309,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
       familyId: randomUUID(),
       tokenHash: randomBytes(32).toString('hex'),
       expiresAt: new Date(Date.now() + 60_000),
+      idleExpiresAt: new Date(Date.now() + AUTH_SESSION_IDLE_TIMEOUT_MS),
     });
     sessionIds.push(session._id);
     const phoneHash = hashAuthValue('phone', identity.phone);

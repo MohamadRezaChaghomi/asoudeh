@@ -57,6 +57,9 @@ export const transactionQuerySchema = z
     categoryId: categoryIdSchema.optional(),
     from: dateOnlySchema.optional(),
     to: dateOnlySchema.optional(),
+    search: z.string().trim().max(100).optional(),
+    sortBy: z.enum(['date', 'amount']).default('date'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().positive().max(10_000).default(1),
     pageSize: z.coerce.number().int().positive().max(100).default(20),
   })

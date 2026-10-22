@@ -627,6 +627,11 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       .send({ phone, code: sent.body.data.developmentOtp });
     const oldRefresh = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
+    const absoluteExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    await AuthSession.updateOne(
+      { tokenHash: hashAuthValue('refresh-token', oldRefresh) },
+      { $set: { expiresAt: absoluteExpiresAt } },
+    );
 
     const refreshed = await agent
       .post('/api/v1/auth/refresh')
@@ -640,6 +645,10 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       tokenHash: hashAuthValue('refresh-token', oldRefresh),
     });
     expect(oldSession?.rotatedAt).toBeTruthy();
+    const successor = await AuthSession.findOne({
+      tokenHash: hashAuthValue('refresh-token', newRefresh),
+    });
+    expect(successor?.expiresAt.getTime()).toBe(absoluteExpiresAt.getTime());
 
     const replay = await request(app)
       .post('/api/v1/auth/refresh')
@@ -652,6 +661,82 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const family = await AuthSession.find({ familyId: oldSession?.familyId });
     expect(family.length).toBe(2);
     expect(family.every((session) => session.revokedAt)).toBe(true);
+  });
+
+  it('extends idle expiry only after an authenticated, CSRF-protected activity signal', async () => {
+    const phone = await createUniquePhone();
+    await User.create({ name: 'کاربر فعالیت', phone, initialBalance: 0 });
+    const agent = request.agent(app);
+    const sent = await agent
+      .post('/api/v1/auth/otp/request')
+      .set('Origin', origin)
+      .set('X-Forwarded-For', nextTestIp())
+      .send({ phone });
+    const verified = await agent
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: sent.body.data.developmentOtp });
+    const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
+    const csrf = cookieHeader(verified, 'asoudeh_csrf');
+    const tokenHash = hashAuthValue('refresh-token', refreshToken);
+    const initialSession = await AuthSession.findOne({ tokenHash });
+    if (!initialSession) throw new Error('Expected a session to be created.');
+
+    const idleExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    await AuthSession.updateOne(
+      { _id: initialSession._id },
+      { $set: { idleExpiresAt } },
+    );
+    expect((await agent.get('/api/v1/me')).status).toBe(200);
+    const afterRead = await AuthSession.findOne({ tokenHash });
+    expect(afterRead?.idleExpiresAt.getTime()).toBe(idleExpiresAt.getTime());
+
+    const missingCsrf = await agent
+      .post('/api/v1/auth/activity')
+      .set('Origin', origin);
+    expect(missingCsrf.status).toBe(403);
+
+    const activity = await agent
+      .post('/api/v1/auth/activity')
+      .set('Origin', origin)
+      .set('X-CSRF-Token', csrf);
+    expect(activity.status).toBe(200);
+    const afterActivity = await AuthSession.findOne({ tokenHash });
+    expect(afterActivity?.idleExpiresAt.getTime()).toBeGreaterThan(idleExpiresAt.getTime());
+  });
+
+  it('revokes the session family when a protected request follows ten minutes of inactivity', async () => {
+    const phone = await createUniquePhone();
+    await User.create({ name: 'کاربر منقضی', phone, initialBalance: 0 });
+    const agent = request.agent(app);
+    const sent = await agent
+      .post('/api/v1/auth/otp/request')
+      .set('Origin', origin)
+      .set('X-Forwarded-For', nextTestIp())
+      .send({ phone });
+    const verified = await agent
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: sent.body.data.developmentOtp });
+    const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
+    const csrf = cookieHeader(verified, 'asoudeh_csrf');
+    const tokenHash = hashAuthValue('refresh-token', refreshToken);
+    await AuthSession.updateOne(
+      { tokenHash },
+      { $set: { idleExpiresAt: new Date(Date.now() - 1) } },
+    );
+
+    const response = await agent.get('/api/v1/me');
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe('SESSION_EXPIRED');
+    const storedSession = await AuthSession.findOne({ tokenHash });
+    expect(storedSession?.revokedAt).toBeTruthy();
+
+    const refresh = await agent
+      .post('/api/v1/auth/refresh')
+      .set('Origin', origin)
+      .set('X-CSRF-Token', csrf);
+    expect(refresh.status).toBe(401);
   });
 
   it('does not leave a refresh successor alive when logout races with rotation', async () => {

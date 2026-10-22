@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import app from '../app.js';
 import { connectDB } from '../config/db.js';
 import { env } from '../config/env.js';
-import AuthSession from '../models/AuthSession.js';
+import AuthSession, { AUTH_SESSION_IDLE_TIMEOUT_MS } from '../models/AuthSession.js';
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
@@ -51,6 +51,7 @@ async function createIdentity(name: string): Promise<TestIdentity> {
     familyId: randomUUID(),
     tokenHash: randomBytes(32).toString('hex'),
     expiresAt: new Date(Date.now() + 60_000),
+    idleExpiresAt: new Date(Date.now() + AUTH_SESSION_IDLE_TIMEOUT_MS),
   });
   sessionIds.push(session._id);
   return {

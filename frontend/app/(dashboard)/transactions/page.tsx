@@ -54,6 +54,20 @@ interface TransactionDraft {
   step: 1 | 2 | 3;
 }
 
+type TransactionSortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
+
+interface TransactionFilters {
+  search: string;
+  sortBy: 'date' | 'amount';
+  sortOrder: 'asc' | 'desc';
+}
+
+const DEFAULT_TRANSACTION_FILTERS: TransactionFilters = {
+  search: '',
+  sortBy: 'date',
+  sortOrder: 'desc',
+};
+
 function isTransactionDraft(value: unknown): value is TransactionDraft {
   if (
     typeof value !== 'object' ||
@@ -230,6 +244,9 @@ export default function TransactionsPage() {
   });
   const [page, setPage] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [sortOption, setSortOption] = useState<TransactionSortOption>('date-desc');
+  const [filters, setFilters] = useState(DEFAULT_TRANSACTION_FILTERS);
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -237,6 +254,7 @@ export default function TransactionsPage() {
   const [note, setNote] = useState('');
   const [editingId, setEditingId] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
   const [saving, setSaving] = useState(false);
   const [restoringId, setRestoringId] = useState<string>();
   const [pendingUndoItems, setPendingUndoItems] = useState<PendingUndo[]>([]);
@@ -264,19 +282,30 @@ export default function TransactionsPage() {
         (selectedCategory.type === type || selectedCategory.type === 'both'),
     );
 
-  const loadData = useCallback(async (requestedPage = 1): Promise<void> => {
+  const loadData = useCallback(async (
+    requestedPage = 1,
+    requestedFilters: TransactionFilters = DEFAULT_TRANSACTION_FILTERS,
+  ): Promise<void> => {
     const [transactionResponse, categoryResponse] = await Promise.all([
       api.get<{
         success: true;
         data: { transactions: Transaction[]; pagination: Pagination };
-      }>('/transactions', { params: { page: requestedPage, pageSize: 20 } }),
+      }>('/transactions', {
+        params: {
+          page: requestedPage,
+          pageSize: 20,
+          sortBy: requestedFilters.sortBy,
+          sortOrder: requestedFilters.sortOrder,
+          ...(requestedFilters.search ? { search: requestedFilters.search } : {}),
+        },
+      }),
       api.get<{ success: true; data: { categories: Category[] } }>('/categories'),
     ]);
     const result = transactionResponse.data.data;
     const lastAvailablePage = Math.max(1, result.pagination.totalPages);
     if (requestedPage > lastAvailablePage) {
       setPage(lastAvailablePage);
-      await loadData(lastAvailablePage);
+      await loadData(lastAvailablePage, requestedFilters);
       return;
     }
     setPage(requestedPage);
@@ -552,7 +581,7 @@ export default function TransactionsPage() {
         setPage(1);
       }
       try {
-        await loadData(refreshPage);
+        await loadData(refreshPage, filters);
       } catch (refreshError) {
         if (axios.isAxiosError(refreshError) && refreshError.response?.status === 401) {
           router.replace('/login');
@@ -582,6 +611,42 @@ export default function TransactionsPage() {
     void saveTransaction(event);
   }
 
+  async function updateTransactionFilters(nextFilters: TransactionFilters) {
+    if (saving || filtering) return;
+    setError('');
+    setNotice('');
+    setFiltering(true);
+    try {
+      await loadData(1, nextFilters);
+      setFilters(nextFilters);
+    } catch (filterError) {
+      if (axios.isAxiosError(filterError) && filterError.response?.status === 401) {
+        router.replace('/login');
+        return;
+      }
+      setError(errorMessage(filterError));
+    } finally {
+      setFiltering(false);
+    }
+  }
+
+  function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const sortBy = sortOption.startsWith('amount') ? 'amount' : 'date';
+    const sortOrder = sortOption.endsWith('asc') ? 'asc' : 'desc';
+    void updateTransactionFilters({
+      search: searchInput.trim(),
+      sortBy,
+      sortOrder,
+    });
+  }
+
+  function clearTransactionFilters() {
+    setSearchInput('');
+    setSortOption('date-desc');
+    void updateTransactionFilters(DEFAULT_TRANSACTION_FILTERS);
+  }
+
   async function removeTransaction(transaction: Transaction) {
     if (!window.confirm('این تراکنش حذف شود؟')) return;
 
@@ -597,7 +662,7 @@ export default function TransactionsPage() {
         ...pendingUndoItems.filter(({ id }) => id !== transaction.id),
         { id: transaction.id, undoExpiresAt: response.data.data.undoExpiresAt },
       ]);
-      await loadData(page);
+      await loadData(page, filters);
       if (editingId === transaction.id) resetForm();
       setNotice('تراکنش حذف شد. تا ۱۰ ثانیه می‌توانید آن را بازگردانید.');
     } catch (deleteError) {
@@ -626,7 +691,7 @@ export default function TransactionsPage() {
       await ensureCsrfToken();
       await api.post(`/transactions/${item.id}/restore`);
       replacePendingUndoItems(pendingUndoItems.filter(({ id }) => id !== item.id));
-      await loadData(page);
+      await loadData(page, filters);
       setNotice('تراکنش بازگردانده شد.');
     } catch (restoreError) {
       if (axios.isAxiosError(restoreError) && restoreError.response?.status === 401) {
@@ -648,7 +713,7 @@ export default function TransactionsPage() {
     setError('');
     setLoading(true);
     try {
-      await loadData(nextPage);
+      await loadData(nextPage, filters);
     } catch (loadError) {
       if (axios.isAxiosError(loadError) && loadError.response?.status === 401) {
         router.replace('/login');
@@ -714,9 +779,70 @@ export default function TransactionsPage() {
           )}
 
           <h2 className="mt-7 text-xl font-bold text-asoudeh-navy">فهرست تراکنش‌ها</h2>
+          <form
+            className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(12rem,1fr)_minmax(12rem,auto)_auto_auto]"
+            onSubmit={handleFilterSubmit}
+            aria-busy={filtering}
+          >
+            <div>
+              <label className="mb-1 block font-medium" htmlFor="transaction-search">
+                جست‌وجو در توضیحات یا نام گروه مالی
+              </label>
+              <input
+                className="w-full rounded-lg border border-slate-300 bg-transparent px-3"
+                id="transaction-search"
+                maxLength={100}
+                onChange={(event) => setSearchInput(event.target.value)}
+                value={searchInput}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block font-medium" htmlFor="transaction-sort">
+                مرتب‌سازی فهرست
+              </label>
+              <select
+                className="w-full rounded-lg border border-slate-300 bg-transparent px-3"
+                id="transaction-sort"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (
+                    value === 'date-desc' ||
+                    value === 'date-asc' ||
+                    value === 'amount-desc' ||
+                    value === 'amount-asc'
+                  ) {
+                    setSortOption(value);
+                  }
+                }}
+                value={sortOption}
+              >
+                <option value="date-desc">جدیدترین تاریخ</option>
+                <option value="date-asc">قدیمی‌ترین تاریخ</option>
+                <option value="amount-desc">بیشترین مبلغ</option>
+                <option value="amount-asc">کمترین مبلغ</option>
+              </select>
+            </div>
+            <button
+              className="self-end rounded-lg bg-asoudeh-navy px-4 font-medium text-white disabled:opacity-60"
+              disabled={filtering || saving}
+              type="submit"
+            >
+              {filtering ? 'در حال جست‌وجو…' : 'اعمال جست‌وجو'}
+            </button>
+            <button
+              className="self-end rounded-lg border border-slate-300 px-4 font-medium disabled:opacity-60"
+              disabled={filtering || saving}
+              onClick={clearTransactionFilters}
+              type="button"
+            >
+              پاک‌کردن
+            </button>
+          </form>
           {transactions.length === 0 ? (
             <p className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-              هنوز تراکنشی ثبت نشده است. از فرم کنار صفحه اولین مورد را ثبت کنید.
+              {filters.search
+                ? 'تراکنشی با این عبارت پیدا نشد. عبارت را تغییر دهید یا فیلترها را پاک کنید.'
+                : 'هنوز تراکنشی ثبت نشده است. از فرم کنار صفحه اولین مورد را ثبت کنید.'}
             </p>
           ) : (
             <ul className="mt-4 space-y-3">

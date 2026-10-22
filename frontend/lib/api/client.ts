@@ -37,6 +37,7 @@ api.interceptors.response.use(
     if (!axios.isAxiosError(error)) return Promise.reject(error);
     const config = error.config as AxiosRequestConfig | undefined;
     const isRefreshableRequest =
+      config?.url?.startsWith('/auth/activity') ||
       config?.url?.startsWith('/me') ||
       config?.url?.startsWith('/categories') ||
       config?.url?.startsWith('/reminders') ||

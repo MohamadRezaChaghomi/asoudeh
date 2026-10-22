@@ -69,7 +69,7 @@ describe('HTTP application baseline', () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       success: false,
-      error: { code: 'NOT_FOUND', message: 'Route not found' },
+      error: { code: 'NOT_FOUND', message: 'مسیر درخواستی پیدا نشد.' },
     });
   });
 
@@ -79,7 +79,7 @@ describe('HTTP application baseline', () => {
       next(new Error('internal database details'));
     });
     errorApp.use(errorHandler);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const response = await request(errorApp).get('/error');
 
@@ -92,5 +92,14 @@ describe('HTTP application baseline', () => {
       },
     });
     expect(JSON.stringify(response.body)).not.toContain('internal database details');
+    expect(errorLog).toHaveBeenCalledOnce();
+    expect(String(errorLog.mock.calls[0][0])).not.toContain('internal database details');
+    expect(JSON.parse(String(errorLog.mock.calls[0][0]))).toMatchObject({
+      level: 'error',
+      event: 'http_error',
+      statusCode: 500,
+      code: 'INTERNAL_ERROR',
+      errorType: 'Error',
+    });
   });
 });

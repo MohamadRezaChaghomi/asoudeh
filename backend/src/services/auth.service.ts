@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { env } from '../config/env.js';
-import AuthSession from '../models/AuthSession.js';
+import AuthSession, { AUTH_SESSION_IDLE_TIMEOUT_MS } from '../models/AuthSession.js';
 import OtpChallenge from '../models/OtpChallenge.js';
 import OtpRateLimit from '../models/OtpRateLimit.js';
 import User from '../models/User.js';
@@ -175,6 +175,7 @@ async function createSession(
     familyId,
     tokenHash: hashAuthValue('refresh-token', refreshToken),
     expiresAt: new Date(now.getTime() + REFRESH_TOKEN_LIFETIME_MS),
+    idleExpiresAt: new Date(now.getTime() + AUTH_SESSION_IDLE_TIMEOUT_MS),
   });
 
   return {
@@ -608,6 +609,14 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
     throw new HttpError(401, 'REFRESH_TOKEN_REUSED', 'نشست امنیتی لغو شد. دوباره وارد شوید.');
   }
 
+  if (!current.idleExpiresAt || current.idleExpiresAt <= now) {
+    await AuthSession.updateMany(
+      { familyId: current.familyId, revokedAt: null },
+      { $set: { revokedAt: now } },
+    );
+    throw new HttpError(401, 'SESSION_EXPIRED', 'به‌دلیل بی‌کاری، نشست منقضی شده است.');
+  }
+
   if (current.expiresAt <= now) {
     await AuthSession.updateOne({ _id: current._id }, { $set: { revokedAt: now } });
     throw new HttpError(401, 'SESSION_EXPIRED', 'نشست منقضی شده است. دوباره وارد شوید.');
@@ -631,7 +640,8 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
     userId: current.userId,
     familyId: current.familyId,
     tokenHash: nextTokenHash,
-    expiresAt: new Date(now.getTime() + REFRESH_TOKEN_LIFETIME_MS),
+    expiresAt: current.expiresAt,
+    idleExpiresAt: current.idleExpiresAt,
   });
   const claimed = await AuthSession.findOneAndUpdate(
     {
@@ -639,6 +649,7 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
       rotatedAt: null,
       revokedAt: null,
       expiresAt: { $gt: now },
+      idleExpiresAt: { $gt: now },
     },
     { $set: { rotatedAt: now, replacedBy: nextTokenHash } },
     { new: true },
@@ -665,6 +676,29 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
     refreshToken: nextRefreshToken,
     csrfToken: generateOpaqueToken(),
   };
+}
+
+export async function recordSessionActivity(
+  sessionId: string,
+  userId: string,
+): Promise<void> {
+  const now = new Date();
+  const updated = await AuthSession.findOneAndUpdate(
+    {
+      _id: sessionId,
+      userId,
+      rotatedAt: null,
+      revokedAt: null,
+      expiresAt: { $gt: now },
+      idleExpiresAt: { $gt: now },
+    },
+    { $set: { idleExpiresAt: new Date(now.getTime() + AUTH_SESSION_IDLE_TIMEOUT_MS) } },
+    { new: true },
+  ).select('_id');
+
+  if (!updated) {
+    throw new HttpError(401, 'SESSION_EXPIRED', 'نشست منقضی شده است. دوباره وارد شوید.');
+  }
 }
 
 export async function revokeRefreshSession(refreshToken?: string): Promise<void> {

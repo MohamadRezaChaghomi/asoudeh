@@ -1,20 +1,11 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { HttpError } from '../utils/httpError.js';
-
-interface AppError {
-  statusCode?: number;
-  code?: string | number;
-  publicMessage?: string;
-}
-
-function isAppError(error: unknown): error is AppError {
-  return typeof error === 'object' && error !== null;
-}
+import { env } from '../config/env.js';
 
 export const notFound: RequestHandler = (_req, res) => res.status(404).json({
   success: false,
-  error: { code: 'NOT_FOUND', message: 'Route not found' },
+  error: { code: 'NOT_FOUND', message: 'مسیر درخواستی پیدا نشد.' },
 });
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _next) => {
@@ -30,18 +21,34 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
     return;
   }
 
-  console.error(error);
+  const isKnownError = error instanceof HttpError;
+  const statusCode = isKnownError ? error.statusCode : 500;
+  const code = isKnownError ? error.code : 'INTERNAL_ERROR';
+  const stack =
+    env.nodeEnv === 'development' && error instanceof Error
+      ? error.stack?.split('\n').slice(1).join('\n')
+      : undefined;
 
-  if (error instanceof HttpError && error.retryAfter) {
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      event: 'http_error',
+      statusCode,
+      code,
+      errorType: error instanceof Error ? error.name : 'UnknownError',
+      ...(stack ? { stack } : {}),
+    }),
+  );
+
+  if (isKnownError && error.retryAfter) {
     res.setHeader('Retry-After', String(error.retryAfter));
   }
 
-  const appError = isAppError(error) ? error : {};
-  res.status(appError.statusCode || 500).json({
+  res.status(statusCode).json({
     success: false,
     error: {
-      code: appError.code || 'INTERNAL_ERROR',
-      message: appError.publicMessage || 'خطایی در سرور رخ داد.',
+      code,
+      message: isKnownError ? error.publicMessage : 'خطایی در سرور رخ داد.',
     },
   });
 };

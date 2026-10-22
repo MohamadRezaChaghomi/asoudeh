@@ -280,6 +280,77 @@ test('loads the selected page of transactions when pagination changes', async ({
   expect(requestedPages).toEqual([1, 2, 1]);
 });
 
+test('searches transactions and applies the selected sort on the server', async ({ page }) => {
+  const transaction = {
+    id: '64b000000000000000000041',
+    type: 'expense',
+    amount: 250000,
+    categoryId: expenseCategory.id,
+    categoryName: 'خانه',
+    date: '2026-03-20',
+    note: 'اجاره ماهانه',
+  };
+  const requestedQueries: Array<{
+    search: string | null;
+    sortBy: string | null;
+    sortOrder: string | null;
+    page: string | null;
+  }> = [];
+
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: activeUserId,
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/categories', async (route) => {
+    await route.fulfill({ json: { success: true, data: { categories: [expenseCategory] } } });
+  });
+  await page.route('**/api/v1/transactions**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    const query = new URL(route.request().url()).searchParams;
+    requestedQueries.push({
+      search: query.get('search'),
+      sortBy: query.get('sortBy'),
+      sortOrder: query.get('sortOrder'),
+      page: query.get('page'),
+    });
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          transactions: [transaction],
+          pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+        },
+      },
+    });
+  });
+
+  await page.goto('/transactions');
+  await expect(page.getByText('اجاره ماهانه')).toBeVisible();
+  await page.getByLabel('جست‌وجو در توضیحات یا نام گروه مالی').fill('اجاره');
+  await page.getByLabel('مرتب‌سازی فهرست').selectOption('amount-asc');
+  await page.getByRole('button', { name: 'اعمال جست‌وجو' }).click();
+
+  await expect.poll(() => requestedQueries.length).toBe(2);
+  expect(requestedQueries[1]).toEqual({
+    search: 'اجاره',
+    sortBy: 'amount',
+    sortOrder: 'asc',
+    page: '1',
+  });
+});
+
 test('restores an opted-in draft only for the same authenticated account', async ({ page }) => {
   const firstAccountId = '64b000000000000000000099';
   activeUserId = firstAccountId;

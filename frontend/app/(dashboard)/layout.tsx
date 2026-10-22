@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { AppShell } from '@/components/layout/AppShell';
+import { SessionActivityMonitor } from '@/components/layout/SessionActivityMonitor';
 
 interface AccessibilityProfile {
   accessibilitySettings: {
@@ -65,6 +66,7 @@ export default function DashboardLayout({
 
   return (
     <AppShell>
+      <SessionActivityMonitor />
       {error && (
         <p className="mx-auto max-w-6xl px-5 pt-4 text-red-800" role="alert">
           {error}

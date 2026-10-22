@@ -42,6 +42,16 @@ function BrandMark() {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speechMessage, setSpeechMessage] = useState('');
+
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setSpeechMessage('');
+    return () => window.speechSynthesis.cancel();
+  }, [pathname]);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem('asoudeh.theme');
@@ -55,6 +65,56 @@ export function AppShell({ children }: { children: ReactNode }) {
     document.documentElement.dataset.theme = nextTheme;
     window.localStorage.setItem('asoudeh.theme', nextTheme);
     setTheme(nextTheme);
+  }
+
+  function togglePageSpeech() {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      setSpeechMessage('خواندن صوتی در این مرورگر پشتیبانی نمی‌شود؛ از صفحه‌خوان سیستم استفاده کنید.');
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setSpeechMessage('خواندن متن متوقف شد.');
+      return;
+    }
+
+    const voice = window.speechSynthesis
+      .getVoices()
+      .find(({ lang }) => /^fa(?:-|$)/i.test(lang));
+    if (!voice) {
+      setSpeechMessage('صدای فارسی در مرورگر یا سیستم شما در دسترس نیست.');
+      return;
+    }
+
+    const text = document.querySelector<HTMLElement>('.app-content')?.innerText.trim();
+    if (!text) {
+      setSpeechMessage('متنی برای خواندن در این صفحه پیدا نشد.');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voice.lang || 'fa-IR';
+    utterance.voice = voice;
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeechMessage('خواندن متن صفحه تمام شد.');
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setSpeechMessage('خواندن متن ممکن نشد؛ از صفحه‌خوان سیستم استفاده کنید.');
+    };
+
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setSpeechMessage('خواندن متن ممکن نشد؛ از صفحه‌خوان سیستم استفاده کنید.');
+      return;
+    }
+    setIsSpeaking(true);
+    setSpeechMessage('خواندن متن صفحه آغاز شد.');
   }
 
   return (
@@ -113,6 +173,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             <span>{theme === 'dark' ? 'پوسته روشن' : 'پوسته تیره'}</span>
           </button>
+          <button
+            aria-describedby="page-reader-help"
+            aria-pressed={isSpeaking}
+            className="theme-toggle"
+            onClick={togglePageSpeech}
+            type="button"
+          >
+            <span>{isSpeaking ? 'توقف خواندن' : 'خواندن متن صفحه'}</span>
+          </button>
+          <p className="sr-only" id="page-reader-status" aria-atomic="true" aria-live="polite">
+            {speechMessage}
+          </p>
+          <span className="sr-only" id="page-reader-help">
+            متن قابل مشاهده با صدای فارسی سیستم خوانده می‌شود؛ اگر از صفحه‌خوان استفاده می‌کنید،
+            هم‌زمانی گفتار ممکن است باعث دوبارخوانی شود.
+          </span>
         </header>
 
         <div className="app-content">{children}</div>

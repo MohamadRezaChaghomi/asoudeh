@@ -4,6 +4,7 @@ import {
   getCurrentProfile,
   logout,
   patchCurrentProfile,
+  recordActivity,
   refresh,
   register,
   requestOtp,
@@ -33,6 +34,7 @@ router.post(
   register,
 );
 router.post('/refresh', requireOrigin, refresh);
+router.post('/activity', requireOrigin, recordActivity);
 router.post('/logout', requireOrigin, logout);
 router.post(
   '/account-deletion',

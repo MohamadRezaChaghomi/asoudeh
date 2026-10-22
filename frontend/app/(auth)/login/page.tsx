@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { clearPendingOtpFlow, savePendingOtpFlow } from '@/lib/auth/otpFlow';
@@ -53,7 +53,16 @@ export default function LoginPage() {
     process.env.NODE_ENV === 'development' ? DEVELOPMENT_QUICK_LOGIN_PHONE : '',
   );
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    if (search.get('session') === 'expired') {
+      setNotice('نشست شما به‌دلیل بی‌کاری پایان یافت. برای ادامه دوباره وارد شوید.');
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   async function requestCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,6 +135,12 @@ export default function LoginPage() {
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">ورود به آسوده</h1>
         <p className="app-muted mt-2">با شماره همراه خود وارد شوید یا حساب بسازید.</p>
+
+        {notice && (
+          <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950" role="status">
+            {notice}
+          </p>
+        )}
 
         <form className="mt-6 space-y-4" onSubmit={requestCode}>
           <label className="block font-medium" htmlFor="phone">

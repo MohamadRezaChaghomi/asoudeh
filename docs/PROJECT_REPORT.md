@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Asoudeh is a Persian, right-to-left personal finance application aimed at older adults and users who benefit from a simpler interface. The repository contains a Next.js frontend and an Express/MongoDB API. The principal product workflows are implemented: passwordless OTP authentication, profile and category management, transaction tracking, dashboard totals, budgets, reminders, monthly reports, and permission-scoped read-only caregiver access.
+Asoudeh is a Persian, right-to-left personal finance application aimed at older adults and users who benefit from a simpler interface. The repository contains a Next.js frontend and an Express/MongoDB API. The principal product workflows are implemented: passwordless OTP authentication, profile and category management, transaction tracking with text search and sorting, dashboard totals, budgets, reminders, monthly reports, and permission-scoped read-only caregiver access. The shared application shell also provides user-initiated Persian browser text-to-speech when a Persian system voice is installed.
 
 The implementation is suitable for continued development and local verification, but **is not ready for production operation**. An SMS.ir Verify adapter exists, but account credentials and an approved template are not configured, so live OTP delivery has not been verified. Production deployment, database index rollout, accessibility certification, and real-user usability evaluation are also unverified.
 
@@ -58,13 +58,14 @@ Status meanings:
 
 | Area | Status | Current behavior and boundary |
 | --- | --- | --- |
-| Account creation and authentication | **PARTIALLY IMPLEMENTED** | Passwordless OTP registration/login, session rotation/revocation, logout, CSRF and Origin checks, profile editing, a dedicated OTP route, and a backend-enforced resend cooldown are implemented. The development simulator is opt-in only. Real SMS is absent, so production OTP delivery is unavailable. |
+| Account creation and authentication | **PARTIALLY IMPLEMENTED** | Passwordless OTP registration/login, refresh-token rotation/reuse detection, logout, CSRF and Origin checks, profile editing, a dedicated OTP route, a backend-enforced resend cooldown, and ten-minute server-side idle expiry are implemented. Activity renewal uses an authenticated CSRF-protected endpoint. The development simulator is opt-in only. Real SMS is absent, so production OTP delivery is unavailable. |
 | Development OTP simulator | **IMPLEMENTED** | When explicitly enabled in development, the default local code is `123456` (configurable). The configured quick-login phone can submit this code automatically through the normal verification API; the challenge remains single-use, expires after five minutes, is stored as a keyed digest, and remains subject to rate and attempt limits. It is not a fallback for a failing production provider. |
 | Profile and accessibility preferences | **IMPLEMENTED** | Profile fields include display name, optional birth year and initial balance; font scaling and high-contrast preferences are persisted and applied in the client. |
 | Shared visual system and application navigation | **PARTIALLY IMPLEMENTED** | Dashboard routes share a responsive RTL shell, eight linked destinations, CSS design tokens, persisted light/dark themes, visible focus styles, and reduced-motion support. A font stack is provided without bundling an unverified font asset. Responsive behavior and theme persistence have a Playwright regression test; WCAG conformance, screen-reader behavior, contrast measurements, and real-user usability remain unverified. |
+| Browser text-to-speech | **PARTIALLY IMPLEMENTED** | A user-initiated control reads visible page text using a Persian voice from the browser/system Speech Synthesis API and provides an explicit stop control. Unsupported browsers or missing Persian voices produce a Persian status message. Browser tests use a stubbed voice; availability, pronunciation, privacy behavior, and assistive-technology interaction on real devices remain unverified. The speech engine may be implemented by the browser or operating system, so processing location depends on the user’s environment. |
 | Account deletion | **PARTIALLY IMPLEMENTED** | A fresh OTP schedules permanent deletion 30 days later and immediately revokes access; a worker checks at startup and every 60 seconds. Purge is idempotent and retries after failures. There is currently no cancellation API, and production OTP delivery remains unavailable. See [account-deletion service](../backend/src/services/accountDeletion.service.ts). |
 | Personal/system categories | **PARTIALLY IMPLEMENTED** | Listing, personal category creation/editing, and activation controls are available. A guarded, development-only command seeds system categories. Physical deletion and transaction reassignment are intentionally disabled; the route returns `409 CATEGORY_DELETION_UNAVAILABLE`. Safe activation needs a transaction-capable topology or equivalent workflow and a confirmed income fallback. |
-| Transactions | **IMPLEMENTED** | Owner-scoped create/list/edit, filtering, 20-item default pagination, soft deletion, ten-second server-enforced undo, Jalali date entry, and an opt-in draft are present. The pagination change now reloads the selected page. The draft is account-keyed and session-only; it is not an offline queue or sync mechanism. |
+| Transactions | **IMPLEMENTED** | Owner-scoped create/list/edit, type/category/date filters, literal text search across notes and owner/system category names, selectable date/amount sort order, 20-item default pagination, soft deletion, ten-second server-enforced undo, Jalali date entry, and an opt-in draft are present. Search input is length-limited and escaped before MongoDB regex use. Pagination and filters are server-side. The draft is account-keyed and session-only; it is not an offline queue or sync mechanism. |
 | Dashboard | **IMPLEMENTED** | Displays current Solar Hijri month income/expense totals, remaining balance based on initial balance plus current-month income minus expenses, recent transactions, and eligible upcoming reminders. |
 | Monthly budgets | **IMPLEMENTED** | Owner-scoped monthly expense budgets, category constraints, exact spending totals, and normal/warning/exceeded thresholds are implemented. |
 | Reminders | **PARTIALLY IMPLEMENTED** | Reminder CRUD/archive, monthly Jalali recurrence, short-month date clamping, and month-scoped completion history are implemented. SMS, email, push, and other scheduled notification delivery are not implemented. |
@@ -102,6 +103,7 @@ The current code and API contract document the following controls:
 - Protected actions derive ownership from the authenticated identity and scope queries to that owner.
 - Cookie-authenticated state changes require the configured Origin and a matching CSRF cookie/header pair. Access and refresh credentials are not intended for browser local storage.
 - Request bodies are validated with Zod. Public errors use a generic response shape rather than exposing internal exception details.
+- Unexpected backend exceptions are returned as a generic localized response and logged as structured metadata without raw error messages; development logs may include stack frames with the first line omitted.
 - OTP requests are throttled by phone and IP; failed verification attempts are limited and can temporarily block the phone. OTP challenges and rate-limit keys use keyed digests rather than storing the OTP or raw throttle keys.
 - Caregiver access is read-only, permission-checked, explicitly accepted, revocable, and audited. A revoked or invalid link must not reveal the protected user's data.
 - Account deletion immediately revokes access and schedules account-related data purging. The worker is retryable and idempotent, but it is not a multi-collection MongoDB transaction.
@@ -109,24 +111,33 @@ The current code and API contract document the following controls:
 
 These observations describe implemented design controls; they are **not** a substitute for an independent security audit or production security assessment. Before launch, review secret provisioning, deployment origins/cookie settings, database access controls, rate-limit behavior under multiple instances, index migration, logging, backups, and purge obligations in the actual hosting environment.
 
+## Dependency audit
+
+Audit was rerun against the checked-in lockfiles and installed dependency trees on 2026-10-22:
+
+| Scope | Result | Action and remaining limitation |
+| --- | --- | --- |
+| Backend production and development dependencies | **0 vulnerabilities** | The test toolchain was upgraded to Vitest 4.1.12 and Vite 7.3.7. Backend tests, lint, typecheck, and build passed after the upgrade. |
+| Frontend production dependencies (`npm audit --omit=dev`) | **0 vulnerabilities** | Next.js remains on 15.5.28; its nested PostCSS dependency is overridden to the compatible patched PostCSS 8.5.31. Frontend production build and browser regression checks are required after the change. |
+| Frontend full dependency tree | **9 development-only advisories: 7 high, 2 moderate** | Findings are in the Tailwind 3.4.19 / `eslint-config-next` toolchain dependency paths. npm only offers major-version remedies (Tailwind 4 and/or Next ESLint config changes) in the current lock resolution. These were not upgraded blindly; CI/developer tooling remains a dependency risk and requires a separately tested migration. |
+
 ## Verification evidence
 
-The following checks were recorded during the current review, against the local development/test setup. They are not claims about production runtime behavior.
+The following checks were run against the local development/test setup after the current changes. They are not claims about production runtime behavior.
 
 | Check | Result |
 | --- | --- |
-| Backend API/unit suite | **111 passed** using the isolated local `asoudeh_test` database, including SMS.ir request/response mocks, accepted OTP verification, rejection without OTP persistence, and the resend cooldown. |
-| TypeScript typechecks | Backend and frontend typechecks passed. |
+| Backend API/unit suite (Vitest 4.1.12) | **113 passed** using the isolated local `asoudeh_test` database; includes idle-session expiry/activity, refresh reuse, OTP, transactions, literal search/sort, and error-response regression checks. |
+| TypeScript typechecks | Backend and frontend typechecks passed after the session, error-handling, dependency, and transaction-search changes. |
 | Lint | Backend and frontend lint passed. |
-| Backend production build | Passed. |
-| Frontend production build | Passed; `/verify-otp` is included as a static route. |
+| Backend production build | Passed after backend dependency and error-handler changes. |
+| Frontend production build | Passed after the transaction search and text-to-speech UI changes; `/transactions` is included as a generated static route. |
 | Jalali date tests | **3 passed.** |
-| Playwright development suite (Edge, 2 workers) | **23 passed, 1 skipped.** This includes the OTP request/navigation/refresh flows, feature workflows, and the responsive application shell, route navigation, and theme persistence. The PWA production-only test is intentionally skipped in development mode. |
-| Playwright authentication tests (Edge) | **14 passed**, including the development quick-login existing-account and new-account registration flows. |
+| Playwright development suite (Edge, 2 workers) | **28 passed, 1 skipped.** This includes OTP, transaction search/sort and existing financial workflows, the responsive shell/theme, and mocked Persian speech/stop and no-voice behavior. The production-only PWA test is intentionally skipped in development mode. |
+| Playwright production PWA check (Edge) | Previously recorded as **1 passed, 1 skipped**; this does not establish production deployment readiness. |
 | Live frontend/backend OTP smoke test (Edge) | Passed against the actual local frontend and API: OTP request, `/verify-otp`, verification, registration, authenticated settings/profile fetch, and HttpOnly access/refresh cookies. It used a unique local temporary database, which was removed afterward. |
-| Playwright production PWA check (Edge) | **1 passed, 1 skipped.** The skip is for the alternate execution mode, not a successful production deployment check. |
 
-The broader Playwright suite and auth regression tests use intercepted API responses. The separate earlier live smoke test exercised the frontend/backend registration journey on an isolated database; backend tests additionally cover replay, rate limits, resend cooldown, existing-user sessions, refresh, and logout. SMS.ir tests mock all HTTP requests. **Real SMS delivery was not tested; SMS.ir account credentials and approved template values are not configured.**
+The Playwright suite uses intercepted API responses for application workflows; speech tests stub the browser voice API and do not validate a real Persian voice. The separate earlier live smoke test exercised frontend/backend registration on an isolated database. SMS.ir tests mock all HTTP requests. **Real SMS delivery was not tested; SMS.ir account credentials and approved template values are not configured.** Full WCAG 2.2 AA, screen-reader, 200% zoom, real-voice pronunciation, and representative-user checks remain unverified.
 
 The database test uses a dedicated local URI and refuses unsupported remote or credential-bearing targets. The regular backend suite skips the database integration test when its dedicated test URI is absent. Refer to [environment setup](./ENVIRONMENT.md) before running it.
 

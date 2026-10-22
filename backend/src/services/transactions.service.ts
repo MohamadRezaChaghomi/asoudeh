@@ -65,6 +65,10 @@ export interface TransactionDeletion {
   undoExpiresAt: string;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function toTransactionResponse(transaction: TransactionRecord): TransactionResponse {
   return {
     id: transaction._id.toString(),
@@ -134,10 +138,30 @@ export async function listTransactions(
       ...(filters.to ? { $lte: new Date(filters.to.getTime() + 86_399_999) } : {}),
     };
   }
+  if (filters.search) {
+    const searchPattern = escapeRegExp(filters.search);
+    const matchingCategories = await Category.find({
+      $or: [
+        { userId: new mongoose.Types.ObjectId(userId) },
+        { userId: null },
+      ],
+      name: { $regex: searchPattern, $options: 'i' },
+    })
+      .select('_id')
+      .lean<{ _id: mongoose.Types.ObjectId }[]>();
+
+    filter.$or = [
+      { note: { $regex: searchPattern, $options: 'i' } },
+      { categoryId: { $in: matchingCategories.map(({ _id }) => _id) } },
+    ];
+  }
 
   const [transactions, totalItems] = await Promise.all([
     Transaction.find(filter)
-      .sort({ date: -1, _id: -1 })
+      .sort({
+        [filters.sortBy]: filters.sortOrder === 'asc' ? 1 : -1,
+        _id: -1,
+      })
       .skip((filters.page - 1) * filters.pageSize)
       .limit(filters.pageSize)
       .lean<ListedTransactionRecord[]>(),

@@ -36,16 +36,29 @@ export const requireAuth: RequestHandler = asyncHandler(async (req, _res, next) 
     return;
   }
 
-  const activeSession = await AuthSession.exists({
+  const activeSession = await AuthSession.findOne({
     _id: sessionId,
     userId,
     rotatedAt: null,
     revokedAt: null,
-    expiresAt: { $gt: new Date() },
-  });
+  }).select('familyId idleExpiresAt expiresAt');
 
   if (!activeSession) {
     next(new HttpError(401, 'AUTHENTICATION_REQUIRED', 'نشست معتبر نیست. دوباره وارد شوید.'));
+    return;
+  }
+
+  const now = new Date();
+  if (
+    activeSession.expiresAt <= now ||
+    !activeSession.idleExpiresAt ||
+    activeSession.idleExpiresAt <= now
+  ) {
+    await AuthSession.updateMany(
+      { familyId: activeSession.familyId, revokedAt: null },
+      { $set: { revokedAt: now } },
+    );
+    next(new HttpError(401, 'SESSION_EXPIRED', 'نشست منقضی شده است. دوباره وارد شوید.'));
     return;
   }
 

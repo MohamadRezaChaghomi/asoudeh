@@ -1,11 +1,14 @@
 import mongoose from 'mongoose';
 
+export const AUTH_SESSION_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+
 const authSessionSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     familyId: { type: String, required: true, index: true },
     tokenHash: { type: String, required: true, unique: true },
     expiresAt: { type: Date, required: true },
+    idleExpiresAt: { type: Date, required: true },
     rotatedAt: { type: Date, default: null },
     revokedAt: { type: Date, default: null },
     replacedBy: { type: String, default: null },

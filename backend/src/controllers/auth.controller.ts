@@ -7,6 +7,7 @@ import { requireOrigin } from '../middleware/requireOrigin.js';
 import {
   completeRegistration,
   getProfile,
+  recordSessionActivity,
   requestOtp as requestOtpService,
   revokeRefreshSession,
   rotateRefreshToken,
@@ -161,6 +162,19 @@ export const refresh = [
       success: true,
       data: { refreshed: true, csrfToken: tokens.csrfToken },
     });
+  }),
+];
+
+export const recordActivity = [
+  requireCsrf,
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new HttpError(401, 'AUTHENTICATION_REQUIRED', 'برای ادامه وارد حساب خود شوید.');
+    }
+
+    await recordSessionActivity(req.user.sessionId, req.user.userId);
+    res.json({ success: true, data: { active: true } });
   }),
 ];
 

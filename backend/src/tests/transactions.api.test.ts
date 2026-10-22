@@ -5,7 +5,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import app from '../app.js';
 import { env } from '../config/env.js';
-import AuthSession from '../models/AuthSession.js';
+import AuthSession, { AUTH_SESSION_IDLE_TIMEOUT_MS } from '../models/AuthSession.js';
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
@@ -51,6 +51,7 @@ async function createIdentity(name: string): Promise<TestIdentity> {
     familyId: randomUUID(),
     tokenHash: randomBytes(32).toString('hex'),
     expiresAt: new Date(Date.now() + 60_000),
+    idleExpiresAt: new Date(Date.now() + AUTH_SESSION_IDLE_TIMEOUT_MS),
   });
   sessionIds.push(session._id);
 
@@ -238,6 +239,31 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
       transaction.id,
     ]);
 
+    const noteSearch = await authenticatedGet(
+      `/api/v1/transactions?${new URLSearchParams({
+        search: `Lunch ${suffix}`,
+        sortBy: 'amount',
+        sortOrder: 'asc',
+      })}`,
+      owner,
+    );
+    const categorySearch = await authenticatedGet(
+      `/api/v1/transactions?${new URLSearchParams({ search: `Expense ${suffix}` })}`,
+      owner,
+    );
+    const regexCharactersSearch = await authenticatedGet(
+      `/api/v1/transactions?${new URLSearchParams({ search: '.*' })}`,
+      owner,
+    );
+    expect(noteSearch.status).toBe(200);
+    expect(noteSearch.body.data.transactions.map(({ id }: { id: string }) => id)).toEqual([
+      transaction.id,
+    ]);
+    expect(categorySearch.body.data.transactions.map(({ id }: { id: string }) => id)).toEqual([
+      transaction.id,
+    ]);
+    expect(regexCharactersSearch.body.data.transactions).toEqual([]);
+
     const today = formatUtcDateOnly(getCurrentJalaliMonthRange().today);
     const tehranTodayTransaction = await authenticatedMutation(
       'post',
@@ -311,6 +337,14 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
       `/api/v1/transactions?categoryId=${paginationCategory.id}&page=3&pageSize=20`,
       owner,
     );
+    const ascendingAmountPage = await authenticatedGet(
+      `/api/v1/transactions?categoryId=${paginationCategory.id}&sortBy=amount&sortOrder=asc`,
+      owner,
+    );
+    const descendingAmountPage = await authenticatedGet(
+      `/api/v1/transactions?categoryId=${paginationCategory.id}&sortBy=amount&sortOrder=desc`,
+      owner,
+    );
     const outOfRangePage = await authenticatedGet(
       `/api/v1/transactions?categoryId=${paginationCategory.id}&page=4&pageSize=20`,
       owner,
@@ -361,6 +395,12 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
         secondPage.body.data.transactions[0].id,
       ),
     ).toBeGreaterThan(0);
+    expect(ascendingAmountPage.body.data.transactions.map(
+      ({ amount }: { amount: number }) => amount,
+    )).toEqual(Array.from({ length: 20 }, (_, index) => 100 + index));
+    expect(descendingAmountPage.body.data.transactions.map(
+      ({ amount }: { amount: number }) => amount,
+    )).toEqual(Array.from({ length: 20 }, (_, index) => 144 - index));
 
     const oversizedPage = await authenticatedGet(
       `/api/v1/transactions?categoryId=${paginationCategory.id}&pageSize=101`,
@@ -374,9 +414,19 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
       `/api/v1/transactions?categoryId=${paginationCategory.id}&page=0`,
       owner,
     );
+    const invalidSort = await authenticatedGet(
+      `/api/v1/transactions?categoryId=${paginationCategory.id}&sortBy=owner`,
+      owner,
+    );
+    const oversizedSearch = await authenticatedGet(
+      `/api/v1/transactions?search=${'x'.repeat(101)}`,
+      owner,
+    );
     expect(oversizedPage.status).toBe(400);
     expect(unboundedPage.status).toBe(400);
     expect(invalidPage.status).toBe(400);
+    expect(invalidSort.status).toBe(400);
+    expect(oversizedSearch.status).toBe(400);
   });
 
   it('rejects invalid amounts, types, dates, and unavailable or incompatible categories', async () => {

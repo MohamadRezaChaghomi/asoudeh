@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('keeps all app routes reachable and preserves the selected theme', async ({ page }) => {
   const clientErrors: string[] = [];
+  let activityRequests = 0;
   page.on('pageerror', (error) => clientErrors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') clientErrors.push(message.text());
@@ -27,6 +28,10 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   });
   await page.route('**/api/v1/auth/csrf', async (route) => {
     await route.fulfill({ json: { success: true, data: { csrfToken: 'app-shell-csrf' } } });
+  });
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    activityRequests += 1;
+    await route.fulfill({ json: { success: true, data: { active: true } } });
   });
   await page.route('**/api/v1/categories', async (route) => {
     await route.fulfill({ json: { success: true, data: { categories: [] } } });
@@ -61,6 +66,7 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   );
 
   await page.getByRole('button', { name: 'فعال‌کردن پوسته تیره' }).click();
+  await expect.poll(() => activityRequests).toBe(1);
   expect(clientErrors).toEqual([]);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
@@ -70,4 +76,118 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(page.locator('.app-sidebar')).toBeVisible();
   await expect(mobileNavigation).toBeHidden();
   await expect(page.getByRole('link', { name: 'گزارش‌ها' })).toBeVisible();
+});
+
+test('reads visible page text with a Persian system voice and can stop speech', async ({ page }) => {
+  await page.addInitScript(() => {
+    class FakeUtterance {
+      lang = '';
+      voice: unknown;
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      constructor(readonly text: string) {}
+    }
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+      configurable: true,
+      value: FakeUtterance,
+    });
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        getVoices: () => [{ lang: 'fa-IR' }],
+        cancel: () => {},
+        speak: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
+    });
+  });
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: 'speech-test-user',
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/budgets**', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          monthKey: '07-1405',
+          period: { startDate: '2026-09-23', endDateExclusive: '2026-10-23' },
+          budgets: [],
+        },
+      },
+    });
+  });
+
+  await page.goto('/budgets');
+  const readButton = page.getByRole('button', { name: 'خواندن متن صفحه' });
+  await readButton.click();
+  await expect(page.getByRole('button', { name: 'توقف خواندن' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.locator('#page-reader-status')).toContainText('خواندن متن صفحه آغاز شد.');
+  await page.getByRole('button', { name: 'توقف خواندن' }).click();
+  await expect(readButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#page-reader-status')).toContainText('خواندن متن متوقف شد.');
+});
+
+test('explains when the browser has no Persian speech voice', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        getVoices: () => [],
+        cancel: () => {},
+        speak: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
+    });
+  });
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: 'speech-no-voice-user',
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/budgets**', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          monthKey: '07-1405',
+          period: { startDate: '2026-09-23', endDateExclusive: '2026-10-23' },
+          budgets: [],
+        },
+      },
+    });
+  });
+
+  await page.goto('/budgets');
+  await page.getByRole('button', { name: 'خواندن متن صفحه' }).click();
+  await expect(page.locator('#page-reader-status')).toContainText(
+    'صدای فارسی در مرورگر یا سیستم شما در دسترس نیست.',
+  );
+  await expect(page.getByRole('button', { name: 'خواندن متن صفحه' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
 });
