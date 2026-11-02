@@ -54,6 +54,10 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await page.goto('/budgets');
 
   const mobileNavigation = page.locator('.mobile-nav');
+  const mobileMenuToggle = page.getByRole('button', { name: 'بازکردن ناوبری' });
+  await expect(mobileMenuToggle).toBeVisible();
+  await expect(mobileNavigation).toBeHidden();
+  await mobileMenuToggle.click();
   await expect(mobileNavigation).toBeVisible();
   await expect(mobileNavigation.getByRole('link')).toHaveCount(8);
   for (const link of await mobileNavigation.getByRole('link').all()) {
@@ -64,6 +68,8 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
     'aria-current',
     'page',
   );
+  await page.keyboard.press('Escape');
+  await expect(mobileNavigation).toBeHidden();
 
   await page.getByRole('button', { name: 'فعال‌کردن پوسته تیره' }).click();
   await expect.poll(() => activityRequests).toBe(1);
@@ -76,7 +82,7 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(page.locator('.app-sidebar')).toBeVisible();
   await expect(mobileNavigation).toBeHidden();
   await expect(page.getByRole('link', { name: 'گزارش‌ها' })).toBeVisible();
-  const logo = page.getByRole('img', { name: 'لوگوی آسوده' });
+  const logo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(logo).toBeVisible();
   const logoWidth = await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth);
   expect(logoWidth).toBeGreaterThan(0);

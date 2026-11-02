@@ -4,25 +4,19 @@ import { sendSmsIrOtp } from '../services/smsIrProvider.js';
 
 const originalMode = env.smsIrMode;
 const originalApiKey = env.smsIrApiKey;
-const originalTemplateId = env.smsIrTemplateId;
-const originalBaseUrl = env.smsIrBaseUrl;
-const originalParameterName = env.smsIrOtpParameterName;
+const originalTemplateId = env.smsIrVerifyTemplateId;
 
 afterEach(() => {
   vi.unstubAllGlobals();
   env.smsIrMode = originalMode;
   env.smsIrApiKey = originalApiKey;
-  env.smsIrTemplateId = originalTemplateId;
-  env.smsIrBaseUrl = originalBaseUrl;
-  env.smsIrOtpParameterName = originalParameterName;
+  env.smsIrVerifyTemplateId = originalTemplateId;
 });
 
 function configureProvider(): void {
-  env.smsIrMode = 'production';
+  env.smsIrMode = 'sandbox';
   env.smsIrApiKey = 'test-api-key';
-  env.smsIrTemplateId = '12345';
-  env.smsIrBaseUrl = 'https://api.sms.ir/v1';
-  env.smsIrOtpParameterName = 'OTP';
+  env.smsIrVerifyTemplateId = '123456';
 }
 
 describe('SMS.ir Verify API adapter', () => {
@@ -31,7 +25,7 @@ describe('SMS.ir Verify API adapter', () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ status: 1, message: 'OK', data: { messageId: 42, cost: 2 } }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -46,43 +40,38 @@ describe('SMS.ir Verify API adapter', () => {
     expect(url).toBe('https://api.sms.ir/v1/send/verify');
     expect(options?.method).toBe('POST');
     expect(options?.headers).toEqual({
-      'X-API-KEY': 'test-api-key',
-      Accept: 'application/json',
+      'x-api-key': 'test-api-key',
+      Accept: 'text/plain',
       'Content-Type': 'application/json',
     });
     expect(JSON.parse(String(options?.body))).toEqual({
       mobile: '09121234567',
-      templateId: 12345,
-      parameters: [{ name: 'OTP', value: '001234' }],
+      templateId: 123456,
+      parameters: [{ name: 'Code', value: '001234' }],
     });
     expect(options?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('does not call any endpoint in sandbox mode', async () => {
+  it('sends the Verify request in sandbox mode', async () => {
     configureProvider();
     env.smsIrMode = 'sandbox';
-    const fetchMock = vi.fn<typeof fetch>();
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ status: 1, data: { messageId: 7, cost: 1 } }), {
+        status: 200,
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(sendSmsIrOtp('09121234567', '123456')).rejects.toMatchObject({
-      category: 'sandbox_not_supported',
+    await expect(sendSmsIrOtp('09121234567', '123456')).resolves.toEqual({
+      messageId: 7,
+      cost: 1,
     });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([
     ['API key', (): void => { env.smsIrApiKey = undefined; }, 'missing_api_key'],
-    ['template ID', (): void => { env.smsIrTemplateId = 'not-an-id'; }, 'invalid_template_id'],
-    [
-      'template parameter',
-      (): void => { env.smsIrOtpParameterName = undefined; },
-      'missing_parameter_name',
-    ],
-    [
-      'untrusted endpoint',
-      (): void => { env.smsIrBaseUrl = 'https://example.com/v1'; },
-      'invalid_base_url',
-    ],
+    ['template ID', (): void => { env.smsIrVerifyTemplateId = 'not-an-id'; }, 'invalid_template_id'],
   ] as const)(
     'rejects missing or invalid %s before making a request',
     async (_label, invalidate, category) => {
@@ -129,6 +118,7 @@ describe('SMS.ir Verify API adapter', () => {
 
   it.each([
     [401, 'invalid_api_key'],
+    [403, 'invalid_api_key'],
     [402, 'insufficient_credit'],
     [429, 'rate_limited'],
     [503, 'provider_rejected'],

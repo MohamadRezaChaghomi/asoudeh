@@ -254,13 +254,6 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
 
   const useDevelopmentSimulator =
     env.nodeEnv === 'development' && env.otpDevSimulatorEnabled;
-  if (!useDevelopmentSimulator && env.smsIrMode !== 'production') {
-    throw new HttpError(
-      503,
-      'SMSIR_SANDBOX_UNAVAILABLE',
-      'حالت sandbox در مستندات رسمی SMS.ir تأیید نشده است؛ برای توسعه از شبیه‌ساز و برای ارسال واقعی پس از تأیید، حالت production را انتخاب کنید.',
-    );
-  }
 
   const code = useDevelopmentSimulator ? env.otpDevFallbackCode : generateOtp();
   const codeHash = hashOtp(normalizedPhone, code);
@@ -371,11 +364,9 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
       const configurationFailure = [
         'missing_api_key',
         'invalid_template_id',
-        'missing_parameter_name',
-        'invalid_base_url',
       ].includes(error.category);
       const message = configurationFailure
-        ? 'تنظیمات SMS.ir ناقص یا نامعتبر است؛ API key، template ID، نام پارامتر و نشانی API را بررسی کنید.'
+        ? 'تنظیمات SMS.ir ناقص یا نامعتبر است؛ API key و Verify template ID را بررسی کنید.'
         : 'ارسال کد تأیید انجام نشد. تنظیمات SMS.ir یا وضعیت سرویس را بررسی کنید.';
       throw new HttpError(
         503,

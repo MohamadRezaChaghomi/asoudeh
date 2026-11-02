@@ -781,7 +781,7 @@ export default function TransactionsPage() {
 
           <h2 className="mt-7 text-xl font-bold text-asoudeh-navy">فهرست تراکنش‌ها</h2>
           <form
-            className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(12rem,1fr)_minmax(12rem,auto)_auto_auto]"
+            className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(12rem,auto)_auto_auto]"
             onSubmit={handleFilterSubmit}
             aria-busy={filtering}
           >

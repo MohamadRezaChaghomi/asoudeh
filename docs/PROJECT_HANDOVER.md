@@ -107,7 +107,7 @@
 - تراکنش و یادآور حذف فیزیکی نمی‌شوند؛ archive/soft-delete تاریخچه را حفظ می‌کند.
 - دعوت caregiver از طریق SMS ارسال نمی‌شود؛ دعوت‌کننده باید از کانال دیگری اطلاع دهد.
 - شاخص‌های مدل صرفاً تعریف کد نیستند؛ ایجاد یا rollout آن‌ها روی production در این بررسی انجام نشده است.
-- فایل‌های محلی `backend/.env` و `frontend/.env.local` باز یا چاپ نشدند. نام متغیرهای template شامل `NODE_ENV`، `PORT`، `MONGODB_URI`، `JWT_SECRET`، `AUTH_HASH_SECRET`، `OTP_DEV_SIMULATOR_ENABLED`، `OTP_DEV_QUICK_LOGIN_ENABLED`، `OTP_DEV_QUICK_LOGIN_PHONE`، `OTP_RESEND_COOLDOWN_SECONDS`، `SMSIR_API_KEY`، `SMSIR_TEMPLATE_ID`، `SMSIR_BASE_URL`، `SMSIR_MODE`، `SMSIR_OTP_PARAMETER_NAME`، `CLIENT_URL`، `TEST_MONGODB_URI` و `NEXT_PUBLIC_API_URL` است. مقدار واقعی در این سند ثبت نمی‌شود.
+- فایل‌های محلی `backend/.env` و `frontend/.env.local` باز یا چاپ نشدند. نام متغیرهای template شامل `NODE_ENV`، `PORT`، `MONGODB_URI`، `JWT_SECRET`، `AUTH_HASH_SECRET`، `OTP_DEV_SIMULATOR_ENABLED`، `OTP_DEV_QUICK_LOGIN_ENABLED`، `OTP_DEV_QUICK_LOGIN_PHONE`، `OTP_RESEND_COOLDOWN_SECONDS`، `SMSIR_API_KEY`، `SMSIR_VERIFY_TEMPLATE_ID`، `SMSIR_MODE`، `CLIENT_URL`، `TEST_MONGODB_URI` و `NEXT_PUBLIC_API_URL` است. مقدار واقعی در این سند ثبت نمی‌شود.
 
 ## اعتبارسنجی انجام‌شده
 

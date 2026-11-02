@@ -44,9 +44,7 @@ export const env = {
   otpDevFallbackCode,
   otpResendCooldownSeconds,
   smsIrApiKey: process.env.SMSIR_API_KEY?.trim() || undefined,
-  smsIrTemplateId: process.env.SMSIR_TEMPLATE_ID?.trim() || undefined,
-  smsIrBaseUrl: process.env.SMSIR_BASE_URL ?? 'https://api.sms.ir/v1',
+  smsIrVerifyTemplateId: process.env.SMSIR_VERIFY_TEMPLATE_ID?.trim() || '123456',
   smsIrMode,
-  smsIrOtpParameterName: process.env.SMSIR_OTP_PARAMETER_NAME?.trim() || undefined,
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
 };

@@ -9,6 +9,7 @@ import {
   CircleUserRound,
   HandCoins,
   LayoutDashboard,
+  Menu,
   Moon,
   PiggyBank,
   Settings,
@@ -17,6 +18,7 @@ import {
   VolumeX,
   UsersRound,
   WalletCards,
+  X,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { cn } from '@/lib/utils/cn';
@@ -36,7 +38,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const [speechMessage, setSpeechMessage] = useState('');
+
+  useEffect(() => {
+    setIsMobileNavigationOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMobileNavigationOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsMobileNavigationOpen(false);
+    }
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isMobileNavigationOpen]);
 
   useEffect(() => {
     if (!('speechSynthesis' in window)) return;
@@ -145,13 +163,22 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="app-workspace">
         <header className="app-topbar">
-          <div className="topbar-context">
-            <span className="topbar-kicker">فضای شخصی</span>
-            <span className="topbar-divider" aria-hidden="true" />
-            <span className="topbar-current">
-              {navigation.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
-                ?.label ?? 'آسوده'}
-            </span>
+          <div className="topbar-heading">
+            <div className="topbar-context">
+              <span className="topbar-kicker">فضای شخصی</span>
+              <span className="topbar-divider" aria-hidden="true" />
+              <span className="topbar-current">
+                {navigation.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
+                  ?.label ?? 'آسوده'}
+              </span>
+            </div>
+            <Link
+              aria-label="آسوده، نمای کلی"
+              className="app-topbar-brand"
+              href="/dashboard"
+            >
+              <BrandLogo size="mobile" />
+            </Link>
           </div>
           <button
             aria-label={theme === 'dark' ? 'فعال‌کردن پوسته روشن' : 'فعال‌کردن پوسته تیره'}
@@ -176,6 +203,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
             <span>{isSpeaking ? 'توقف خواندن' : 'خواندن متن صفحه'}</span>
           </button>
+          <button
+            aria-controls="mobile-navigation"
+            aria-expanded={isMobileNavigationOpen}
+            aria-label={isMobileNavigationOpen ? 'بستن ناوبری' : 'بازکردن ناوبری'}
+            className="mobile-menu-toggle"
+            onClick={() => setIsMobileNavigationOpen((open) => !open)}
+            type="button"
+          >
+            {isMobileNavigationOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
+          </button>
           <p className="sr-only" id="page-reader-status" aria-atomic="true" aria-live="polite">
             {speechMessage}
           </p>
@@ -188,7 +225,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="app-content">{children}</div>
       </div>
 
-      <nav className="mobile-nav" aria-label="ناوبری اصلی">
+      {isMobileNavigationOpen && (
+        <button
+          aria-label="بستن ناوبری"
+          className="mobile-nav-backdrop"
+          onClick={() => setIsMobileNavigationOpen(false)}
+          type="button"
+        />
+      )}
+
+      <nav
+        aria-hidden={!isMobileNavigationOpen}
+        aria-label="ناوبری اصلی"
+        className={cn('mobile-nav', isMobileNavigationOpen && 'is-open')}
+        hidden={!isMobileNavigationOpen}
+        id="mobile-navigation"
+      >
         {navigation.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (

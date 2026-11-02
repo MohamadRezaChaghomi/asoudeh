@@ -22,7 +22,7 @@ Returns HTTP 200 with `{ success: true, data: { status: "ready", service: "asoud
 ### `POST /api/v1/auth/otp/request`
 Request body: `{ "phone": "09121234567" }`. Persian/Arabic digits and common `+98`, `0098`, or `98` prefixes are normalized to `09xxxxxxxxx`.
 
-SMS.ir Verify delivery is available only when `SMSIR_MODE=production` is explicitly selected and the required server-side settings are valid. The adapter sends to the official Verify endpoint and requires the provider response to contain `status: 1` and a positive message ID; this confirms API acceptance, not handset delivery. `SMSIR_MODE=sandbox` makes no external request because the current official OpenAPI document does not document sandbox behavior.
+When the development simulator is disabled, the backend sends the OTP using the SMS.ir Verify endpoint in either `SMSIR_MODE=sandbox` or `SMSIR_MODE=production`. The request uses `SMSIR_API_KEY`, `SMSIR_VERIFY_TEMPLATE_ID` (default `123456`), and the fixed `Code` parameter. An HTTP success is insufficient: the JSON response must have `status: 1` and a positive message ID. This confirms provider acceptance, not handset delivery; in particular, a successful Sandbox response does not imply a real SMS was delivered.
 
 For local development, OTP delivery is available through the simulator only when both `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true`; only then does the simulator return `developmentOtp` in the response. With `OTP_DEV_QUICK_LOGIN_ENABLED=true`, a request for `OTP_DEV_QUICK_LOGIN_PHONE` (default `09120000000`) additionally returns `developmentQuickLogin: true`. This is only a client convenience: it submits the returned development code to the normal verification endpoint, which still consumes the challenge and issues the session. With both delivery modes unavailable, requests return `503 OTP_DELIVERY_UNAVAILABLE` and never include a code. The generic response message does not disclose whether an account exists.
 
@@ -33,7 +33,7 @@ Request body: `{ "phone": "09121234567", "code": "012345" }`.
 
 When the local development simulator is enabled, the requested code is `OTP_DEV_FALLBACK_CODE` (default `123456`), shown by the verification page for regular numbers. For the configured quick-login phone, the client submits this same code automatically; it remains single-use, expires after five minutes, and is subject to existing request and attempt limits. Development-issued codes cannot be verified outside development or after disabling the simulator. Do not use this fixed code with shared or production data. This simulator is the local no-SMS path, not an automatic fallback after a real SMS provider failure.
 
-See [SMS.ir setup and verification details](./SMSIR_SETUP.md) for provider configuration, account prerequisites, testing, and the authorized live-test procedure.
+See [SMS.ir setup and verification details](./SMSIR_SETUP.md) for provider configuration, account prerequisites, mocked tests, and the opt-in Sandbox connection test.
 
 Success for an existing account: `{ success: true, data: { registrationRequired: false, csrfToken } }`, with access, refresh, and CSRF cookies set.
 
@@ -56,7 +56,7 @@ Requires the CSRF cookie/header pair. Success: `{ success: true, message }`; ses
 ### `POST /api/v1/auth/account-deletion`
 Requires the access cookie, configured Origin, CSRF cookie/header pair, and `{ "code": "012345" }`. First request a code using `POST /api/v1/auth/otp/request` for the authenticated profile’s phone. A valid, unused OTP schedules permanent deletion exactly 30 days later, immediately revokes all account sessions, blocks further authenticated access (including caregiver reads), and clears the browser’s authentication cookies. Login with a pending-deletion phone returns `409 ACCOUNT_DELETION_PENDING`.
 
-The backend worker checks due accounts at startup and every 60 seconds. It removes the user’s sessions, categories, transactions, budgets, reminders and completion history, caregiver links, audit events, and phone-bound OTP data before deleting the user record. Purging is idempotent and retries on a later check after a failure. The current API does not provide cancellation. Verify the `deletionScheduledAt` index is safely deployed before production use. OTP delivery uses the local development simulator or the explicitly configured SMS.ir Verify adapter; production requests fail closed when SMS.ir mode or account settings are unavailable.
+The backend worker checks due accounts at startup and every 60 seconds. It removes the user’s sessions, categories, transactions, budgets, reminders and completion history, caregiver links, audit events, and phone-bound OTP data before deleting the user record. Purging is idempotent and retries on a later check after a failure. The current API does not provide cancellation. Verify the `deletionScheduledAt` index is safely deployed before production use. OTP delivery uses the local development simulator or the configured SMS.ir Verify adapter; provider requests fail closed when SMS.ir settings or responses are invalid.
 
 ### `GET /api/v1/auth/csrf`
 Requires the configured Origin and returns `{ success: true, data: { csrfToken } }` while setting the matching CSRF cookie. The frontend keeps this token in memory only.

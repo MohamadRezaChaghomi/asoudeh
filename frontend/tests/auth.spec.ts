@@ -9,13 +9,13 @@ const profile = {
   accessibilitySettings: { fontScale: 1.25, highContrast: false },
 };
 
-test('shows the real SVG logo on login and OTP registration without duplicating the brand name', async ({
+test('shows the approved logo on login and OTP registration without duplicating the brand name', async ({
   page,
 }) => {
   await page.goto('/login');
-  const loginLogo = page.getByRole('img', { name: 'لوگوی آسوده' });
+  const loginLogo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(loginLogo).toBeVisible();
-  await expect(loginLogo).toHaveAttribute('src', '/icons/logo.svg');
+  await expect(loginLogo).toHaveAttribute('src', '/icons/logoo.svg');
   const loginLogoWidth = await loginLogo.evaluate(
     (image: HTMLImageElement) => image.naturalWidth,
   );
@@ -33,7 +33,7 @@ test('shows the real SVG logo on login and OTP registration without duplicating 
     );
   });
   await page.goto('/verify-otp');
-  const verificationLogo = page.getByRole('img', { name: 'لوگوی آسوده' });
+  const verificationLogo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(verificationLogo).toBeVisible();
   const verificationLogoWidth = await verificationLogo.evaluate(
     (image: HTMLImageElement) => image.naturalWidth,

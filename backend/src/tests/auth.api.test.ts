@@ -23,9 +23,7 @@ const originalResendCooldownSeconds = env.otpResendCooldownSeconds;
 const originalAuthHashSecret = env.authHashSecret;
 const originalSmsIrMode = env.smsIrMode;
 const originalSmsIrApiKey = env.smsIrApiKey;
-const originalSmsIrTemplateId = env.smsIrTemplateId;
-const originalSmsIrBaseUrl = env.smsIrBaseUrl;
-const originalSmsIrOtpParameterName = env.smsIrOtpParameterName;
+const originalSmsIrTemplateId = env.smsIrVerifyTemplateId;
 const origin = env.clientUrl;
 const testPhones: string[] = [];
 const testIps = new Set<string>();
@@ -123,9 +121,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     env.otpResendCooldownSeconds = 0;
     env.smsIrMode = 'sandbox';
     env.smsIrApiKey = originalSmsIrApiKey;
-    env.smsIrTemplateId = originalSmsIrTemplateId;
-    env.smsIrBaseUrl = originalSmsIrBaseUrl;
-    env.smsIrOtpParameterName = originalSmsIrOtpParameterName;
+    env.smsIrVerifyTemplateId = originalSmsIrTemplateId;
   });
 
   afterEach(() => {
@@ -152,9 +148,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     env.authHashSecret = originalAuthHashSecret;
     env.smsIrMode = originalSmsIrMode;
     env.smsIrApiKey = originalSmsIrApiKey;
-    env.smsIrTemplateId = originalSmsIrTemplateId;
-    env.smsIrBaseUrl = originalSmsIrBaseUrl;
-    env.smsIrOtpParameterName = originalSmsIrOtpParameterName;
+    env.smsIrVerifyTemplateId = originalSmsIrTemplateId;
     if (mongoose.connection.readyState === 1) {
       await User.deleteMany({ phone: { $in: testPhones } });
       await OtpChallenge.deleteMany({ phoneHash: { $in: phoneHashes } });
@@ -269,9 +263,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     env.otpDevSimulatorEnabled = false;
     env.smsIrMode = 'production';
     env.smsIrApiKey = 'test-only-smsir-key';
-    env.smsIrTemplateId = '12345';
-    env.smsIrBaseUrl = 'https://api.sms.ir/v1';
-    env.smsIrOtpParameterName = 'OTP';
+    env.smsIrVerifyTemplateId = '123456';
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>(async (_input, init) => {
@@ -281,8 +273,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
           parameters: Array<{ name: string; value: string }>;
         };
         expect(requestBody.mobile).toBe(phone);
-        expect(requestBody.templateId).toBe(12345);
-        expect(requestBody.parameters[0]?.name).toBe('OTP');
+        expect(requestBody.templateId).toBe(123456);
+        expect(requestBody.parameters[0]?.name).toBe('Code');
         sentCode = requestBody.parameters[0]?.value ?? '';
         return new Response(
           JSON.stringify({ status: 1, message: 'OK', data: { messageId: 17, cost: 1 } }),
@@ -316,9 +308,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     env.otpDevSimulatorEnabled = false;
     env.smsIrMode = 'production';
     env.smsIrApiKey = 'test-only-smsir-key';
-    env.smsIrTemplateId = '12345';
-    env.smsIrBaseUrl = 'https://api.sms.ir/v1';
-    env.smsIrOtpParameterName = 'OTP';
+    env.smsIrVerifyTemplateId = '123456';
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>().mockResolvedValue(

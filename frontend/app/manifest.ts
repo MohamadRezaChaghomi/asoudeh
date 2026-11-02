@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'مدیریت ساده و دسترس‌پذیر امور مالی شخصی',
     start_url: '/dashboard',
     display: 'standalone',
-    background_color: '#f8fafc',
-    theme_color: '#0f2747',
+    background_color: '#f6f5ef',
+    theme_color: '#173d32',
     lang: 'fa',
     dir: 'rtl',
     icons: [

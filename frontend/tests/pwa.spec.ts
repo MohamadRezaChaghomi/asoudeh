@@ -19,9 +19,11 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   expect(manifestResponse.ok()).toBe(true);
   const manifest = await manifestResponse.json() as {
     start_url: string;
+    theme_color: string;
     icons: Array<{ src: string; type: string }>;
   };
   expect(manifest.start_url).toBe('/dashboard');
+  expect(manifest.theme_color).toBe('#173d32');
   expect(manifest.icons).toContainEqual({
     src: '/icons/asoudeh.svg',
     sizes: 'any',

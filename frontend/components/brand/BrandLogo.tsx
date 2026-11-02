@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 
-type BrandLogoSize = 'sidebar' | 'auth' | 'landing';
+type BrandLogoSize = 'sidebar' | 'mobile' | 'auth' | 'landing';
 
 interface BrandLogoProps {
   size?: BrandLogoSize;
@@ -12,11 +12,12 @@ export function BrandLogo({ size = 'auth', className }: BrandLogoProps) {
   return (
     <span className={cn('brand-logo-frame', `brand-logo-frame--${size}`, className)}>
       <Image
-        alt="لوگوی آسوده"
+        alt="نشان آسوده"
         className="brand-logo-image"
-        height={400}
+        height={600}
         priority
-        src="/icons/logo.svg"
+        sizes="(max-width: 700px) 144px, 176px"
+        src="/icons/logoo.svg"
         width={600}
       />
     </span>

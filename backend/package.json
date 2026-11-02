@@ -12,6 +12,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "test:smsir:sandbox": "vitest run src/tests/smsIrSandbox.integration.test.ts",
     "test:db": "vitest run src/tests/database.test.ts",
     "test:watch": "vitest",
     "seed:system-categories": "tsx src/scripts/seedSystemCategories.ts",

@@ -7,9 +7,6 @@ const SMSIR_SUCCESS_STATUS = 1;
 export type SmsIrFailureCategory =
   | 'missing_api_key'
   | 'invalid_template_id'
-  | 'missing_parameter_name'
-  | 'invalid_base_url'
-  | 'sandbox_not_supported'
   | 'invalid_mobile'
   | 'invalid_code'
   | 'invalid_api_key'
@@ -41,12 +38,11 @@ interface SmsIrResponse {
 function getConfiguration(): {
   apiKey: string;
   templateId: number;
-  parameterName: string;
   endpoint: string;
 } {
   if (!env.smsIrApiKey) throw new SmsIrProviderError('missing_api_key');
 
-  const templateIdValue = env.smsIrTemplateId ?? '';
+  const templateIdValue = env.smsIrVerifyTemplateId;
   if (!/^[1-9]\d*$/.test(templateIdValue)) {
     throw new SmsIrProviderError('invalid_template_id');
   }
@@ -55,34 +51,10 @@ function getConfiguration(): {
     throw new SmsIrProviderError('invalid_template_id');
   }
 
-  const parameterName = env.smsIrOtpParameterName?.trim();
-  if (!parameterName || parameterName.length > 100) {
-    throw new SmsIrProviderError('missing_parameter_name');
-  }
-
-  let baseUrl: URL;
-  try {
-    baseUrl = new URL(env.smsIrBaseUrl);
-  } catch {
-    throw new SmsIrProviderError('invalid_base_url');
-  }
-  if (
-    baseUrl.protocol !== 'https:' ||
-    baseUrl.hostname !== 'api.sms.ir' ||
-    baseUrl.pathname.replace(/\/+$/, '') !== '/v1' ||
-    baseUrl.username ||
-    baseUrl.password ||
-    baseUrl.search ||
-    baseUrl.hash
-  ) {
-    throw new SmsIrProviderError('invalid_base_url');
-  }
-
   return {
     apiKey: env.smsIrApiKey,
     templateId,
-    parameterName,
-    endpoint: `${baseUrl.origin}/v1/send/verify`,
+    endpoint: 'https://api.sms.ir/v1/send/verify',
   };
 }
 
@@ -97,10 +69,6 @@ export async function sendSmsIrOtp(
   mobileInput: string,
   code: string,
 ): Promise<{ messageId: number; cost?: number }> {
-  if (env.smsIrMode !== 'production') {
-    throw new SmsIrProviderError('sandbox_not_supported');
-  }
-
   const mobile = normalizeIranianMobile(mobileInput);
   if (!mobile) throw new SmsIrProviderError('invalid_mobile');
   if (!/^\d{6}$/.test(code)) throw new SmsIrProviderError('invalid_code');
@@ -111,14 +79,14 @@ export async function sendSmsIrOtp(
     response = await fetch(configuration.endpoint, {
       method: 'POST',
       headers: {
-        'X-API-KEY': configuration.apiKey,
-        Accept: 'application/json',
+        'x-api-key': configuration.apiKey,
+        Accept: 'text/plain',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         mobile,
         templateId: configuration.templateId,
-        parameters: [{ name: configuration.parameterName, value: code }],
+        parameters: [{ name: 'Code', value: code }],
       }),
       signal: AbortSignal.timeout(SMSIR_TIMEOUT_MS),
     });
@@ -136,7 +104,10 @@ export async function sendSmsIrOtp(
   let parsedBody: unknown;
   try {
     parsedBody = await response.json();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new SmsIrProviderError('provider_timeout', response.status);
+    }
     throw new SmsIrProviderError('malformed_response', response.status);
   }
 
