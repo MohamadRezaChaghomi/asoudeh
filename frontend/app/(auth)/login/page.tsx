@@ -3,11 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { ArrowRight } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { api } from '@/lib/api/client';
-import { clearPendingOtpFlow, savePendingOtpFlow } from '@/lib/auth/otpFlow';
-
-const DEVELOPMENT_QUICK_LOGIN_PHONE = '09120000000';
+import { savePendingOtpFlow } from '@/lib/auth/otpFlow';
 
 interface ApiErrorBody {
   error?: { message?: string };
@@ -15,8 +14,6 @@ interface ApiErrorBody {
 
 interface OtpRequestResponse {
   data: {
-    developmentOtp?: string;
-    developmentQuickLogin?: boolean;
     registrationRequired?: boolean;
     resendAfterSeconds?: number;
   };
@@ -50,9 +47,7 @@ function errorMessage(error: unknown): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState(
-    process.env.NODE_ENV === 'development' ? DEVELOPMENT_QUICK_LOGIN_PHONE : '',
-  );
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
@@ -91,36 +86,8 @@ export default function LoginPage() {
           : 60;
       const resendAvailableAt = Date.now() + resendAfterSeconds * 1000;
 
-      if (
-        requestData?.developmentQuickLogin === true &&
-        typeof requestData.developmentOtp === 'string'
-      ) {
-        const verification = await api.post<OtpRequestResponse>('/auth/otp/verify', {
-          phone: normalizedPhone,
-          code: requestData.developmentOtp,
-        });
-
-        if (verification.data.data?.registrationRequired) {
-          savePendingOtpFlow({
-            phone: normalizedPhone,
-            resendAvailableAt,
-            step: 'register',
-          });
-          router.push('/verify-otp');
-          return;
-        }
-
-        clearPendingOtpFlow();
-        router.replace('/settings');
-        return;
-      }
-
       savePendingOtpFlow({
         phone: normalizedPhone,
-        ...(process.env.NODE_ENV === 'development' &&
-        typeof requestData?.developmentOtp === 'string'
-          ? { developmentOtp: requestData.developmentOtp }
-          : {}),
         resendAvailableAt,
         step: 'code',
       });
@@ -136,6 +103,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-5">
       <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <LoginBackButton />
         <BrandLogo className="mx-auto mb-5" size="auth" />
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">ورود به حساب کاربری</h1>
@@ -158,7 +126,7 @@ export default function LoginPage() {
             id="phone"
             inputMode="tel"
             onChange={(event) => setPhone(event.target.value)}
-            placeholder="۰۹۱۲۱۲۳۴۵۶۷"
+            placeholder="مثلاً ۰۹۱۲۱۲۳۴۵۶۷"
             required
             value={phone}
           />
@@ -178,5 +146,38 @@ export default function LoginPage() {
         )}
       </section>
     </main>
+  );
+}
+
+function LoginBackButton() {
+  const router = useRouter();
+
+  function goBack() {
+    const referrer = document.referrer;
+    if (referrer) {
+      try {
+        const previousUrl = new URL(referrer);
+        const currentUrl = new URL(window.location.href);
+        const previousPath = previousUrl.pathname.replace(/\/+$/, '') || '/';
+        if (
+          previousUrl.origin === currentUrl.origin &&
+          previousPath !== '/login' &&
+          previousPath !== '/verify-otp'
+        ) {
+          window.history.back();
+          return;
+        }
+      } catch {
+        // An invalid referrer falls back to the public home page.
+      }
+    }
+    router.replace('/');
+  }
+
+  return (
+    <button className="auth-back-button" onClick={goBack} type="button">
+      <ArrowRight aria-hidden="true" size={18} />
+      <span>بازگشت</span>
+    </button>
   );
 }

@@ -18,7 +18,6 @@ interface ApiErrorBody {
 
 interface OtpResponseData {
   data: {
-    developmentOtp?: string;
     resendAfterSeconds?: number;
     registrationRequired?: boolean;
   };
@@ -90,10 +89,6 @@ export default function VerifyOtpPage() {
           : 60;
       const updatedFlow: PendingOtpFlow = {
         ...flow,
-        ...(process.env.NODE_ENV === 'development' &&
-        typeof responseData?.developmentOtp === 'string'
-          ? { developmentOtp: responseData.developmentOtp }
-          : { developmentOtp: undefined }),
         resendAvailableAt: Date.now() + resendAfterSeconds * 1000,
         step: 'code',
       };
@@ -129,7 +124,6 @@ export default function VerifyOtpPage() {
       if (response.data.data?.registrationRequired) {
         const registrationFlow: PendingOtpFlow = {
           ...flow,
-          developmentOtp: undefined,
           step: 'register',
         };
         savePendingOtpFlow(registrationFlow);
@@ -192,11 +186,6 @@ export default function VerifyOtpPage() {
             <p className="app-muted">
               کد شش‌رقمی ارسال‌شده به <bdi dir="ltr">{maskPhone(flow.phone)}</bdi> را وارد کنید.
             </p>
-            {process.env.NODE_ENV === 'development' && flow.developmentOtp && (
-              <p className="rounded-lg bg-amber-50 p-3 text-amber-900" role="status">
-                کد شبیه‌ساز توسعه: <bdi dir="ltr">{flow.developmentOtp}</bdi>
-              </p>
-            )}
             <label className="block font-medium" htmlFor="otp">
               کد تأیید
             </label>

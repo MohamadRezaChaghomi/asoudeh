@@ -16,8 +16,6 @@ import { connectDB } from '../config/db.js';
 const testMongoUri = process.env.TEST_MONGODB_URI;
 const originalNodeEnv = env.nodeEnv;
 const originalSimulatorSetting = env.otpDevSimulatorEnabled;
-const originalQuickLoginSetting = env.otpDevQuickLoginEnabled;
-const originalQuickLoginPhone = env.otpDevQuickLoginPhone;
 const originalFallbackCode = env.otpDevFallbackCode;
 const originalResendCooldownSeconds = env.otpResendCooldownSeconds;
 const originalAuthHashSecret = env.authHashSecret;
@@ -117,7 +115,6 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
   beforeEach(() => {
     env.nodeEnv = 'development';
     env.otpDevSimulatorEnabled = true;
-    env.otpDevQuickLoginEnabled = false;
     env.otpResendCooldownSeconds = 0;
     env.smsIrMode = 'sandbox';
     env.smsIrApiKey = originalSmsIrApiKey;
@@ -141,8 +138,6 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     }
     env.nodeEnv = originalNodeEnv;
     env.otpDevSimulatorEnabled = originalSimulatorSetting;
-    env.otpDevQuickLoginEnabled = originalQuickLoginSetting;
-    env.otpDevQuickLoginPhone = originalQuickLoginPhone;
     env.otpDevFallbackCode = originalFallbackCode;
     env.otpResendCooldownSeconds = originalResendCooldownSeconds;
     env.authHashSecret = originalAuthHashSecret;
@@ -191,17 +186,17 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(rejected.status).toBe(403);
   });
 
-  it('returns the development OTP only when explicitly enabled in development', async () => {
+  it('keeps the development OTP out of the API response and verifies it server-side', async () => {
     const phone = await createUniquePhone();
     const developmentResponse = await otpRequest(phone);
     expect(developmentResponse.status).toBe(200);
-    const developmentOtp = developmentResponse.body.data.developmentOtp as string;
-    expect(developmentOtp).toBe(env.otpDevFallbackCode);
+    expect(developmentResponse.body.data.developmentOtp).toBeUndefined();
+    expect(JSON.stringify(developmentResponse.body)).not.toContain(env.otpDevFallbackCode);
     const challenge = await OtpChallenge.findOne({
       phoneHash: hashAuthValue('phone', phone),
     }).lean();
     expect(challenge?.otpHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(challenge?.otpHash).not.toBe(developmentOtp);
+    expect(challenge?.otpHash).not.toBe(env.otpDevFallbackCode);
     expect(new Date(String(challenge?.codeExpiresAt)).getTime() - Date.now()).toBeGreaterThan(
       4 * 60 * 1000,
     );
@@ -216,6 +211,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const fallbackOnlyPhone = await createUniquePhone();
     await otpRequest(fallbackOnlyPhone);
     env.otpDevSimulatorEnabled = false;
+    env.smsIrMode = 'production';
+    env.smsIrApiKey = undefined;
     const disabledResponse = await otpRequest(await createUniquePhone());
     env.otpDevSimulatorEnabled = true;
 
@@ -235,26 +232,18 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(replayedInProduction.status).toBe(400);
   });
 
-  it('marks only the configured development phone for quick login', async () => {
-    const quickLoginPhone = await createUniquePhone();
-    env.otpDevQuickLoginEnabled = true;
-    env.otpDevQuickLoginPhone = quickLoginPhone;
+  it('never signals or performs quick login for any development phone', async () => {
+    const phone = await createUniquePhone();
+    const response = await otpRequest(phone);
 
-    const enabled = await otpRequest(quickLoginPhone);
-    const otherPhone = await createUniquePhone();
-    const notEnabled = await otpRequest(otherPhone);
-
-    expect(enabled.status).toBe(200);
-    expect(enabled.body.data.developmentQuickLogin).toBe(true);
-    expect(notEnabled.status).toBe(200);
-    expect(notEnabled.body.data.developmentQuickLogin).toBeUndefined();
-
-    env.nodeEnv = 'production';
-    const productionPhone = await createUniquePhone();
-    env.otpDevQuickLoginPhone = productionPhone;
-    const productionResponse = await otpRequest(productionPhone);
-    expect(productionResponse.status).toBe(503);
-    expect(productionResponse.body.data?.developmentQuickLogin).toBeUndefined();
+    expect(response.status).toBe(200);
+    expect(response.body.data.developmentQuickLogin).toBeUndefined();
+    expect(JSON.stringify(response.body)).not.toContain(env.otpDevFallbackCode);
+    const verified = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: env.otpDevFallbackCode });
+    expect(verified.status).toBe(200);
   });
 
   it('verifies an accepted SMS.ir challenge and never returns the real OTP', async () => {
@@ -407,7 +396,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
 
   it('preserves failed attempts when a code is resent and blocks after five failures', async () => {
     const phone = await createUniquePhone();
-    const firstCode = (await otpRequest(phone)).body.data.developmentOtp as string;
+    const firstCode = env.otpDevFallbackCode;
+    await otpRequest(phone);
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       expect(
@@ -420,7 +410,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       ).toBe(400);
     }
 
-    const secondCode = (await otpRequest(phone)).body.data.developmentOtp as string;
+    const secondCode = env.otpDevFallbackCode;
+    await otpRequest(phone);
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const response = await request(app)
@@ -443,7 +434,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
 
   it('rejects expired OTPs', async () => {
     const phone = await createUniquePhone();
-    const code = (await otpRequest(phone)).body.data.developmentOtp as string;
+    const code = env.otpDevFallbackCode;
+    await otpRequest(phone);
     const phoneHash = hashAuthValue('phone', phone);
     await OtpChallenge.updateOne(
       { phoneHash },
@@ -462,7 +454,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
   it('registers a verified phone, stores the profile, and sets secure session cookies', async () => {
     const phone = await createUniquePhone();
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -470,7 +462,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
 
     expect(verified.body.data.registrationRequired).toBe(true);
     expect(cookieValue(verified, 'asoudeh_access')).toBeUndefined();
@@ -531,7 +523,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       initialBalance: 1000,
     });
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -539,7 +531,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
 
     expect(verified.body.data.registrationRequired).toBe(false);
     expect(setCookie(verified, 'asoudeh_access')).not.toContain('Secure');
@@ -547,7 +539,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const replayedOtp = await request(app)
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
     expect(replayedOtp.status).toBe(400);
     expect(cookieValue(verified, 'asoudeh_registration')).toBeUndefined();
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
@@ -606,7 +598,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر نشست', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -614,7 +606,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
     const oldRefresh = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const absoluteExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
@@ -657,7 +649,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر فعالیت', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -665,7 +657,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
     const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const tokenHash = hashAuthValue('refresh-token', refreshToken);
@@ -699,7 +691,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر منقضی', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -707,7 +699,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
     const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const tokenHash = hashAuthValue('refresh-token', refreshToken);
@@ -733,7 +725,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر رقابت', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -741,7 +733,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
     const oldRefresh = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const createSession = AuthSession.create.bind(AuthSession);
@@ -776,7 +768,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر csrf', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    const sent = await agent
+    await agent
       .post('/api/v1/auth/otp/request')
       .set('Origin', origin)
       .set('X-Forwarded-For', nextTestIp())
@@ -784,7 +776,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const verified = await agent
       .post('/api/v1/auth/otp/verify')
       .set('Origin', origin)
-      .send({ phone, code: sent.body.data.developmentOtp });
+      .send({ phone, code: env.otpDevFallbackCode });
 
     const badCsrf = await agent
       .patch('/api/v1/me/profile')

@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { AssistantWidget } from '@/components/assistant/AssistantWidget';
 import { cn } from '@/lib/utils/cn';
 
 const navigation = [
@@ -40,6 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const [speechMessage, setSpeechMessage] = useState('');
+  const [themeReady, setThemeReady] = useState(false);
 
   useEffect(() => {
     setIsMobileNavigationOpen(false);
@@ -69,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const nextTheme = savedTheme === 'dark' ? 'dark' : 'light';
     document.documentElement.dataset.theme = nextTheme;
     setTheme(nextTheme);
+    setThemeReady(true);
   }, []);
 
   function toggleTheme() {
@@ -152,6 +155,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+        <nav aria-label="راهنمای آسوده" className="sidebar-public-links">
+          <Link href="/guide">راهنمای استفاده</Link>
+          <Link href="/faq">سؤالات متداول</Link>
+          <Link href="/about">درباره آسوده</Link>
+        </nav>
 
         <div className="sidebar-note">
           <span className="sidebar-note-icon" aria-hidden="true">
@@ -184,6 +192,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={theme === 'dark' ? 'فعال‌کردن پوسته روشن' : 'فعال‌کردن پوسته تیره'}
             className="theme-toggle"
             onClick={toggleTheme}
+            disabled={!themeReady}
             type="button"
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -255,7 +264,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           );
         })}
+        <Link className="mobile-nav-link mobile-nav-public-link" href="/guide">
+          <span>راهنمای استفاده</span>
+        </Link>
+        <Link className="mobile-nav-link mobile-nav-public-link" href="/faq">
+          <span>سؤالات متداول</span>
+        </Link>
       </nav>
+      <AssistantWidget />
     </div>
   );
 }

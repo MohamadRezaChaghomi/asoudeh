@@ -100,7 +100,8 @@ async function issueOtp(phone: string): Promise<string> {
     .set('X-Forwarded-For', nextIp())
     .send({ phone });
   expect(response.status).toBe(200);
-  return response.body.data.developmentOtp as string;
+  expect(response.body.data.developmentOtp).toBeUndefined();
+  return env.otpDevFallbackCode;
 }
 
 function authenticatedDeletion(identity: TestIdentity, code: string) {

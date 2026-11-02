@@ -4,6 +4,7 @@ import {
   getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
+  formatJalaliYear,
   jalaliToGregorianIso,
 } from '../lib/jalaliDate.ts';
 
@@ -24,4 +25,10 @@ test('returns a complete Persian month and rejects impossible dates', () => {
 
 test('uses a valid Tehran Gregorian date for the latest selectable day', () => {
   assert.match(getTehranTodayIso(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('formats Jalali years without grouping and pads years below four digits', () => {
+  assert.equal(formatJalaliYear(1405), '۱۴۰۵');
+  assert.equal(formatJalaliYear(999), '۰۹۹۹');
+  assert.throws(() => formatJalaliYear(-1), RangeError);
 });

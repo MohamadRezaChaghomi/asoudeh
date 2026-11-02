@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
-import { ThemeInitializer } from '@/components/layout/ThemeInitializer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,8 +13,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fa" dir="rtl">
+      <head>
+        <Script id="theme-initializer" strategy="beforeInteractive">
+          {`try { document.documentElement.dataset.theme = localStorage.getItem('asoudeh.theme') === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }`}
+        </Script>
+      </head>
       <body>
-        <ThemeInitializer />
         <ServiceWorkerRegistration />
         {children}
       </body>

@@ -1,8 +1,8 @@
 import type { RequestHandler } from 'express';
-import type { ZodType, ZodTypeDef } from 'zod';
+import type { ZodType } from 'zod';
 
 export function validateBody<Output, Input = Output>(
-  schema: ZodType<Output, ZodTypeDef, Input>,
+  schema: ZodType<Output, Input>,
 ): RequestHandler {
   return (req, _res, next) => {
     const result = schema.safeParse(req.body);
@@ -17,8 +17,8 @@ export function validateBody<Output, Input = Output>(
   };
 }
 
-export function validateParams<T extends Record<string, string>>(
-  schema: ZodType<T>,
+export function validateParams<T extends Record<string, string>, Input = T>(
+  schema: ZodType<T, Input>,
 ): RequestHandler {
   return (req, _res, next) => {
     const result = schema.safeParse(req.params);
@@ -34,7 +34,7 @@ export function validateParams<T extends Record<string, string>>(
 }
 
 export function validateQuery<Output, Input = Output>(
-  schema: ZodType<Output, ZodTypeDef, Input>,
+  schema: ZodType<Output, Input>,
 ): RequestHandler {
   return (req, res, next) => {
     const result = schema.safeParse(req.query);

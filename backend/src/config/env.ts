@@ -10,11 +10,6 @@ if (!Number.isInteger(otpResendCooldownSeconds) || otpResendCooldownSeconds < 1)
   throw new Error('OTP_RESEND_COOLDOWN_SECONDS must be a positive integer.');
 }
 
-const otpDevQuickLoginPhone = process.env.OTP_DEV_QUICK_LOGIN_PHONE ?? '09120000000';
-if (!/^09\d{9}$/.test(otpDevQuickLoginPhone)) {
-  throw new Error('OTP_DEV_QUICK_LOGIN_PHONE must be a valid Iranian mobile number.');
-}
-
 const smsIrMode = process.env.SMSIR_MODE ?? 'sandbox';
 if (smsIrMode !== 'sandbox' && smsIrMode !== 'production') {
   throw new Error('SMSIR_MODE must be either sandbox or production.');
@@ -37,14 +32,13 @@ export const env = {
   jwtSecret: requireEnvironmentVariable('JWT_SECRET'),
   authHashSecret: process.env.AUTH_HASH_SECRET,
   otpDevSimulatorEnabled: process.env.OTP_DEV_SIMULATOR_ENABLED === 'true',
-  otpDevQuickLoginEnabled:
-    process.env.NODE_ENV === 'development' &&
-    process.env.OTP_DEV_QUICK_LOGIN_ENABLED === 'true',
-  otpDevQuickLoginPhone,
   otpDevFallbackCode,
   otpResendCooldownSeconds,
   smsIrApiKey: process.env.SMSIR_API_KEY?.trim() || undefined,
   smsIrVerifyTemplateId: process.env.SMSIR_VERIFY_TEMPLATE_ID?.trim() || '123456',
   smsIrMode,
+  aiApiKey: process.env.AI_API_KEY?.trim() || undefined,
+  aiModel: process.env.AI_MODEL?.trim() || undefined,
+  aiBaseUrl: process.env.AI_BASE_URL?.trim() || undefined,
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
 };

@@ -1,5 +1,7 @@
 # وضعیت پیاده‌سازی Asoudeh
 
+> این فایل گزارش تاریخی مراحل قبلی است. برای وضعیت جاری قابلیت‌ها و اولویت‌ها از [PROJECT_STATUS.md](./PROJECT_STATUS.md) و برای نتایج آزمون اخیر از [TESTING.md](./TESTING.md) استفاده کنید.
+
 این سند در آغاز ادامهٔ کار، بر اساس مشاهدهٔ مخزن و کد موجود ثبت شده است. وضعیت‌ها فقط پس از اجرای بررسی یا تست مرتبط به «تکمیل و تأییدشده» ارتقا می‌یابند.
 
 ## وضعیت شروع
@@ -46,7 +48,7 @@
 | وابستگی‌های frontend | نیمه‌تمام | PostCSS `8.5.31` برای Next `15.5.28` override شده؛ audit production صفر است. audit کامل هنوز ۹ هشدار development-only (۷ high، ۲ moderate) در Tailwind/Next lint گزارش می‌کند؛ رفع بدون migration عمده نیازمند بررسی است. |
 | UI/RTL و تم | پیاده‌سازی‌شده ولی نیازمند ارزیابی دستی | suite Edge مسیرها/تم را پاس کرد؛ contrast measurement، ۲۰۰٪ zoom و WCAG 2.2 AA certification اجرا نشده‌اند. |
 | تست‌های اجرای مرحلهٔ قبلی | تکمیل و تأییدشده در محدودهٔ اجراشده | Backend: ۱۱۳ پاس؛ Edge Playwright: ۲۸ پاس، ۱ skip؛ Jalali: ۳ پاس؛ backend/frontend typecheck و lint، backend build و frontend production build همگی پاس شدند. WCAG/production/live-SMS هنوز خارج از موارد تأییدشده‌اند. |
-| قابلیت‌های بعدی | انجام‌نشده/نیازمند تصمیم | recurring transactions، CSV/Excel export، notification delivery، chatbot، category deletion امن، WCAG و usability study در این مرحله پیاده‌سازی/تأیید نشده‌اند. |
+| قابلیت‌های بعدی | انجام‌نشده/نیازمند تصمیم | recurring transactions، CSV/Excel export، notification delivery، OCR، voice input، category deletion امن، WCAG و usability study پیاده‌سازی/تأیید نشده‌اند؛ دستیار راهنما به‌صورت اختیاری پیاده‌سازی شده و تا پیکربندی/بررسی provider غیرفعال است. |
 | Commit و push | commit انجام شد، push انجام نشد | commit `f2618c1` با پیام `feat: harden sessions and expand accessibility` ساخته شد؛ working tree پس از commit پاک بود. |
 
 ## برند و زیرساخت loading UI (2026-10-22)
@@ -77,3 +79,11 @@
 | Git | تغییرات محلی، بدون commit/push | شاخه `main` در `120f2a2` و همگام با upstream باقی ماند؛ تغییرات قبلی و اصلاحات جاری حفظ شده‌اند. |
 
 مدارک جزئی هر requirement و دستور/نتیجهٔ دقیق در [REQUIREMENTS_TRACEABILITY.md](./REQUIREMENTS_TRACEABILITY.md) و [QUALITY_AUDIT_REPORT.md](./QUALITY_AUDIT_REPORT.md) است.
+
+## ارجاع به ممیزی جاری (2026-11-02)
+
+- Backend: **۱۱۶ تست موفق، ۱ skip** روی دیتابیس تست محلی مجزا.
+- Frontend Edge E2E: **۳۷ موفق، ۱ skip**؛ Jalali **۴ موفق**.
+- Lint، typecheck و build هر دو پروژه موفق شدند.
+- Audit وابستگی‌های production پس از اصلاح `body-parser`، Zod و `follow-redirects`: صفر آسیب‌پذیری؛ هشدارهای Moderate زنجیرهٔ ابزارهای توسعه باقی است.
+- تست Sandbox واقعی اجرا نشده است. هیچ فایل `.env` واقعی خوانده/ویرایش و هیچ commit/push انجام نشد.

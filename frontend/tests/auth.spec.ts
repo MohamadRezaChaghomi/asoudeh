@@ -42,84 +42,50 @@ test('shows the approved logo on login and OTP registration without duplicating 
   await expect(page.getByRole('heading', { name: 'ساخت حساب کاربری' })).toBeVisible();
 });
 
-test('uses the development quick-login phone without showing the OTP form', async ({ page }) => {
+test('returns from login to the public home page', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'بازگشت' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: /مدیریت مالی/ })).toBeVisible();
+});
+
+test('requires manual OTP entry and never returns or stores the development OTP', async ({
+  page,
+}) => {
   let verificationPayload: Record<string, string> | undefined;
   await page.route('**/api/v1/auth/otp/request', async (route) => {
-    expect(route.request().postDataJSON()).toEqual({ phone: '09120000000' });
+    expect(route.request().postDataJSON()).toEqual({ phone: profile.phone });
     await route.fulfill({
-      json: {
-        success: true,
-        data: {
-          developmentOtp: '123456',
-          developmentQuickLogin: true,
-          resendAfterSeconds: 60,
-        },
-      },
+      json: { success: true, data: { resendAfterSeconds: 60 } },
     });
   });
   await page.route('**/api/v1/auth/otp/verify', async (route) => {
     verificationPayload = route.request().postDataJSON() as Record<string, string>;
     await route.fulfill({
-      json: {
-        success: true,
-        data: { registrationRequired: false, csrfToken: 'quick-login-csrf' },
-      },
+      json: { success: true, data: { registrationRequired: false } },
     });
   });
   await page.route('**/api/v1/me', async (route) => {
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
-          profile: { ...profile, phone: '09120000000' },
-        },
-      },
-    });
+    await route.fulfill({ json: { success: true, data: { profile } } });
   });
 
   await page.goto('/login');
-  await expect(page.getByLabel('شماره همراه')).toHaveValue('09120000000');
-  await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
-
-  await expect(page).toHaveURL(/\/settings$/, { timeout: 15_000 });
-  expect(verificationPayload).toEqual({ phone: '09120000000', code: '123456' });
-  await expect(page.getByLabel('کد تأیید')).toHaveCount(0);
-});
-
-test('sends first-time quick-login users to registration without requesting code entry', async ({
-  page,
-}) => {
-  await page.route('**/api/v1/auth/otp/request', async (route) => {
-    await route.fulfill({
-      json: {
-        success: true,
-        data: {
-          developmentOtp: '123456',
-          developmentQuickLogin: true,
-          resendAfterSeconds: 60,
-        },
-      },
-    });
-  });
-  await page.route('**/api/v1/auth/otp/verify', async (route) => {
-    expect(route.request().postDataJSON()).toEqual({
-      phone: '09120000000',
-      code: '123456',
-    });
-    await route.fulfill({
-      json: {
-        success: true,
-        data: { registrationRequired: true, csrfToken: 'registration-csrf' },
-      },
-    });
-  });
-
-  await page.goto('/login');
+  await expect(page.getByLabel('شماره همراه')).toHaveValue('');
+  await page.getByLabel('شماره همراه').fill(profile.phone);
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
 
   await expect(page).toHaveURL(/\/verify-otp$/);
-  await expect(page.getByLabel('نام نمایشی')).toBeVisible();
-  await expect(page.getByLabel('کد تأیید')).toHaveCount(0);
+  await expect(page.getByLabel('کد تأیید')).toBeVisible();
+  await expect(page.getByText('کد شبیه‌ساز توسعه:')).toHaveCount(0);
+  const pendingFlow = JSON.parse(
+    (await page.evaluate(() => sessionStorage.getItem('asoudeh.pendingOtp'))) ?? 'null',
+  ) as Record<string, unknown>;
+  expect(pendingFlow).not.toHaveProperty('code');
+  expect(pendingFlow).not.toHaveProperty('developmentOtp');
+  await page.getByLabel('کد تأیید').fill('123456');
+  await page.getByRole('button', { name: 'تأیید و ادامه' }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  expect(verificationPayload).toEqual({ phone: profile.phone, code: '123456' });
 });
 
 test('navigates to the OTP verification route after the request is accepted', async ({ page }) => {
@@ -154,15 +120,12 @@ test('returns to login when the OTP route has no pending request', async ({ page
   await expect(page.getByLabel('شماره همراه')).toBeVisible();
 });
 
-test('preserves the pending OTP challenge safely across a refresh', async ({ page }) => {
+test('preserves only the phone and resend time across refresh, never the OTP', async ({ page }) => {
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     await route.fulfill({
       json: {
         success: true,
-        data: {
-          developmentOtp: '123456',
-          resendAfterSeconds: 60,
-        },
+        data: { resendAfterSeconds: 60 },
       },
     });
   });
@@ -172,11 +135,16 @@ test('preserves the pending OTP challenge safely across a refresh', async ({ pag
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
   await expect(page).toHaveURL(/\/verify-otp$/);
   await expect(page.getByRole('button', { name: /ارسال دوباره کد/ })).toBeDisabled();
+  const pendingFlow = JSON.parse(
+    (await page.evaluate(() => sessionStorage.getItem('asoudeh.pendingOtp'))) ?? 'null',
+  ) as Record<string, unknown>;
+  expect(pendingFlow).not.toHaveProperty('code');
+  expect(pendingFlow).not.toHaveProperty('developmentOtp');
 
   await page.reload();
 
   await expect(page.getByLabel('کد تأیید')).toBeVisible();
-  await expect(page.getByText('کد شبیه‌ساز توسعه:')).toBeVisible();
+  await expect(page.getByText('کد شبیه‌ساز توسعه:')).toHaveCount(0);
   await expect(page.getByText(/0912••••567/)).toBeVisible();
 });
 
@@ -257,7 +225,7 @@ test('navigates to the protected app only after the backend confirms OTP verific
   let verificationPayload: Record<string, string> | undefined;
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     await route.fulfill({
-      json: { success: true, data: { developmentOtp: '123456', resendAfterSeconds: 60 } },
+      json: { success: true, data: { resendAfterSeconds: 60 } },
     });
   });
   await page.route('**/api/v1/auth/otp/verify', async (route) => {
@@ -291,7 +259,7 @@ test('validates the mobile number and completes OTP registration without storing
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     otpRequests += 1;
     await route.fulfill({
-      json: { success: true, data: { developmentOtp: '123456' } },
+      json: { success: true, data: {} },
     });
   });
   await page.route('**/api/v1/auth/otp/verify', async (route) => {
@@ -322,7 +290,7 @@ test('validates the mobile number and completes OTP registration without storing
   await page.getByLabel('شماره همراه').fill('۰۹۱۲۱۲۳۴۵۶۷');
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
   await expect(page).toHaveURL(/\/verify-otp$/);
-  await expect(page.getByText('کد شبیه‌ساز توسعه:')).toBeVisible();
+  await expect(page.getByText('کد شبیه‌ساز توسعه:')).toHaveCount(0);
   await page.getByLabel('کد تأیید').fill('۱۲۳۴۵۶');
   await page.getByRole('button', { name: 'تأیید و ادامه' }).click();
   expect(verificationPayload).toEqual({ phone: '09121234567', code: '123456' });
@@ -497,7 +465,7 @@ test('requires OTP and explicit confirmation before scheduling account deletion'
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     expect(route.request().postDataJSON()).toEqual({ phone: profile.phone });
     await route.fulfill({
-      json: { success: true, data: { developmentOtp: '123456' } },
+      json: { success: true, data: {} },
     });
   });
   await page.route('**/api/v1/auth/account-deletion', async (route) => {
@@ -513,7 +481,8 @@ test('requires OTP and explicit confirmation before scheduling account deletion'
 
   await page.goto('/settings');
   await page.getByRole('button', { name: 'ارسال کد تأیید به شماره حساب' }).click();
-  await expect(page.getByRole('status')).toContainText('123456');
+  await expect(page.getByRole('status')).toContainText('کد تأیید به شماره همراه حساب ارسال می‌شود');
+  await expect(page.getByRole('status')).not.toContainText('123456');
   const confirmButton = page.getByRole('button', { name: 'تأیید حذف حساب' });
   await expect(confirmButton).toBeDisabled();
   await page.getByLabel('کد تأیید شش‌رقمی').fill('۱۲۳۴۵۶');

@@ -59,7 +59,11 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(mobileNavigation).toBeHidden();
   await mobileMenuToggle.click();
   await expect(mobileNavigation).toBeVisible();
-  await expect(mobileNavigation.getByRole('link')).toHaveCount(8);
+  await expect(mobileNavigation.getByRole('link')).toHaveCount(10);
+  await expect(mobileNavigation.getByRole('link', { name: 'راهنمای استفاده' })).toHaveAttribute(
+    'href',
+    '/guide',
+  );
   for (const link of await mobileNavigation.getByRole('link').all()) {
     const bounds = await link.boundingBox();
     expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(48);

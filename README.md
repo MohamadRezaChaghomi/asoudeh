@@ -2,7 +2,7 @@
 
 Asoudeh is a Persian, right-to-left personal finance web application designed to make everyday money management approachable for older adults and people with limited experience using financial software. It supports personal transactions, budgets, reminders, monthly reports, and optional read-only caregiver access.
 
-> **Development status:** This repository is not production-ready. A server-side SMS.ir Verify adapter is implemented, but no account credentials/template are configured and no live delivery has been verified. Local OTP login is available through an explicitly enabled development simulator.
+> **Development status:** This repository is not production-ready. A server-side SMS.ir Verify adapter is implemented, but the checked-in sample has no API key and no live credentials, approved template, or delivery have been verified. Local OTP login is available through an explicitly enabled development simulator.
 
 ## Product capabilities
 
@@ -11,6 +11,8 @@ Asoudeh is a Persian, right-to-left personal finance web application designed to
 - Personal and read-only system categories; owner-scoped transaction management, soft deletion with a 10-second undo window, and 20-item pagination.
 - Solar Hijri dashboard, monthly budgets, recurring reminders with month-scoped completion, and monthly reports.
 - Explicitly accepted, permission-scoped, read-only caregiver access with revocation and audit events.
+- Optional Persian guide assistant, disabled until a backend-only provider is configured; it does not receive account or transaction data.
+- Browser text-to-speech for visible page text when a Persian system voice is available.
 - Optional, account-keyed session-only transaction draft storage.
 - A PWA manifest and a limited offline shell. Only a generic public offline page and its icon are cached; authenticated pages and API data are not cached.
 
@@ -77,13 +79,11 @@ The frontend is at <http://localhost:3000>. The API is at <http://localhost:5000
 
 ### Local OTP without an SMS provider
 
-For local development, set `NODE_ENV=development`, `OTP_DEV_SIMULATOR_ENABLED=true`, and `OTP_DEV_QUICK_LOGIN_ENABLED=true` in the backend's local environment file. The login page is prefilled with `09120000000`; submitting that number automatically sends the simulator's default OTP (`123456`) to the backend verification endpoint, so no code entry is required. A new account still needs a display name once. Other phone numbers continue through the normal OTP verification screen.
-
-The development OTP is single-use, expires after five minutes, is stored as a keyed digest, and retains the application's rate and attempt limits. Resends have a server-enforced cooldown (60 seconds by default). Quick login is accepted only for `OTP_DEV_QUICK_LOGIN_PHONE` (default `09120000000`) and only when `NODE_ENV=development`; the server still verifies and consumes the OTP before issuing a session. It is not an automatic fallback when a production SMS delivery fails. Never enable the simulator or quick login outside local development or use them with shared or production data. More detail is in [environment setup](docs/ENVIRONMENT.md).
+For local development without SMS, set `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true` in the backend's local environment file. The simulator uses `OTP_DEV_FALLBACK_CODE`, which must be entered manually on the verification page; the API and browser do not return or store the code. A new account still needs a display name once. Use only a dedicated local database. The challenge is single-use, expires after five minutes, is stored as a keyed digest, and retains the application's rate and attempt limits. Resends have a server-enforced cooldown (60 seconds by default). The simulator is not an automatic fallback after an SMS delivery failure. See [environment setup](docs/ENVIRONMENT.md).
 
 SMS.ir OTP delivery is server-side and uses `SMSIR_API_KEY`, `SMSIR_VERIFY_TEMPLATE_ID` (default `123456`), and the fixed `Code` Verify parameter when the development simulator is disabled. Both `SMSIR_MODE=sandbox` and `SMSIR_MODE=production` use the configured Verify endpoint; a successful Sandbox response does not prove handset delivery. No live SMS has been sent or tested. See [SMS.ir setup](docs/SMSIR_SETUP.md).
 
-For regular numbers, an accepted OTP request navigates to `/verify-otp`. The pending phone and development-only simulator code are kept in the current tab's session storage so refresh can recover the form; this client-side state never authenticates a user. Only successful backend OTP verification issues an authenticated session.
+An accepted OTP request navigates to `/verify-otp`. The current tab stores only the pending phone, step, and resend time so the form can recover after refresh; it never stores an OTP or authenticates a user. Only successful backend OTP verification issues an authenticated session.
 
 ## Checks and tests
 
@@ -110,12 +110,12 @@ Available root scripts are declared in the root `package.json`. Backend and fron
 
 ## Known limitations
 
-- **Production OTP delivery is not configured:** SMS.ir credentials and an approved template are missing. Production requests fail closed instead of returning a development code.
+- **Production OTP delivery is unverified:** the checked-in sample contains no SMS.ir API key; an approved template and live delivery have not been verified. Configure credentials only in the backend deployment environment. Requests fail closed when SMS settings are unavailable.
 - **Category deletion is intentionally unavailable:** the registered delete route returns `409 CATEGORY_DELETION_UNAVAILABLE`; safely reassigning transactions requires a transaction-capable database topology or an equivalent safe workflow, and a confirmed income fallback.
 - **No reminder or caregiver invitation delivery:** reminders are shown in the app, and caregiver invitations must be communicated out of band.
 - **Account deletion cannot currently be cancelled:** access is revoked immediately and permanent purge is scheduled for 30 days later.
 - **Offline behavior is limited:** the public offline page is cached, but account/API data and automatic offline transaction submission or synchronization are not supported.
-- **Not production-verified:** deployment, production index rollout, WCAG/Lighthouse results, and real-user usability studies have not been verified. OCR, voice, and chatbot features are not implemented.
+- **Not production-verified:** deployment, production index rollout, WCAG/Lighthouse results, and real-user usability studies have not been verified. The optional guide assistant requires provider configuration; voice input and OCR are not implemented. Browser text-to-speech support depends on the user's system and has not been validated with real assistive technology.
 
 There is no `LICENSE` file in the repository. No deployment URL, demo, screenshot, or CI status is claimed here.
 
@@ -125,6 +125,11 @@ There is no `LICENSE` file in the repository. No deployment URL, demo, screensho
 - [Requirements traceability](docs/REQUIREMENTS_TRACEABILITY.md)
 - [Quality audit report](docs/QUALITY_AUDIT_REPORT.md)
 - [API contract](docs/API.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Database model and ownership notes](docs/DATABASE.md)
+- [Security model and operational cautions](docs/SECURITY.md)
+- [Test guide and current verification](docs/TESTING.md)
+- [Current project status](docs/PROJECT_STATUS.md)
 - [Environment setup and safe database testing](docs/ENVIRONMENT.md)
 - [Development guide](docs/DEVELOPMENT.md)
 - [Architecture and security decisions](docs/DECISIONS.md)

@@ -1,6 +1,6 @@
 # Asoudeh Requirements Traceability
 
-Audit snapshot: 2026-10-22. This matrix reconciles the original product specification, the current API contract, implementation decisions, roadmap, and observed source/tests. A feature is not marked complete merely because a route or component exists.
+Audit snapshot: 2026-11-02. This matrix reconciles the original product specification, the current API contract, implementation decisions, roadmap, and observed source/tests. A feature is not marked complete merely because a route or component exists. For current system architecture, assistant scope, and verification totals, see [PROJECT_STATUS.md](./PROJECT_STATUS.md) and [TESTING.md](./TESTING.md).
 
 ## Status definitions
 
@@ -14,7 +14,7 @@ Audit snapshot: 2026-10-22. This matrix reconciles the original product specific
 
 | ID | Requirement and expected behavior | Implementation evidence | Verification evidence | Status and remaining action |
 |---|---|---|---|---|
-| FR-01 | Passwordless mobile registration/login; a new user provides a display name and duplicate accounts are not created. | OTP request/verify and registration routes, auth service, login and verify pages. | 113 backend tests; Edge auth E2E covers accepted request, registration, login and error paths using mocked API responses. | **PARTIAL** — production SMS configuration and live delivery are unavailable; simulator is development-only. |
+| FR-01 | Passwordless mobile registration/login; a new user provides a display name and duplicate accounts are not created. | OTP request/verify and registration routes, auth service, login and verify pages. | Current backend suite: 116 passed, 1 skipped; Edge auth E2E is part of 37 passing browser tests and uses mocked API responses. | **PARTIAL** — production SMS configuration and live delivery are unavailable; simulator is development-only and requires manual code entry. |
 | FR-02 | OTP expires after five minutes, is single-use, allows at most five failed attempts, and blocks the phone for ten minutes after repeated failures. | OTP challenge/rate-limit models, auth service and validators; keyed OTP digest and development-only simulator. | Backend auth API/unit tests cover expiry, invalid/replayed code, attempts and rate limits. | **PASS** for tested implementation; production SMS delivery remains separately blocked under FR-01. |
 | FR-03 | Session lifecycle includes logout, short-lived access credentials, refresh rotation/reuse detection, CSRF/Origin checks, and idle expiry. | Auth session model/service, auth/CSRF/origin middleware and frontend API client/activity monitor. | Backend auth API tests and Edge auth/session tests passed. | **PARTIAL** — production cookie/origin deployment and real multi-tab/network behavior are not verified. |
 | FR-04 | View/edit profile, optional birth year, initial balance, and saved accessibility preferences. | `/api/v1/me` and profile patch routes; settings page and shared theme/font preference application. | Backend profile tests and Edge settings/preferences E2E passed. | **PASS** for covered local/test behavior; real assistive-technology behavior remains unverified under NFR-01. |

@@ -42,8 +42,6 @@ export interface AuthTokens {
 
 export interface OtpRequestResult {
   message: string;
-  developmentOtp?: string;
-  developmentQuickLogin?: boolean;
   deliveryMode: 'development' | 'sms';
   resendAfterSeconds: number;
 }
@@ -380,13 +378,6 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
   return {
     message: OTP_MESSAGE,
     deliveryMode: useDevelopmentSimulator ? 'development' : 'sms',
-    ...(useDevelopmentSimulator ? { developmentOtp: code } : {}),
-    ...(useDevelopmentSimulator &&
-    env.otpDevQuickLoginEnabled &&
-    env.nodeEnv === 'development' &&
-    normalizedPhone === env.otpDevQuickLoginPhone
-      ? { developmentQuickLogin: true }
-      : {}),
     resendAfterSeconds: env.otpResendCooldownSeconds,
   };
 }

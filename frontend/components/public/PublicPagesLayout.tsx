@@ -76,7 +76,8 @@ function PublicFooter() {
     <footer className="public-footer">
       <div className="public-footer-inner">
         <div className="public-footer-about">
-          <Link className="public-footer-brand" href="/">
+          <Link aria-label="آسوده، صفحه اصلی" className="public-footer-brand" href="/">
+            <BrandLogo className="public-footer-logo" size="landing" />
             آسوده
           </Link>
           <p>مدیریت مالی شخصی، ساده و فارسی.</p>

@@ -147,15 +147,10 @@ export default function SettingsPage() {
     setDeletionNotice('');
     setDeletionOtpSending(true);
     try {
-      const response = await api.post('/auth/otp/request', { phone: profile?.phone });
+      await api.post('/auth/otp/request', { phone: profile?.phone });
       setDeletionCodeRequested(true);
       setDeletionCode('');
-      const developmentOtp = response.data.data.developmentOtp as string | undefined;
-      setDeletionNotice(
-        developmentOtp
-          ? `קוד האימות לסביבת הפיתוח: ${developmentOtp}`
-          : 'אם השירות זמין, קוד אימות נשלח למספר הטלפון של החשבון.',
-      );
+      setDeletionNotice('اگر سرویس در دسترس باشد، کد تأیید به شماره همراه حساب ارسال می‌شود.');
     } catch (requestError) {
       setDeletionError(errorMessage(requestError));
     } finally {

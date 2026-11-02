@@ -173,14 +173,14 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
       expect((headingBounds?.x ?? 0) + (headingBounds?.width ?? 0)).toBeLessThanOrEqual(
         viewport.width,
       );
-      const logo = page.getByRole('img', { name: 'نشان آسوده' });
+      const logo = page.locator('img[alt="نشان آسوده"]:visible').first();
       await expect(logo).toBeVisible();
       const logoMetrics = await logo.evaluate((image: HTMLImageElement) => ({
         sourceAspectRatio: image.naturalWidth / image.naturalHeight,
         objectFit: getComputedStyle(image).objectFit,
       }));
       expect(logoMetrics.sourceAspectRatio).toBeCloseTo(1, 1);
-      expect(logoMetrics.objectFit).toBe('cover');
+      expect(logoMetrics.objectFit).toBe(path === '/' ? 'contain' : 'cover');
 
       if (
         viewport.width > 700 &&
@@ -236,7 +236,10 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
         await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
         await menuToggle.click();
         await expect(mobileNavigation).toBeVisible();
-        await expect(mobileNavigation.getByRole('link')).toHaveCount(8);
+        await expect(mobileNavigation.getByRole('link')).toHaveCount(10);
+        await expect(
+          mobileNavigation.getByRole('link', { name: 'راهنمای استفاده' }),
+        ).toHaveAttribute('href', '/guide');
         for (const link of await mobileNavigation.getByRole('link').all()) {
           const bounds = await link.boundingBox();
           expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(48);
@@ -274,7 +277,7 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
     await page.setViewportSize(viewport);
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'نشان آسوده' })).toBeVisible();
+    await expect(page.locator('img[alt="نشان آسوده"]:visible').first()).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: document.documentElement.clientWidth,
@@ -288,7 +291,7 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
-  await expect(page.getByRole('img', { name: 'نشان آسوده' })).toBeVisible();
+  await expect(page.locator('img[alt="نشان آسوده"]:visible').first()).toBeVisible();
   const loginDimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,
     viewportWidth: document.documentElement.clientWidth,

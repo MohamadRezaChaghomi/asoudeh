@@ -1,6 +1,14 @@
 # یادداشت تحویل پروژه آسوده
 
-آخرین بررسی: 2026-10-22
+آخرین بررسی: 2026-11-02
+
+## وضعیت جاری و خروجی ممیزی (2026-11-02)
+
+- وضعیت canonical قابلیت‌ها و اولویت‌ها در [PROJECT_STATUS.md](./PROJECT_STATUS.md) و نتایج/دستورهای بازتولید در [TESTING.md](./TESTING.md) ثبت شده‌اند. بخش‌های تاریخ‌دار پایین‌تر، سوابق قبلی هستند.
+- آزمون‌های جاری: backend **۱۱۶ موفق، ۱ skip**؛ Edge production browser **۳۷ موفق، ۱ skip**؛ Jalali **۴ موفق**. Backend/frontend lint، typecheck و build نیز موفق شدند.
+- سه آسیب‌پذیری High در dependencyهای production با به‌روزرسانی `body-parser`، Zod 4 و `follow-redirects` رفع شد؛ audit production فعلی هر دو بخش صفر مورد دارد. هشدارهای Moderate در ابزارهای توسعه باقی مانده‌اند و force upgrade ناسازگار انجام نشد.
+- OTP توسعه دیگر از API یا browser storage افشا نمی‌شود و quick-login وجود ندارد؛ کد simulator باید دستی وارد شود.
+- SMS زنده/Sandbox، production deployment، database index rollout، backup/restore، WCAG و آزمون usability انجام نشده‌اند. فایل‌های `.env` واقعی حفظ شدند؛ هیچ SMS، commit یا push انجام نشد.
 
 ## ادامهٔ ممیزی و توسعه (2026-10-22)
 
@@ -37,7 +45,7 @@
 - فرم ورود اکنون پس از پاسخ موفق `POST /auth/otp/request`، اطلاعات حداقلی درخواست را در session storage همان tab ذخیره و به `/verify-otp` منتقل می‌کند. شماره در URL قرار نمی‌گیرد. نبود state معتبر در بازکردن مستقیم مسیر به `/login` بازمی‌گردد؛ refresh مسیر کد را از state موقت بازیابی می‌کند.
 - state مرورگر نشانه احراز هویت نیست. تنها پاسخ موفق `POST /auth/otp/verify` به کاربر موجود اجازه ورود می‌دهد و backend کوکی‌های session را صادر می‌کند. کاربر جدید پس از تأیید OTP به فرم ثبت‌نام می‌رود؛ ثبت‌نام همچنان به کوکی کوتاه‌عمر سرور و CSRF نیاز دارد.
 - OTP شش‌رقمی، paste/Enter، خطای شبکه/API، جلوگیری از submit تکراری، شمارش معکوس و ارسال مجدد پوشش دارند. `OTP_RESEND_COOLDOWN_SECONDS` به‌طور پیش‌فرض ۶۰ ثانیه است و backend آن را با محدودیت اتمیک روی challenge اعمال می‌کند.
-- برای توسعهٔ محلی، شمارهٔ `09120000000` در فرم ورود از پیش وارد شده است. با فعال‌کردن صریح simulator و `OTP_DEV_QUICK_LOGIN_ENABLED=true`، backend فقط برای این شماره علامت quick-login می‌دهد؛ client کد توسعه را به endpoint عادی verify می‌فرستد و جلسه همچنان فقط پس از اعتبارسنجی server ایجاد می‌شود. حساب جدید یک بار به تکمیل نام نمایشی نیاز دارد.
+- **رفتار تاریخی، superseded:** نسخه‌های توسعهٔ قبلی شمارهٔ نمونه و quick-login داشتند. رفتار فعلی هیچ شماره/OTP را prefill یا از API برنمی‌گرداند؛ simulator توسعه کد ثابت محلی را فقط با ورود دستی می‌پذیرد. هیچ کلید quick-login در پیکربندی فعلی وجود ندارد.
 - adapter سروری SMS.ir به Verify API رسمی (`POST /v1/send/verify`) اضافه شده است؛ key، template ID و نام دقیق پارامتر هنوز از پنل کاربر دریافت/تأیید نشده‌اند و SMS واقعی آزمایش نشده است. حالت `SMSIR_MODE=sandbox` هیچ درخواست شبکه‌ای نمی‌فرستد، چون OpenAPI رسمی در دسترس sandbox را مستند نکرده است. برای راهنما و تست مجاز، `docs/SMSIR_SETUP.md` را ببینید.
 - فایل‌های تغییرکرده در این milestone: `frontend/app/(auth)/login/page.tsx`, `frontend/app/(auth)/verify-otp/page.tsx`, `frontend/lib/auth/otpFlow.ts`, `frontend/tests/auth.spec.ts`, `backend/.env.example`, `backend/src/config/env.ts`, `backend/src/controllers/auth.controller.ts`, `backend/src/models/OtpChallenge.ts`, `backend/src/services/auth.service.ts`, `backend/src/tests/auth.api.test.ts` و مستندات OTP.
 - **تأیید مرورگر واقعی:** علاوه بر E2Eهای دارای API mock، یک smoke test در Edge به frontend و backend واقعی متصل شد: OTP request، `/verify-otp`، verify، تکمیل registration، دریافت `/me` با HTTP 200 و بررسی HttpOnly بودن کوکی‌های access/refresh. دیتابیس منحصربه‌فرد محلیِ موقت پس از آزمون حذف شد.
@@ -83,7 +91,8 @@
 | P2 | WCAG 2.2 AA، کنتراست، لمس و کاربردپذیری | پوسته واکنش‌گرا، تم روشن/تیره، focus، reduced motion و تنظیمات اندازه متن/کنتراست موجودند؛ ارزیابی Lighthouse/assistive technology و آزمون واقعی کاربران انجام نشده. | اجرای ارزیابی دستی و خودکار، ثبت نتیجه و رفع موارد بحرانی؛ ادعای AA فقط پس از بررسی کامل. |
 | P2 | تأیید browser و PWA/E2E | با Edge و ۲ worker: ۲۸ آزمون موفق و یک آزمون PWA production-only در اجرای development عمداً skip شد؛ جست‌وجو/مرتب‌سازی تراکنش و کنترل گفتار نیز تست شدند. | اجرای ماتریس مرورگرهای پشتیبانی‌شده و بررسی نصب PWA/تجربه کاربری روی دستگاه واقعی. |
 | P2 | راه‌اندازی production و شاخص‌ها | هیچ deployment یا شاخصی در production اجرا/بررسی نشده است. شاخص‌های یکتای reminder completion و caregiver باید پیش از ترافیک واقعی ایمن rollout شوند. | بررسی داده‌های موجود و اجرای rollout شاخص‌ها توسط اپراتور روی replica set مناسب؛ سپس health check و smoke test. |
-| P3 / خارج از MVP | OCR، chatbot و اعلان‌های SMS/email/push | پیاده‌سازی نشده‌اند. خواندن اختیاری متن صفحه با Web Speech API افزوده شده، اما voice واقعی فارسی و همزیستی با screen reader ارزیابی نشده‌اند. | فقط در صورت تصمیم محصول برای فاز بعدی؛ قابلیت گفتار نیازمند آزمون واقعی مرورگر/سیستم است. |
+| P2 / تصمیم محصول | دستیار راهنمای آسوده | UI/API اختیاری پیاده‌سازی شده؛ بدون تنظیم provider غیرفعال می‌ماند و فقط محتوای راهنمای عمومی را با provider به اشتراک می‌گذارد. نگهداری provider نیازمند بررسی است. | فقط پس از ارزیابی حریم خصوصی provider و آزمون پاسخ محدود به محتوای راهنما فعال شود. |
+| P3 / خارج از MVP | OCR، voice input و اعلان‌های SMS/email/push | پیاده‌سازی نشده‌اند. خواندن اختیاری متن صفحه با Web Speech API افزوده شده، اما voice واقعی فارسی و همزیستی با screen reader ارزیابی نشده‌اند. | فقط در صورت تصمیم محصول برای فاز بعدی؛ قابلیت گفتار نیازمند آزمون واقعی مرورگر/سیستم است. |
 
 ## چک‌لیست تکمیل گردش کار
 
@@ -107,7 +116,7 @@
 - تراکنش و یادآور حذف فیزیکی نمی‌شوند؛ archive/soft-delete تاریخچه را حفظ می‌کند.
 - دعوت caregiver از طریق SMS ارسال نمی‌شود؛ دعوت‌کننده باید از کانال دیگری اطلاع دهد.
 - شاخص‌های مدل صرفاً تعریف کد نیستند؛ ایجاد یا rollout آن‌ها روی production در این بررسی انجام نشده است.
-- فایل‌های محلی `backend/.env` و `frontend/.env.local` باز یا چاپ نشدند. نام متغیرهای template شامل `NODE_ENV`، `PORT`، `MONGODB_URI`، `JWT_SECRET`، `AUTH_HASH_SECRET`، `OTP_DEV_SIMULATOR_ENABLED`، `OTP_DEV_QUICK_LOGIN_ENABLED`، `OTP_DEV_QUICK_LOGIN_PHONE`، `OTP_RESEND_COOLDOWN_SECONDS`، `SMSIR_API_KEY`، `SMSIR_VERIFY_TEMPLATE_ID`، `SMSIR_MODE`، `CLIENT_URL`، `TEST_MONGODB_URI` و `NEXT_PUBLIC_API_URL` است. مقدار واقعی در این سند ثبت نمی‌شود.
+- فایل‌های محلی `backend/.env` و `frontend/.env.local` باز یا چاپ نشدند. نام متغیرهای template شامل `NODE_ENV`، `PORT`، `MONGODB_URI`، `JWT_SECRET`، `AUTH_HASH_SECRET`، `OTP_DEV_SIMULATOR_ENABLED`، `OTP_DEV_FALLBACK_CODE`، `OTP_RESEND_COOLDOWN_SECONDS`، `SMSIR_API_KEY`، `SMSIR_VERIFY_TEMPLATE_ID`، `SMSIR_MODE`، `AI_API_KEY`، `AI_MODEL`، `AI_BASE_URL`، `CLIENT_URL`، `TEST_MONGODB_URI` و `NEXT_PUBLIC_API_URL` است. مقدار واقعی در این سند ثبت نمی‌شود.
 
 ## اعتبارسنجی انجام‌شده
 

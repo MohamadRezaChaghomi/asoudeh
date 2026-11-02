@@ -2,7 +2,6 @@ const OTP_FLOW_KEY = 'asoudeh.pendingOtp';
 
 export interface PendingOtpFlow {
   phone: string;
-  developmentOtp?: string;
   resendAvailableAt: number;
   step: 'code' | 'register';
 }
@@ -14,8 +13,6 @@ function isPendingOtpFlow(value: unknown): value is PendingOtpFlow {
   return (
     typeof flow.phone === 'string' &&
     /^09\d{9}$/.test(flow.phone) &&
-    (flow.developmentOtp === undefined ||
-      (typeof flow.developmentOtp === 'string' && /^\d{6}$/.test(flow.developmentOtp))) &&
     typeof flow.resendAvailableAt === 'number' &&
     Number.isFinite(flow.resendAvailableAt) &&
     (flow.step === 'code' || flow.step === 'register')

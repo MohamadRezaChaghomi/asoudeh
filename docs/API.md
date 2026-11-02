@@ -24,14 +24,14 @@ Request body: `{ "phone": "09121234567" }`. Persian/Arabic digits and common `+9
 
 When the development simulator is disabled, the backend sends the OTP using the SMS.ir Verify endpoint in either `SMSIR_MODE=sandbox` or `SMSIR_MODE=production`. The request uses `SMSIR_API_KEY`, `SMSIR_VERIFY_TEMPLATE_ID` (default `123456`), and the fixed `Code` parameter. An HTTP success is insufficient: the JSON response must have `status: 1` and a positive message ID. This confirms provider acceptance, not handset delivery; in particular, a successful Sandbox response does not imply a real SMS was delivered.
 
-For local development, OTP delivery is available through the simulator only when both `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true`; only then does the simulator return `developmentOtp` in the response. With `OTP_DEV_QUICK_LOGIN_ENABLED=true`, a request for `OTP_DEV_QUICK_LOGIN_PHONE` (default `09120000000`) additionally returns `developmentQuickLogin: true`. This is only a client convenience: it submits the returned development code to the normal verification endpoint, which still consumes the challenge and issues the session. With both delivery modes unavailable, requests return `503 OTP_DELIVERY_UNAVAILABLE` and never include a code. The generic response message does not disclose whether an account exists.
+For local development, OTP delivery is available through the simulator only when both `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true`. The simulator uses `OTP_DEV_FALLBACK_CODE`, but the OTP is never returned by the API or stored by the browser; the developer enters it manually. There is no quick-login bypass. With both delivery modes unavailable, requests return `503 OTP_DELIVERY_UNAVAILABLE` and never include a code. The generic response message does not disclose whether an account exists.
 
 Successful requests include `resendAfterSeconds` (default 60, configured by `OTP_RESEND_COOLDOWN_SECONDS`). A resend attempted during this interval returns `429 OTP_RATE_LIMITED` with a `Retry-After` header. Phone and IP rolling-window request limits also apply.
 
 ### `POST /api/v1/auth/otp/verify`
 Request body: `{ "phone": "09121234567", "code": "012345" }`.
 
-When the local development simulator is enabled, the requested code is `OTP_DEV_FALLBACK_CODE` (default `123456`), shown by the verification page for regular numbers. For the configured quick-login phone, the client submits this same code automatically; it remains single-use, expires after five minutes, and is subject to existing request and attempt limits. Development-issued codes cannot be verified outside development or after disabling the simulator. Do not use this fixed code with shared or production data. This simulator is the local no-SMS path, not an automatic fallback after a real SMS provider failure.
+When the local development simulator is enabled, verify using the configured `OTP_DEV_FALLBACK_CODE` (default `123456`) entered manually on `/verify-otp`. It remains single-use, expires after five minutes, and is subject to existing request and attempt limits. Development-issued codes cannot be verified outside development or after disabling the simulator. Do not use this fixed code with shared or production data. The simulator is the local no-SMS path, not an automatic fallback after a real SMS provider failure.
 
 See [SMS.ir setup and verification details](./SMSIR_SETUP.md) for provider configuration, account prerequisites, mocked tests, and the opt-in Sandbox connection test.
 
@@ -77,6 +77,14 @@ Requires the access cookie, configured Origin, and CSRF cookie/header pair. At l
 ```
 
 `displayName` is trimmed and 1–80 characters; `birthYear` is optional/null or a Solar Hijri year from 1300 through the current year; `initialBalance` is an integer non-negative safe number in toman; `fontScale` is one of `1`, `1.25`, `1.5`, `2`; `highContrast` is boolean. Success: `{ success: true, data: { profile } }`.
+
+### `GET /api/v1/assistant/status`
+Requires the access cookie. Returns `{ success: true, data: { available: boolean } }`. Availability reflects whether the backend-only AI provider settings are valid; it does not send a provider request.
+
+### `POST /api/v1/assistant/messages`
+Requires the access cookie, configured Origin, and CSRF cookie/header pair. Request body: `{ "message": "چطور یادآور بسازم؟" }`; the trimmed message must contain 1–1000 characters. At most ten requests per user per minute are accepted. A configured provider receives the question and selected public guide content only; personal profile, transactions, budgets, and conversation history are not sent or persisted by the application. When the provider is not configured or is unavailable, the endpoint returns a sanitized `503 ASSISTANT_UNAVAILABLE`; invalid provider output returns a sanitized `502 ASSISTANT_INVALID_RESPONSE`.
+
+Success: `{ success: true, data: { answer, source? } }`. The answer is rendered as plain text by the frontend.
 
 All state-changing authentication and profile requests require the exact configured `CLIENT_URL` Origin. Cookie-authenticated requests also require the CSRF cookie echoed in `X-CSRF-Token`. Common failures include `400 VALIDATION_ERROR` or `OTP_INVALID`, `401 AUTHENTICATION_REQUIRED`/`SESSION_INVALID`/`SESSION_EXPIRED`/`REFRESH_TOKEN_REUSED`, `403 ORIGIN_REQUIRED`/`ORIGIN_NOT_ALLOWED`/`CSRF_VALIDATION_FAILED`, `409 ACCOUNT_ALREADY_EXISTS`/`ACCOUNT_DELETION_PENDING`, `429 OTP_RATE_LIMITED`/`OTP_TEMPORARILY_BLOCKED`, and `503 AUTH_NOT_CONFIGURED`/`OTP_DELIVERY_UNAVAILABLE`. Rate-limit responses include `Retry-After` when available. Errors use `{ success: false, error: { code, message, details? } }`.
 

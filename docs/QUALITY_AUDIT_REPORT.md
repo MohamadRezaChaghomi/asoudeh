@@ -92,7 +92,7 @@ Commands below were executed against the final code changes unless noted.
 3. Measure WCAG 2.2 AA (including contrast), keyboard/screen-reader/200% zoom/mobile touch behavior, and user task success with representative older adults. Current automated tests do not establish usability metrics or certification.
 4. Deploy to a non-production environment and verify HTTPS cookie/origin settings, MongoDB topology/indices, backups, account-deletion worker health/retention, logging, and operational recovery.
 5. Keep category deletion disabled until transaction reassignment has concurrency-safe guarantees and income/expense fallback behavior is approved.
-6. External reminder and caregiver-invitation delivery, offline transaction submission/sync, OCR, voice input and chatbot remain unsupported/out of current scope; do not represent them as implemented.
+6. External reminder and caregiver-invitation delivery, offline transaction submission/sync, OCR, and voice input remain unsupported/out of current scope. The optional guide assistant is implemented but must remain unavailable until the backend provider is configured and reviewed.
 7. The app-wide UI/API error, empty, pending and boundary combinations are not exhaustively browser-tested. Existing feature pages, especially transactions and reminders, remain large; only refactor when a bounded feature change justifies it.
 8. No cross-browser Safari/Firefox certification or performance budget measurement was performed.
 
@@ -104,3 +104,47 @@ Commands below were executed against the final code changes unless noted.
 - Playwright generated `frontend/test-results/.last-run.json`; that exact metadata file was removed after the final run.
 
 For requirement-level detail, see [REQUIREMENTS_TRACEABILITY.md](./REQUIREMENTS_TRACEABILITY.md). For current product boundaries and API behavior, see [PROJECT_REPORT.md](./PROJECT_REPORT.md), [API.md](./API.md), and [ROADMAP.md](./ROADMAP.md).
+
+## Follow-up audit (2026-11-02)
+
+This follow-up supersedes the earlier snapshot's test counts, dependency-audit counts, Git baseline, and feature statements. It preserves the 2026-10-22 findings as historical evidence.
+
+### Current scope and findings
+
+- Reviewed current route/service/model/test inventories for frontend and backend, existing project documentation, environment templates (not real `.env` values), and package manifests.
+- No confirmed exploitable application vulnerability was established by this source/test review. This is not a penetration test or security certification.
+- Source-level deployment risks remain: cookies receive `Secure` only when `NODE_ENV=production`; configuration requires `JWT_SECRET` but does not enforce its entropy. No live deployment values were accessed, so neither is confirmed as a deployed vulnerability.
+- A fresh dependency audit found three production-tree High advisories: backend `body-parser`, backend Zod, and frontend `follow-redirects`. They were remediated with compatible updates plus Zod 4 migration in the shared validator type signatures. Current production-only audits report zero vulnerabilities for both backend and frontend.
+- Full development-tree audit still reports **11 moderate backend** and **14 moderate frontend** advisories in the lint/type-tooling dependency trees, primarily through `minimatch`. `npm audit fix --force` proposed incompatible major/downgrade changes; no force upgrade was applied.
+- Existing docs had stale claims that the simulator OTP was returned or a quick-login shortcut existed. They were corrected to match current manual entry and non-disclosure. New architecture, database, security, testing, and current-status documents were added.
+
+### Severity summary
+
+| Severity | Finding | Current disposition |
+|---|---|---|
+| Critical | None established. | No action indicated by this review. |
+| High | `body-parser` before 1.20.9 had a request-parsing denial-of-service condition; Zod before 4.6.6 had a memory-exhaustion validation condition; `follow-redirects` 1.16.0–1.16.1 could mishandle sensitive headers across redirects. These dependency paths could affect API availability or, for redirected HTTP requests with custom credentials, credential confidentiality. | **Fixed:** `body-parser@1.20.9`, `zod@4.6.7`, and `follow-redirects@1.16.2`; full backend/API and frontend Edge regression suites, lint, typecheck, and builds passed; production-only audits report zero. No vulnerability payload was run. Evidence: [backend manifest](../backend/package.json), [validator compatibility update](../backend/src/validators/validateBody.ts), [frontend manifest](../frontend/package.json), and corresponding lockfiles. |
+| Medium | Moderate `minimatch` advisories remain in backend/frontend development-tool dependency trees; production trees are clear. | **Open, accepted for now**; npm's forced remediation proposes incompatible major/downgrade changes. Plan a toolchain upgrade, do not force-install. Evidence: full `npm audit` output for the backend and frontend lockfiles. |
+| Medium (configuration risk, not confirmed exploit) | Missing/misconfigured `NODE_ENV=production` can disable `Secure` cookies; weak `JWT_SECRET` values are accepted if non-empty. | **Operational gate**; require production environment review and high-entropy secret. No live deployment configuration was inspected. Evidence: [environment parsing](../backend/src/config/env.ts) and [cookie flags](../backend/src/controllers/auth.controller.ts). |
+| Low | Stale Playwright assertions expected old navigation counts/OTP exposure and selected duplicate logos imprecisely. | **Fixed in tests**; all 37 applicable production Edge browser tests passed with one intentional skip. No application behavior change was needed for these assertion updates. |
+
+### Current validation
+
+| Check | Result |
+|---|---|
+| Backend Vitest suite against explicitly selected local `asoudeh_test`, synthetic signing secrets, blank SMS API key, Sandbox opt-in disabled | **116 passed, 1 skipped** (17 passed test files, 1 skipped test file). The skipped case is the real SMS Sandbox check. |
+| Frontend production Edge Playwright, `PWA_TEST=true`, direct CLI with four workers | **37 passed, 1 skipped**. Development-only service-worker test skipped by design. |
+| Frontend Jalali tests | **4 passed**. Node emitted its experimental type-stripping/module-type warnings. |
+| Backend/frontend lint and typecheck | **PASS** after dependency updates and Zod migration. |
+| Backend/frontend production builds | **PASS** after dependency updates. |
+| SMS.ir provider unit tests | Covered in the backend suite with mocked HTTP; no request to SMS.ir. |
+| Backend production dependency audit | **0 vulnerabilities**. |
+| Frontend production dependency audit | **0 vulnerabilities**. |
+| Full backend/frontend dependency audit | **11 / 14 moderate development-tooling advisories**, respectively; no High production advisories remain. |
+| SMS Sandbox | **Not run**; no real outbound HTTP request or handset delivery was tested. |
+
+An intermediate Playwright invocation used ten workers and had three navigation timeouts under local server contention; the direct CLI run with four workers passed all applicable tests. No application fix was needed for that transient capacity issue.
+
+The backend tests connected only to the credential-free local `asoudeh_test` URI and cleaned up test fixtures; no production/shared database, real `.env`, or secrets were read. No commit or push occurred. Existing local changes were retained.
+
+The current execution guide and project status are in [TESTING.md](./TESTING.md) and [PROJECT_STATUS.md](./PROJECT_STATUS.md). See [SECURITY.md](./SECURITY.md) for residual configuration and deployment risks.

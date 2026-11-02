@@ -22,8 +22,7 @@ The random-code requirement below applies to a future SMS delivery integration. 
 - Requesting another code does not clear failed attempts or an active block. A replacement code may be issued only when the phone is not blocked and both request limits permit it; its challenge retains the existing attempt count until its attempt window ends.
 - A replacement code invalidates the previous code. Expired challenges cannot be verified.
 - Challenges and counters are persisted with expiry indexes; OTP values and request bodies are never logged.
-- The simulator may include the OTP in a development-only response field only when `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true`. Otherwise no simulator OTP is returned or logged. The simulator is disabled in every other environment.
-- A local quick-login shortcut is restricted to `NODE_ENV=development`, explicit `OTP_DEV_QUICK_LOGIN_ENABLED=true`, the simulator, and one configured phone (`OTP_DEV_QUICK_LOGIN_PHONE`). The client submits the server-provided development code to the normal OTP verification endpoint; this does not bypass backend verification or create a session directly.
+- **Superseded behavior:** earlier development builds exposed the simulator OTP and had a quick-login shortcut. Current behavior does not return the OTP or quick-login flag from the API, does not store the code in browser storage, and requires manual entry even when the development simulator is enabled. Keep the simulator limited to an isolated local database.
 - `AUTH_HASH_SECRET` is a dedicated secret of at least 32 bytes used for OTP, refresh-token, and rate-limit HMACs. Authentication endpoints fail closed if it is absent or too short; it is never derived from the JWT signing key. CSRF tokens are random and compared with a constant-time comparison; they do not use this HMAC secret.
 
 ### CSRF and Origin validation

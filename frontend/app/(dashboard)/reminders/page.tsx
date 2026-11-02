@@ -10,6 +10,7 @@ import {
   getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
+  formatJalaliYear,
   jalaliToGregorianIso,
 } from '@/lib/jalaliDate';
 
@@ -120,7 +121,7 @@ function JalaliDateInput({
             onChange={(event) => changeMonth(Number(event.target.value), selected.month, selected.day)}
             value={selected.year}
           >
-            {years.map((year) => <option key={year} value={year}>{new Intl.NumberFormat('fa-IR').format(year)}</option>)}
+            {years.map((year) => <option key={year} value={year}>{formatJalaliYear(year)}</option>)}
           </select>
         </div>
         <div>

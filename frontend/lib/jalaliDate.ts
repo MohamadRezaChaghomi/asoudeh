@@ -4,6 +4,17 @@ export interface JalaliDate {
   day: number;
 }
 
+export function formatJalaliYear(year: number): string {
+  if (!Number.isInteger(year) || year < 0) {
+    throw new RangeError('Invalid Jalali year.');
+  }
+  return new Intl.NumberFormat('fa-IR', {
+    useGrouping: false,
+    minimumIntegerDigits: 4,
+    maximumFractionDigits: 0,
+  }).format(year);
+}
+
 const persianPartsFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn', {
   year: 'numeric',
   month: 'numeric',

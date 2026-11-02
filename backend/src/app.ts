@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import assistantRoutes from './routes/assistant.routes.js';
 import authRoutes, { profileRouter } from './routes/auth.routes.js';
 import budgetRoutes from './routes/budgets.routes.js';
 import caregiverRoutes from './routes/caregiver.routes.js';
@@ -27,6 +28,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/budgets', budgetRoutes);
 app.use('/api/v1/caregiver', caregiverRoutes);
 app.use('/api/v1/categories', categoryRoutes);
