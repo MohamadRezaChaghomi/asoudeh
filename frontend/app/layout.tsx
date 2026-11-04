@@ -12,7 +12,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
         <Script id="theme-initializer" strategy="beforeInteractive">
           {`try { document.documentElement.dataset.theme = localStorage.getItem('asoudeh.theme') === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }`}

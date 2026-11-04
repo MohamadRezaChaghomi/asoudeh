@@ -3,17 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { DeferredExpenseCategoryChart } from '@/components/reports/DeferredExpenseCategoryChart';
 import { api } from '@/lib/api/client';
 import { getJalaliParts, getTehranTodayIso, jalaliToGregorianIso } from '@/lib/jalaliDate';
 
@@ -246,27 +238,7 @@ export default function ReportsPage() {
               <p className="mt-2 text-sm">{comparisonText}</p>
               {report.expensesByCategory.length > 0 && (
                 <>
-                  <div className="mt-6 h-72 w-full" aria-label="نمودار هزینه دسته‌ها">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={report.expensesByCategory}
-                        layout="vertical"
-                        margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          tickFormatter={(value: number) => new Intl.NumberFormat('fa-IR').format(value)}
-                          type="number"
-                        />
-                        <YAxis dataKey="categoryName" type="category" width={110} />
-                        <Tooltip
-                          formatter={(value) => [`${formatAmount(String(value))} تومان`, 'هزینه']}
-                          labelFormatter={(label) => String(label)}
-                        />
-                        <Bar dataKey="amount" fill="#0f766e" radius={[0, 6, 6, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <DeferredExpenseCategoryChart data={report.expensesByCategory} />
                   <ul className="mt-5 divide-y divide-slate-200" aria-label="جزئیات هزینه دسته‌ها">
                     {report.expensesByCategory.map((item) => (
                       <li className="flex flex-wrap justify-between gap-2 py-3" key={item.categoryId}>

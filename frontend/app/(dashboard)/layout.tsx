@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
@@ -27,11 +27,12 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [error, setError] = useState('');
+  const accessibilityPreferencesRequested = useRef(false);
 
   useEffect(() => {
+    if (pathname === '/settings' || accessibilityPreferencesRequested.current) return;
+    accessibilityPreferencesRequested.current = true;
     setError('');
-    if (pathname === '/settings') return;
-    let active = true;
 
     async function loadAccessibilityPreferences() {
       try {
@@ -39,7 +40,6 @@ export default function DashboardLayout({
           success: true;
           data: { profile: AccessibilityProfile };
         }>('/me');
-        if (!active) return;
         const settings = response.data.data.profile.accessibilitySettings;
         document.documentElement.style.setProperty(
           '--font-scale',
@@ -47,7 +47,7 @@ export default function DashboardLayout({
         );
         document.documentElement.dataset.highContrast = String(settings.highContrast);
       } catch (loadError) {
-        if (!active) return;
+        accessibilityPreferencesRequested.current = false;
         if (axios.isAxiosError(loadError) && loadError.response?.status === 401) {
           router.replace('/login');
           return;
@@ -57,12 +57,15 @@ export default function DashboardLayout({
     }
 
     void loadAccessibilityPreferences();
-    return () => {
-      active = false;
+  }, [pathname, router]);
+
+  useEffect(
+    () => () => {
       document.documentElement.style.removeProperty('--font-scale');
       delete document.documentElement.dataset.highContrast;
-    };
-  }, [pathname, router]);
+    },
+    [],
+  );
 
   return (
     <AppShell>

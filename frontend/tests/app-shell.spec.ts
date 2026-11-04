@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('keeps all app routes reachable and preserves the selected theme', async ({ page }) => {
   const clientErrors: string[] = [];
   let activityRequests = 0;
+  let profileRequests = 0;
   page.on('pageerror', (error) => clientErrors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') clientErrors.push(message.text());
@@ -14,13 +15,14 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   });
 
   await page.route('**/api/v1/me', async (route) => {
+    profileRequests += 1;
     await route.fulfill({
       json: {
         success: true,
         data: {
           profile: {
             id: 'app-shell-user',
-            accessibilitySettings: { fontScale: 1, highContrast: false },
+            accessibilitySettings: { fontScale: 1.25, highContrast: true },
           },
         },
       },
@@ -75,6 +77,15 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await page.keyboard.press('Escape');
   await expect(mobileNavigation).toBeHidden();
 
+  await mobileMenuToggle.click();
+  await mobileNavigation.getByRole('link', { name: 'دسته‌ها' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'دسته‌بندی‌ها', exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => profileRequests).toBe(1);
+  await expect(page.locator('html')).toHaveCSS('font-size', '20px');
+  await expect(page.locator('html')).toHaveAttribute('data-high-contrast', 'true');
+
   await page.getByRole('button', { name: 'فعال‌کردن پوسته تیره' }).click();
   await expect.poll(() => activityRequests).toBe(1);
   expect(clientErrors).toEqual([]);
@@ -94,6 +105,13 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
     (image) => getComputedStyle(image.parentElement!).backgroundColor,
   );
   expect(logoBackground).toBe('rgb(255, 255, 255)');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mobileMenuToggle.click();
+  await mobileNavigation.getByRole('link', { name: 'راهنمای استفاده' }).click();
+  await expect(page.getByRole('heading', { name: 'راهنمای استفاده' })).toBeVisible();
+  await expect(page.locator('html')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('html')).not.toHaveAttribute('data-high-contrast');
 });
 
 test('shows a page-shaped budget skeleton while data is loading and removes it after success', async ({

@@ -55,6 +55,7 @@ test('shows a Jalali monthly report and loads the previous month', async ({ page
   ).toBeVisible();
   await expect(page.getByText('۱۰۰٪ هزینه‌ها صرف درمان شده است.')).toBeVisible();
   await expect(page.getByText(/۲۵٪ کمتر شده است/)).toBeVisible();
+  await expect(page.locator('.recharts-wrapper')).toBeVisible();
   await page.getByRole('button', { name: 'ماه قبل' }).click();
   await expect.poll(() => months.length).toBeGreaterThan(1);
   expect(months[0]).toMatch(/^\d{2}-\d{4}$/);
