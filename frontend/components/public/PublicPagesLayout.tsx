@@ -35,8 +35,13 @@ function PublicHeader() {
     <header className="public-header">
       <div className="public-header-inner">
         <Link aria-label="آسوده، صفحه اصلی" className="public-brand" href="/">
-          <BrandLogo className="public-brand-logo" size="landing" />
-          <span>آسوده</span>
+          <BrandLogo
+            alt=""
+            className="public-brand-logo"
+            priority
+            size="landing"
+            variant="horizontal"
+          />
         </Link>
         <nav aria-label="ناوبری صفحات عمومی" className="public-desktop-nav">
           {primaryLinks.map((link) => (
@@ -77,8 +82,12 @@ function PublicFooter() {
       <div className="public-footer-inner">
         <div className="public-footer-about">
           <Link aria-label="آسوده، صفحه اصلی" className="public-footer-brand" href="/">
-            <BrandLogo className="public-footer-logo" size="landing" />
-            آسوده
+            <BrandLogo
+              alt=""
+              className="public-footer-logo"
+              size="footer"
+              variant="horizontal"
+            />
           </Link>
           <p>مدیریت مالی شخصی، ساده و فارسی.</p>
         </div>

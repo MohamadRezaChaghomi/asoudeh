@@ -173,14 +173,17 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
       expect((headingBounds?.x ?? 0) + (headingBounds?.width ?? 0)).toBeLessThanOrEqual(
         viewport.width,
       );
-      const logo = page.locator('img[alt="نشان آسوده"]:visible').first();
+      const logo = page.locator('img.brand-logo-image:visible').first();
       await expect(logo).toBeVisible();
       const logoMetrics = await logo.evaluate((image: HTMLImageElement) => ({
         sourceAspectRatio: image.naturalWidth / image.naturalHeight,
         objectFit: getComputedStyle(image).objectFit,
+        bounds: image.getBoundingClientRect().toJSON(),
       }));
-      expect(logoMetrics.sourceAspectRatio).toBeCloseTo(1, 1);
-      expect(logoMetrics.objectFit).toBe(path === '/' ? 'contain' : 'cover');
+      expect(logoMetrics.sourceAspectRatio).toBeGreaterThan(0);
+      expect(logoMetrics.objectFit).toBe('contain');
+      expect(logoMetrics.bounds.x).toBeGreaterThanOrEqual(0);
+      expect(logoMetrics.bounds.right).toBeLessThanOrEqual(viewport.width);
 
       if (
         viewport.width > 700 &&
@@ -277,7 +280,7 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
     await page.setViewportSize(viewport);
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
-    await expect(page.locator('img[alt="نشان آسوده"]:visible').first()).toBeVisible();
+    await expect(page.locator('img.brand-logo-image:visible').first()).toBeVisible();
     const dimensions = await page.evaluate(() => ({
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: document.documentElement.clientWidth,
@@ -291,7 +294,8 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
-  await expect(page.locator('img[alt="نشان آسوده"]:visible').first()).toBeVisible();
+  await expect(page.locator('img.brand-logo-image[alt="نشان آسوده"]:visible').first())
+    .toBeVisible();
   const loginDimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,
     viewportWidth: document.documentElement.clientWidth,

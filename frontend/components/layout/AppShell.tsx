@@ -135,7 +135,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="app-sidebar" aria-label="ناوبری اصلی">
         <Link className="app-brand" href="/dashboard" aria-label="آسوده، نمای کلی">
-          <BrandLogo size="sidebar" />
+          <BrandLogo
+            alt=""
+            size="sidebar"
+            variant={theme === 'dark' ? 'white' : 'horizontal'}
+          />
         </Link>
 
         <p className="sidebar-eyebrow">مدیریت مالی</p>
@@ -185,7 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="app-topbar-brand"
               href="/dashboard"
             >
-              <BrandLogo size="mobile" />
+              <BrandLogo alt="" size="mobile" variant="symbol" />
             </Link>
           </div>
           <button

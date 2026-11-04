@@ -97,16 +97,23 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(page.locator('.app-sidebar')).toBeVisible();
   await expect(mobileNavigation).toBeHidden();
   await expect(page.getByRole('link', { name: 'گزارش‌ها' })).toBeVisible();
-  const logo = page.getByRole('img', { name: 'نشان آسوده' });
+  const logo = page.locator('.app-sidebar .brand-logo-image');
   await expect(logo).toBeVisible();
+  await expect(logo).toHaveAttribute('src', '/logo/asoudeh-white.svg');
   const logoWidth = await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth);
   expect(logoWidth).toBeGreaterThan(0);
   const logoBackground = await logo.evaluate(
     (image) => getComputedStyle(image.parentElement!).backgroundColor,
   );
-  expect(logoBackground).toBe('rgb(255, 255, 255)');
+  expect(logoBackground).toBe('rgb(31, 92, 74)');
+  await expect(page.getByRole('link', { name: 'آسوده، نمای کلی' })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  const mobileLogo = page.locator('.app-topbar-brand img');
+  await expect(mobileLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
+  const mobileLogoBounds = await mobileLogo.boundingBox();
+  expect(mobileLogoBounds?.width).toBeLessThanOrEqual(48);
+  expect(mobileLogoBounds?.height).toBeLessThanOrEqual(48);
   await mobileMenuToggle.click();
   await mobileNavigation.getByRole('link', { name: 'راهنمای استفاده' }).click();
   await expect(page.getByRole('heading', { name: 'راهنمای استفاده' })).toBeVisible();

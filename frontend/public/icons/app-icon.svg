@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<title>Asoudeh app icon</title>
+<rect x="12" y="12" width="488" height="488" rx="112" fill="#1F5C4A"/>
+<g transform="translate(56 56) scale(2)">
+<path d="M100 22 C61 22 34 51 34 91 L34 151"
+      fill="none" stroke="#FFFFFF" stroke-width="15" stroke-linecap="round"/>
+<path d="M100 22 C139 22 166 51 166 91 L166 151"
+      fill="none" stroke="#FFFFFF" stroke-width="15" stroke-linecap="round"/>
+<path d="M55 151 C57 119 73 101 100 101 C127 101 143 119 145 151"
+      fill="none" stroke="#B8DEC7" stroke-width="15" stroke-linecap="round"/>
+<circle cx="100" cy="70" r="10" fill="#FFFFFF"/>
+<path d="M52 168 Q100 184 148 168" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
+</g>
+</svg>

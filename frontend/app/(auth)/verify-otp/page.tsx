@@ -175,7 +175,12 @@ export default function VerifyOtpPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-5">
       <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-        <BrandLogo className="mx-auto mb-5" size="auth" />
+        <BrandLogo
+          className="mx-auto mb-5"
+          priority
+          size="auth"
+          variant="primary"
+        />
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">
           {flow.step === 'register' ? 'ساخت حساب کاربری' : 'تأیید شماره همراه'}

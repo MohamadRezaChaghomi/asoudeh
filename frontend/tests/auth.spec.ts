@@ -15,7 +15,7 @@ test('shows the approved logo on login and OTP registration without duplicating 
   await page.goto('/login');
   const loginLogo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(loginLogo).toBeVisible();
-  await expect(loginLogo).toHaveAttribute('src', '/icons/logoo.svg');
+  await expect(loginLogo).toHaveAttribute('src', '/logo/asoudeh-primary.svg');
   const loginLogoWidth = await loginLogo.evaluate(
     (image: HTMLImageElement) => image.naturalWidth,
   );
@@ -35,6 +35,7 @@ test('shows the approved logo on login and OTP registration without duplicating 
   await page.goto('/verify-otp');
   const verificationLogo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(verificationLogo).toBeVisible();
+  await expect(verificationLogo).toHaveAttribute('src', '/logo/asoudeh-primary.svg');
   const verificationLogoWidth = await verificationLogo.evaluate(
     (image: HTMLImageElement) => image.naturalWidth,
   );

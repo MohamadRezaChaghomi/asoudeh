@@ -17,6 +17,9 @@ test('public information pages share navigation and are available without signin
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+    const headerLogo = page.locator('.public-brand img');
+    await expect(headerLogo).toHaveAttribute('src', '/logo/asoudeh-horizontal.svg');
+    await expect(headerLogo).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'پیوندهای صفحات عمومی' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'ورود به آسوده' }).first()).toHaveAttribute(
       'href',
@@ -26,6 +29,11 @@ test('public information pages share navigation and are available without signin
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const mobileBrand = await page.locator('.public-brand img').boundingBox();
+  expect(mobileBrand?.width).toBeLessThan(160);
+  expect(mobileBrand?.x ?? -1).toBeGreaterThanOrEqual(0);
   await page.goto('/guide');
   await expect(page.getByRole('link', { name: 'ثبت تراکنش پس از ورود' })).toHaveAttribute(
     'href',

@@ -1,11 +1,30 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'آسوده',
-  description: 'مدیریت مالی شخصی سالمندان',
+  applicationName: 'آسوده | Asoudeh',
+  title: {
+    default: 'آسوده | Asoudeh',
+    template: '%s | آسوده',
+  },
+  description: 'مدیریت مالی شخصی، ساده و دسترس‌پذیر به زبان فارسی',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icons/favicon.ico', sizes: 'any' },
+      { url: '/icons/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#1F5C4A',
+  colorScheme: 'light dark',
 };
 
 export default function RootLayout({
