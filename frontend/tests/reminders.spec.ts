@@ -1,4 +1,5 @@
 import { expect, test } from './diagnostics-test';
+import { expectThemeAwareIllustration } from './assert-theme-aware-illustration';
 
 const csrfToken = 'reminder-e2e-csrf-token';
 
@@ -105,10 +106,32 @@ test('creates, completes, and archives a monthly reminder while showing persiste
 
   await page.goto('/reminders');
   await expect(page.getByText(/برای قبض یا پرداخت بعدی یادآور بسازید/)).toBeVisible();
+  await expectThemeAwareIllustration(page, 'empty-reminders-illustration');
   await page.getByLabel('عنوان').fill('پرداخت قبض');
-  await page.getByLabel('روز').selectOption('10');
+  await page.getByRole('button', { name: 'تغییر تاریخ' }).click();
+  const calendar = page.getByRole('dialog', { name: 'انتخاب تاریخ سررسید شمسی' });
+  await expect(
+    calendar.getByRole('grid').getByRole('columnheader').first(),
+  ).toHaveText('شنبه');
+  const initiallySelectedDate = await calendar.locator('[aria-pressed="true"]').getAttribute('data-date');
+  const initiallyFocusedDate = await calendar.locator(':focus').getAttribute('data-date');
+  await page.keyboard.press('ArrowLeft');
+  const movedFocusedDate = await calendar.locator(':focus').getAttribute('data-date');
+  expect(movedFocusedDate).not.toBe(initiallyFocusedDate);
+  await page.keyboard.press('Escape');
+  await expect(calendar).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'تغییر تاریخ' })).toBeFocused();
+  await page.getByRole('button', { name: 'تغییر تاریخ' }).click();
+  const reopenedCalendar = page.getByRole('dialog', { name: 'انتخاب تاریخ سررسید شمسی' });
+  await expect(reopenedCalendar.locator('[aria-pressed="true"]')).toHaveAttribute(
+    'data-date',
+    initiallySelectedDate ?? '',
+  );
+  const selectedDate = await reopenedCalendar.locator('[data-day="10"]').getAttribute('data-date');
+  await reopenedCalendar.locator('[data-day="10"]').click();
   await page.getByLabel('مبلغ (اختیاری، تومان)').fill('۱۲۵۰۰۰');
-  await page.getByLabel('تکرار').selectOption('monthly');
+  await page.getByLabel('تکرار').click();
+  await page.getByRole('option', { name: 'ماهانه' }).click();
   await page.getByRole('button', { name: 'ثبت یادآور' }).click();
 
   await expect(page.getByRole('status').filter({ hasText: 'یادآور ثبت شد.' })).toContainText(
@@ -120,6 +143,7 @@ test('creates, completes, and archives a monthly reminder while showing persiste
     amount: 125_000,
   });
   expect(createPayload?.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(createPayload?.date).toBe(selectedDate);
 
   await page.getByRole('button', { name: 'ویرایش' }).click();
   await page.getByLabel('عنوان').fill('قبض برق');
@@ -141,4 +165,13 @@ test('creates, completes, and archives a monthly reminder while showing persiste
     'یادآور بایگانی شد.',
   );
   await expect(page.getByText(/وضعیت: انجام‌شده در این ماه/)).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'تغییر تاریخ' }).click();
+  const mobileCalendar = page.getByRole('dialog', { name: 'انتخاب تاریخ سررسید شمسی' });
+  const bounds = await mobileCalendar.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBe(0);
+  expect(bounds!.y + bounds!.height).toBeGreaterThanOrEqual(844);
+  await page.getByRole('button', { name: 'بستن انتخاب تاریخ' }).click();
 });

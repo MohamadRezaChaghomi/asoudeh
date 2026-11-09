@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asoudeh-static-shell-v6';
+const CACHE_NAME = 'asoudeh-static-shell-v7';
 const STATIC_ASSETS = ['/offline.html', '/icons/app-icon.svg'];
 
 self.addEventListener('install', (event) => {

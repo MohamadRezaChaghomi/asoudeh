@@ -1,16 +1,17 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { ArrowDownLeft, ArrowUpRight, ReceiptText } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
+import { Select, type SelectOption } from '@/components/ui/Select';
 import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
-  getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
 } from '@/lib/jalaliDate';
@@ -121,101 +122,6 @@ function formatDate(date: string): string {
     dateStyle: 'medium',
     timeZone: 'UTC',
   }).format(new Date(`${date}T00:00:00.000Z`));
-}
-
-function JalaliDatePicker({
-  value,
-  onChange,
-  maxDate,
-}: {
-  value: string;
-  onChange: (date: string) => void;
-  maxDate: string;
-}) {
-  const selectedDate = getJalaliParts(value);
-  const [visibleMonth, setVisibleMonth] = useState({
-    year: selectedDate.year,
-    month: selectedDate.month,
-  });
-
-  useEffect(() => {
-    const parts = getJalaliParts(value);
-    setVisibleMonth({ year: parts.year, month: parts.month });
-  }, [value]);
-
-  const monthDays = getJalaliMonthDays(visibleMonth.year, visibleMonth.month);
-  const firstDayOffset = (new Date(`${monthDays[0]}T00:00:00.000Z`).getUTCDay() + 1) % 7;
-  const monthTitle = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${monthDays[0]}T00:00:00.000Z`));
-
-  function moveMonth(direction: -1 | 1) {
-    const month = visibleMonth.month + direction;
-    const nextMonth =
-      month < 1
-        ? { year: visibleMonth.year - 1, month: 12 }
-        : month > 12
-          ? { year: visibleMonth.year + 1, month: 1 }
-          : { year: visibleMonth.year, month };
-    if (nextMonth.year >= 1200 && nextMonth.year <= 1600) {
-      setVisibleMonth(nextMonth);
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-slate-300 p-3" dir="rtl">
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          aria-label="ماه بعد"
-          className="rounded-lg border border-slate-300 px-3 py-1"
-          onClick={() => moveMonth(1)}
-          type="button"
-        >
-          بعد
-        </button>
-        <p className="font-semibold" aria-live="polite">{monthTitle}</p>
-        <button
-          aria-label="ماه قبل"
-          className="rounded-lg border border-slate-300 px-3 py-1"
-          onClick={() => moveMonth(-1)}
-          type="button"
-        >
-          قبل
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-sm">
-        {['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'].map((weekday) => (
-          <span className="app-muted py-1 text-[10px] sm:text-xs" key={weekday} title={weekday}>
-            {weekday}
-          </span>
-        ))}
-        {Array.from({ length: firstDayOffset }, (_, index) => (
-          <span aria-hidden="true" key={`blank-${index}`} />
-        ))}
-        {monthDays.map((isoDate) => {
-          const day = getJalaliParts(isoDate).day;
-          const isSelected = isoDate === value;
-          const isFuture = isoDate > maxDate;
-          return (
-            <button
-              aria-pressed={isSelected}
-              className={`rounded-lg py-2 ${
-                isSelected ? 'bg-asoudeh-navy text-white' : 'hover:bg-slate-100'
-              } disabled:cursor-not-allowed disabled:opacity-40`}
-              disabled={isFuture}
-              key={isoDate}
-              onClick={() => onChange(isoDate)}
-              type="button"
-            >
-              {new Intl.NumberFormat('fa-IR').format(day)}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export default function TransactionsPage() {
@@ -487,6 +393,9 @@ export default function TransactionsPage() {
     setNote('');
     setStep(1);
     setSaveDraftLocally(false);
+    setError('');
+    setFieldError(null);
+    setNotice('');
   }
 
   function startEditing(transaction: Transaction) {
@@ -802,27 +711,24 @@ export default function TransactionsPage() {
               <label className="mb-1 block font-medium" htmlFor="transaction-sort">
                 مرتب‌سازی فهرست
               </label>
-              <select
-                className="w-full rounded-lg border border-slate-300 bg-transparent px-3"
+              <Select
                 id="transaction-sort"
-                onChange={(event) => {
-                  const value = event.target.value;
+                onChange={(value) => {
                   if (
                     value === 'date-desc' ||
                     value === 'date-asc' ||
                     value === 'amount-desc' ||
                     value === 'amount-asc'
-                  ) {
-                    setSortOption(value);
-                  }
+                  ) setSortOption(value);
                 }}
+                options={[
+                  { value: 'date-desc', label: 'جدیدترین تاریخ' },
+                  { value: 'date-asc', label: 'قدیمی‌ترین تاریخ' },
+                  { value: 'amount-desc', label: 'بیشترین مبلغ' },
+                  { value: 'amount-asc', label: 'کمترین مبلغ' },
+                ]}
                 value={sortOption}
-              >
-                <option value="date-desc">جدیدترین تاریخ</option>
-                <option value="date-asc">قدیمی‌ترین تاریخ</option>
-                <option value="amount-desc">بیشترین مبلغ</option>
-                <option value="amount-asc">کمترین مبلغ</option>
-              </select>
+              />
             </div>
             <button
               className="self-end rounded-lg bg-asoudeh-navy px-4 font-medium text-white disabled:opacity-60"
@@ -843,15 +749,13 @@ export default function TransactionsPage() {
           {transactions.length === 0 ? (
             <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
               {!filters.search && (
-                <Image
-                  alt=""
+                <div
                   aria-hidden="true"
-                  className="mb-3 h-auto w-32"
-                  height={96}
-                  priority
-                  src="/illustrations/empty-transactions.svg"
-                  width={128}
-                />
+                  className="mb-3 flex size-24 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--info)]"
+                  data-testid="empty-transactions-illustration"
+                >
+                  <ReceiptText size={44} strokeWidth={1.5} />
+                </div>
               )}
               {filters.search
                 ? <p>تراکنشی پیدا نشد؛ عبارت را تغییر دهید یا فیلترها را پاک کنید.</p>
@@ -946,16 +850,21 @@ export default function TransactionsPage() {
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editingId ? 'ویرایش تراکنش' : 'ثبت تراکنش'}
           </h2>
-          <ol className="mt-4 flex gap-2 text-sm" aria-label="مراحل ثبت تراکنش">
+          <ol className="mt-5 grid grid-cols-3 gap-2 text-sm" aria-label="مراحل ثبت تراکنش">
             {['مبلغ', 'دسته و تاریخ', 'بازبینی'].map((label, index) => (
               <li
                 aria-current={step === index + 1 ? 'step' : undefined}
-                className={`rounded-full px-3 py-1 ${
-                  step === index + 1 ? 'bg-asoudeh-navy text-white' : 'bg-slate-100'
+                className={`flex min-h-14 items-center justify-center gap-2 rounded-xl px-2 py-2 text-center ${
+                  step === index + 1
+                    ? 'bg-[var(--brand-action)] font-semibold text-[var(--text-on-action)]'
+                    : 'bg-[var(--surface-muted)]'
                 }`}
                 key={label}
               >
-                {formatInteger(index + 1)}. {label}
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-current text-xs">
+                  {formatInteger(index + 1)}
+                </span>
+                <span>{label}</span>
               </li>
             ))}
           </ol>
@@ -965,60 +874,64 @@ export default function TransactionsPage() {
                 اتصال اینترنت برقرار نیست. ثبت یا ویرایش تراکنش تا اتصال دوباره انجام نمی‌شود.
               </p>
             )}
-            {!editingId && (
-              <div className="rounded-lg bg-slate-50 p-3">
-                <label className="flex items-start gap-3 font-medium" htmlFor="saveTransactionDraft">
-                  <input
-                    checked={saveDraftLocally}
-                    className="mt-1"
-                    disabled={!userId}
-                    id="saveTransactionDraft"
-                    onChange={(event) => setSaveDraftLocally(event.target.checked)}
-                    type="checkbox"
-                  />
-                  ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر
-                </label>
-                <p className="app-muted mt-2 text-sm">
-                  این گزینه خاموش است مگر اینکه خودتان فعالش کنید. پیش‌نویس تا ثبت موفق در همین مرورگر و برای این حساب نگهداری می‌شود و با پایان نشست مرورگر پاک می‌شود.
-                </p>
-              </div>
-            )}
             {step === 1 && (
               <>
-                <div>
-                  <label className="mb-2 block font-medium" htmlFor="transactionType">نوع</label>
-                  <select
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4"
-                    id="transactionType"
-                    onChange={(event) =>
-                      setType(event.target.value === 'income' ? 'income' : 'expense')
-                    }
-                    value={type}
-                  >
-                    <option value="expense">هزینه</option>
-                    <option value="income">درآمد</option>
-                  </select>
+                <div role="group" aria-label="نوع تراکنش">
+                  <p className="mb-2 font-medium">نوع تراکنش</p>
+                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface-muted)] p-1">
+                    <button
+                      aria-pressed={type === 'expense'}
+                      className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 font-semibold ${
+                        type === 'expense'
+                          ? 'bg-[var(--brand-action)] text-[var(--text-on-action)] shadow-sm'
+                          : 'text-[var(--text)]'
+                      }`}
+                      onClick={() => setType('expense')}
+                      type="button"
+                    >
+                      <ArrowDownLeft aria-hidden="true" size={18} />
+                      هزینه
+                    </button>
+                    <button
+                      aria-pressed={type === 'income'}
+                      className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 font-semibold ${
+                        type === 'income'
+                          ? 'bg-[var(--brand-action)] text-[var(--text-on-action)] shadow-sm'
+                          : 'text-[var(--text)]'
+                      }`}
+                      onClick={() => setType('income')}
+                      type="button"
+                    >
+                      <ArrowUpRight aria-hidden="true" size={18} />
+                      درآمد
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="mb-2 block font-medium" htmlFor="transactionAmount">
-                    مبلغ (تومان)
+                    مبلغ
                   </label>
-                  <input
-                    autoComplete="off"
-                    className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
-                    dir="ltr"
-                    id="transactionAmount"
-                    inputMode="numeric"
-                    aria-invalid={fieldError === 'amount'}
-                    aria-describedby={fieldError === 'amount' ? 'transaction-field-error' : undefined}
-                    onChange={(event) => {
-                      setAmount(formatTomanAmountInput(event.target.value));
-                      setFieldError(null);
-                    }}
-                    placeholder="۲۰۰٬۰۰۰"
-                    required
-                    value={amount}
-                  />
+                  <div className="flex items-center gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 focus-within:border-[var(--focus)] focus-within:ring-2 focus-within:ring-[var(--focus)]">
+                    <input
+                      autoComplete="off"
+                      className="min-w-0 flex-1 border-0 bg-transparent px-0 py-4 text-start text-3xl font-bold tabular-nums"
+                      dir="ltr"
+                      id="transactionAmount"
+                      inputMode="numeric"
+                      aria-label="مبلغ (تومان)"
+                      aria-invalid={fieldError === 'amount'}
+                      aria-describedby={fieldError === 'amount' ? 'transaction-field-error' : undefined}
+                      onChange={(event) => {
+                        setAmount(formatTomanAmountInput(event.target.value));
+                        setFieldError(null);
+                      }}
+                      placeholder="۲۰۰٬۰۰۰"
+                      required
+                      value={amount}
+                    />
+                    <span className="app-muted shrink-0 font-semibold">تومان</span>
+                  </div>
+                  <p className="app-muted mt-2 text-sm">مبلغ را به تومان وارد کنید.</p>
                 </div>
               </>
             )}
@@ -1028,38 +941,39 @@ export default function TransactionsPage() {
                   <label className="mb-2 block font-medium" htmlFor="transactionCategory">
                     دسته‌بندی
                   </label>
-                  <select
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4"
+                  <Select
                     disabled={!activeCategories.length}
                     id="transactionCategory"
                     aria-invalid={fieldError === 'category'}
                     aria-describedby={fieldError === 'category' ? 'transaction-field-error' : undefined}
-                    onChange={(event) => {
-                      setCategoryId(event.target.value);
+                    onChange={(value) => {
+                      setCategoryId(value);
                       setFieldError(null);
                     }}
+                    options={(
+                      activeCategories.length
+                        ? activeCategories.map((category) => ({
+                            value: category.id,
+                            label: category.name,
+                          }))
+                        : [{ value: '', label: 'دستهٔ فعال موجود نیست' }]
+                    ).concat(
+                      editingId &&
+                        categories.some(
+                          (category) =>
+                            category.id === categoryId &&
+                            !category.isActive &&
+                            (category.type === type || category.type === 'both'),
+                        )
+                        ? [{
+                            value: categoryId,
+                            label: `${categories.find((category) => category.id === categoryId)?.name} (غیرفعال؛ دستهٔ فعال انتخاب کنید)`,
+                          }]
+                        : [],
+                    ) satisfies SelectOption[]}
                     required
                     value={categoryId}
-                  >
-                    {activeCategories.length === 0 ? (
-                      <option value="">دستهٔ فعال موجود نیست</option>
-                    ) : (
-                      activeCategories.map((category) => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
-                      ))
-                    )}
-                    {editingId &&
-                      categories.some(
-                        (category) =>
-                          category.id === categoryId &&
-                          !category.isActive &&
-                          (category.type === type || category.type === 'both'),
-                      ) && (
-                        <option value={categoryId}>
-                          {categories.find((category) => category.id === categoryId)?.name} (غیرفعال؛ دستهٔ فعال انتخاب کنید)
-                        </option>
-                      )}
-                  </select>
+                  />
                   {!activeCategories.length && (
                     <Link className="mt-2 inline-block text-sm text-asoudeh-teal underline" href="/categories">
                       ابتدا یک دسته‌بندی فعال ایجاد کنید
@@ -1073,7 +987,12 @@ export default function TransactionsPage() {
                     aria-labelledby="transactionDateLabel"
                     role="group"
                   >
-                    <JalaliDatePicker maxDate={todayDate()} onChange={setDate} value={date} />
+                    <JalaliDatePicker
+                      label="انتخاب تاریخ شمسی"
+                      maxDate={todayDate()}
+                      onChange={setDate}
+                      value={date}
+                    />
                   </div>
                   <p className="app-muted mt-2 text-sm" aria-labelledby="transactionDateLabel">
                     {formatDate(date)}
@@ -1119,7 +1038,7 @@ export default function TransactionsPage() {
             <div className="flex flex-wrap gap-3">
               {step > 1 && (
                 <button
-                  className="rounded-lg border border-slate-300 px-5 py-3 font-medium"
+                  className="min-h-12 rounded-lg border border-slate-300 px-5 py-3 font-medium"
                   disabled={saving}
                   onClick={() => setStep((step - 1) as 1 | 2)}
                   type="button"
@@ -1129,7 +1048,7 @@ export default function TransactionsPage() {
               )}
               {step < 3 ? (
                 <button
-                  className="rounded-lg bg-asoudeh-navy px-5 py-3 font-semibold text-white disabled:opacity-60"
+                  className="min-h-12 rounded-lg bg-[var(--brand-action)] px-5 py-3 font-semibold text-[var(--text-on-action)] disabled:opacity-60"
                   disabled={saving || (step === 2 && !canUseSelectedCategory)}
                   onClick={(event) => {
                     event.preventDefault();
@@ -1141,24 +1060,46 @@ export default function TransactionsPage() {
                 </button>
               ) : (
                 <button
-                  className="rounded-lg bg-asoudeh-navy px-5 py-3 font-semibold text-white disabled:opacity-60"
+                  className="min-h-12 rounded-lg bg-[var(--brand-action)] px-5 py-3 font-semibold text-[var(--text-on-action)] disabled:opacity-60"
                   disabled={saving || !categoryId}
                   type="submit"
                 >
                   {saving ? 'در حال ذخیره…' : editingId ? 'ذخیرهٔ تغییرات' : 'ثبت تراکنش'}
                 </button>
               )}
-              {editingId && (
-                <button
-                  className="rounded-lg border border-slate-300 px-5 py-3 font-medium"
-                  disabled={saving}
-                  onClick={resetForm}
-                  type="button"
-                >
-                  انصراف از ویرایش
-                </button>
-              )}
+              <button
+                className="min-h-12 rounded-lg border border-[var(--border-strong)] px-5 py-3 font-medium"
+                disabled={saving}
+                onClick={resetForm}
+                type="button"
+              >
+                {editingId ? 'انصراف از ویرایش' : 'انصراف'}
+              </button>
             </div>
+            {!editingId && (
+              <div className="mt-6 border-t border-[var(--border-soft)] pt-4">
+                <label
+                  className="flex cursor-pointer items-center justify-between gap-4 rounded-lg px-2 py-2 text-sm"
+                  htmlFor="saveTransactionDraft"
+                >
+                  <span className="font-medium">
+                    ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر
+                  </span>
+                  <input
+                    checked={saveDraftLocally}
+                    className="relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-[var(--border)] transition-colors checked:bg-[var(--brand-action)] before:absolute before:start-1 before:top-1 before:size-4 before:rounded-full before:bg-[var(--surface)] before:transition-transform checked:before:-translate-x-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                    disabled={!userId}
+                    id="saveTransactionDraft"
+                    onChange={(event) => setSaveDraftLocally(event.target.checked)}
+                    role="switch"
+                    type="checkbox"
+                  />
+                </label>
+                <p className="app-muted px-2 text-xs">
+                  اختیاری و خاموش به‌طور پیش‌فرض؛ فقط در نشست فعلی و برای همین حساب ذخیره می‌شود.
+                </p>
+              </div>
+            )}
           </form>
         </section>
       </div>

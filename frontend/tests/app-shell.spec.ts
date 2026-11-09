@@ -239,6 +239,10 @@ test('shows connectivity notices only after offline/online transitions', async (
     await route.fulfill({ json: { success: true, data } });
   });
   await page.goto('/dashboard');
+  const connectivityStatus = page
+    .getByRole('status')
+    .filter({ hasText: /اتصال اینترنت برقرار نیست|اتصال برقرار شد/ });
+  await expect(connectivityStatus).toHaveCount(0);
   const themeToggle = page.getByRole('button', { name: /فعال‌کردن پوسته/ });
   await expect(themeToggle).toBeEnabled();
   await themeToggle.click();
@@ -247,12 +251,15 @@ test('shows connectivity notices only after offline/online transitions', async (
 
   await context.setOffline(true);
   await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
-  await expect(page.getByRole('status')).toContainText('اتصال اینترنت برقرار نیست');
+  await expect(connectivityStatus).toHaveAttribute('aria-live', 'polite');
+  await expect(connectivityStatus).toContainText('اتصال اینترنت برقرار نیست');
+  await page.waitForTimeout(3200);
+  await expect(connectivityStatus).toContainText('اتصال اینترنت برقرار نیست');
 
   await context.setOffline(false);
   await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
-  await expect(page.getByRole('status')).toContainText('اتصال برقرار شد');
-  await expect(page.getByRole('status').filter({ hasText: /اتصال/ })).toHaveCount(0, {
+  await expect(connectivityStatus).toContainText('اتصال برقرار شد');
+  await expect(connectivityStatus).toHaveCount(0, {
     timeout: 5000,
   });
 });
@@ -291,6 +298,7 @@ test('anchors the assistant to the physical bottom-left without overflowing on m
   const launcherBounds = await launcher.boundingBox();
   expect(launcherBounds).not.toBeNull();
   expect(launcherBounds!.x).toBeLessThan(40);
+  expect(800 - (launcherBounds!.y + launcherBounds!.height)).toBeGreaterThanOrEqual(80);
 
   await launcher.click();
   const panel = page.getByRole('dialog', { name: 'راهنمای آسوده' });
@@ -299,6 +307,18 @@ test('anchors the assistant to the physical bottom-left without overflowing on m
   expect(panelBounds).not.toBeNull();
   expect(panelBounds!.x).toBeGreaterThanOrEqual(0);
   expect(panelBounds!.x + panelBounds!.width).toBeLessThanOrEqual(360);
+  expect(Math.abs(panelBounds!.x - launcherBounds!.x)).toBeLessThanOrEqual(1);
+  const closeButton = panel.getByRole('button', { name: 'بستن دستیار' });
+  const closeBounds = await closeButton.boundingBox();
+  expect(closeBounds?.width).toBe(44);
+  expect(closeBounds?.height).toBe(44);
+  await expect(closeButton.locator('svg')).toHaveAttribute('width', '20');
+  await expect(closeButton).toHaveCSS('border-width', '0px');
+  await page.keyboard.press('Tab');
+  await expect(closeButton).toBeFocused();
+  expect(
+    await closeButton.evaluate((button) => getComputedStyle(button).outlineWidth),
+  ).toBe('3px');
   const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(documentWidth).toBeLessThanOrEqual(360);
 });

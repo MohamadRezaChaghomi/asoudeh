@@ -148,11 +148,11 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     };
   });
   expect(workerState.controlled).toBe(true);
-  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v6']);
+  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v7']);
   expect(workerState.cachedUrls).toEqual(['/icons/app-icon.svg', '/offline.html']);
   expect(workerState.cachedUrls).not.toContain('/dashboard');
 
-  await expect(page.getByText('اتصال برقرار است')).toBeVisible();
+  await expect(page.getByText('اتصال برقرار است')).toHaveCount(0);
   await page.evaluate(() => {
     let promptCalled = false;
     const installEvent = new Event('beforeinstallprompt', { cancelable: true });
@@ -241,7 +241,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     }
     return { names, urls: urls.sort() };
   });
-  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v6']);
+  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v7']);
   expect(cachesAfterUpdate.urls).toEqual(['/icons/app-icon.svg', '/offline.html']);
 
   await page.evaluate(async () => {
@@ -257,6 +257,12 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   });
   expect(cachedApiUrls).toEqual([]);
 
+  const offlineRequests: string[] = [];
+  page.on('request', (request) => {
+    if (['document', 'image', 'stylesheet', 'script', 'font'].includes(request.resourceType())) {
+      offlineRequests.push(request.url());
+    }
+  });
   await context.setOffline(true);
   await expect(page.getByText('اتصال اینترنت برقرار نیست')).toBeVisible();
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
@@ -265,9 +271,18 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   await expect(page.getByRole('img', { name: 'نشان آسوده' })).toBeVisible();
   await expect(page.getByText('اطلاعات مالی شما در حالت آفلاین بارگذاری نمی‌شود.'))
     .toBeVisible();
-  await expect(page.getByRole('link', { name: 'بررسی دوبارهٔ اتصال' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('button', { name: 'تلاش دوباره' })).toBeVisible();
+  await page.getByRole('button', { name: 'تلاش دوباره' }).click();
+  await expect(page.getByRole('status')).toContainText('هنوز اتصال اینترنت برقرار نیست');
+  expect(offlineRequests.every((url) => new URL(url).origin === new URL(page.url()).origin)).toBe(true);
+  await expect(page.getByRole('link', { name: 'صفحهٔ اصلی' })).toHaveAttribute('href', '/');
 
   await context.setOffline(false);
+  await Promise.all([
+    page.waitForNavigation(),
+    page.getByRole('button', { name: 'تلاش دوباره' }).click(),
+  ]);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: /ورود/ })).toBeVisible();
 });

@@ -32,6 +32,10 @@ test('public information pages share navigation and are available without signin
   await page.goto('/contact');
   await expect(page.getByText('support@example.com')).toBeVisible();
   await expect(page.getByText('۰۰۰-۰۰۰-۰۰۰۰')).toBeVisible();
+  await expect(page.getByText(/ساعت پاسخ‌گویی/)).toBeVisible();
+  await expect(page.getByText('شهر: شهر نمونه')).toBeVisible();
+  await expect(page.getByText(/برای پرسش یا دریافت راهنمایی/)).toBeVisible();
+  await expect(page.locator('#main-content form')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'ارسال ایمیل به پشتیبانی' })).toHaveAttribute(
     'href',
     'mailto:support@example.com',
@@ -53,6 +57,17 @@ test('public information pages share navigation and are available without signin
     '/reports',
   );
   expect(errors).toEqual([]);
+});
+
+test('not-found page uses the brand symbol and provides overview and home actions', async ({ page }) => {
+  await page.goto('/this-route-does-not-exist');
+  await expect(page.getByRole('heading', { name: 'این صفحه پیدا نشد' })).toBeVisible();
+  await expect(page.locator('img[src="/logo/asoudeh-symbol.svg"]')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'بازگشت به نمای کلی' })).toHaveAttribute(
+    'href',
+    '/dashboard',
+  );
+  await expect(page.getByRole('link', { name: 'صفحهٔ اصلی' }).last()).toHaveAttribute('href', '/');
 });
 
 test('public and authenticated page titles include the brand exactly once', async ({ page }) => {

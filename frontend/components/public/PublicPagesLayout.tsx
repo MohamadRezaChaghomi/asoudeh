@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 const primaryLinks = [
   { href: '/guide', label: 'راهنما' },
@@ -31,7 +32,7 @@ function PublicHeader() {
   return (
     <header className="public-header">
       <div className="public-header-inner">
-        <Link aria-label="آسوده، صفحه اصلی" className="public-brand" href="/">
+        <Link aria-label="آسوده، صفحه اصلی" className="public-brand brand-link" href="/">
           <BrandLogo
             alt=""
             className="public-brand-logo"
@@ -47,27 +48,30 @@ function PublicHeader() {
             </Link>
           ))}
         </nav>
-        <Link className="public-login-link" href="/login">
-          ورود به آسوده
-        </Link>
-        <details className="public-mobile-menu">
-          <summary aria-label="بازکردن منوی صفحات عمومی">
-            <span aria-hidden="true" className="public-menu-icon">
-              <span />
-              <span />
-              <span />
-            </span>
-            <span className="public-sr-only">منو</span>
-          </summary>
-          <nav aria-label="منوی صفحات عمومی">
-            {[...primaryLinks, { href: '/contact', label: 'تماس با ما' }].map((link) => (
-              <Link href={link.href} key={link.href}>
-                {link.label}
-              </Link>
-            ))}
-            <Link href="/login">ورود به آسوده</Link>
-          </nav>
-        </details>
+        <div className="public-header-actions">
+          <ThemeToggle compact />
+          <Link className="public-login-link" href="/login">
+            ورود به آسوده
+          </Link>
+          <details className="public-mobile-menu">
+            <summary aria-label="بازکردن منوی صفحات عمومی">
+              <span aria-hidden="true" className="public-menu-icon">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className="public-sr-only">منو</span>
+            </summary>
+            <nav aria-label="منوی صفحات عمومی">
+              {[...primaryLinks, { href: '/contact', label: 'تماس با ما' }].map((link) => (
+                <Link href={link.href} key={link.href}>
+                  {link.label}
+                </Link>
+              ))}
+              <Link href="/login">ورود به آسوده</Link>
+            </nav>
+          </details>
+        </div>
       </div>
     </header>
   );
@@ -78,7 +82,7 @@ function PublicFooter() {
     <footer className="public-footer">
       <div className="public-footer-inner">
         <div className="public-footer-about">
-          <Link aria-label="آسوده، صفحه اصلی" className="public-footer-brand" href="/">
+          <Link aria-label="آسوده، صفحه اصلی" className="public-footer-brand brand-link" href="/">
             <BrandLogo
               alt=""
               className="public-footer-logo"

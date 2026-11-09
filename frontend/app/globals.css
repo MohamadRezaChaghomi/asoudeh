@@ -290,6 +290,12 @@ html[data-high-contrast='true'] :focus-visible {
   text-decoration: none;
 }
 
+.brand-link,
+.brand-logo-frame {
+  border: 0;
+  box-shadow: none;
+}
+
 .brand-logo-frame {
   display: inline-flex;
   flex: 0 0 auto;
@@ -320,7 +326,7 @@ html[data-high-contrast='true'] :focus-visible {
 }
 
 .brand-logo-frame--auth-symbol {
-  width: 4rem;
+  width: 3.5rem;
 }
 
 .brand-logo-frame--landing {
@@ -502,7 +508,7 @@ html[data-high-contrast='true'] .pwa-notice {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.8rem;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-size: 0.89rem;
@@ -511,7 +517,6 @@ html[data-high-contrast='true'] .pwa-notice {
   transition:
     color var(--motion-fast) ease,
     background var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
     transform var(--motion-fast) ease;
 }
 
@@ -522,7 +527,6 @@ html[data-high-contrast='true'] .pwa-notice {
 }
 
 .sidebar-link.is-active {
-  border-color: color-mix(in srgb, var(--brand-700) 13%, transparent);
   background: var(--brand-50);
   color: var(--brand-900);
 }
@@ -543,13 +547,7 @@ html[data-high-contrast='true'] .pwa-notice {
 }
 
 .sidebar-note-icon {
-  display: grid;
   flex: 0 0 2rem;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border-radius: 0.7rem;
-  background: var(--surface);
   color: var(--brand-700);
 }
 
@@ -640,6 +638,24 @@ html[data-high-contrast='true'] .pwa-notice {
     background var(--motion-fast) ease,
     color var(--motion-fast) ease,
     border-color var(--motion-fast) ease;
+}
+
+.theme-toggle--compact {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+}
+
+.theme-toggle--compact span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 .theme-toggle:hover {
@@ -1066,6 +1082,13 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   min-height: 5rem;
   justify-content: space-between;
   gap: 1.5rem;
+}
+
+.public-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .public-brand {
@@ -1604,6 +1627,10 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
     max-width: 45%;
   }
 
+  .public-header-actions {
+    gap: 0.25rem;
+  }
+
   .public-brand-logo.brand-logo-frame--landing {
     width: 100%;
   }
@@ -1710,7 +1737,7 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   }
 
   .public-brand {
-    max-width: 42%;
+    max-width: 32%;
   }
 
   .public-login-link {
@@ -1734,6 +1761,52 @@ select {
   padding-inline: 0.75rem;
   appearance: auto;
   accent-color: var(--brand-700);
+}
+
+.jalali-calendar-backdrop {
+  display: none;
+}
+
+.jalali-calendar-popover {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 120;
+  width: min(100%, 22rem);
+  max-height: min(28rem, calc(100vh - 2rem));
+  overflow: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 1rem;
+  color: var(--text);
+  box-shadow: var(--shadow-float);
+}
+
+@media (max-width: 640px) {
+  .jalali-calendar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 119;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: var(--overlay-backdrop);
+  }
+
+  .jalali-calendar-popover {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 120;
+    width: 100%;
+    max-height: min(80dvh, 36rem);
+    overflow-y: auto;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  }
 }
 
 .sidebar-public-links {
@@ -1804,7 +1877,8 @@ select {
 
 .auth-card-tools {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
   direction: ltr;
   margin-block-end: 0.85rem;
 }
@@ -1823,9 +1897,9 @@ select {
 .assistant-widget {
   position: fixed;
   z-index: 45;
-  left: max(1.25rem, env(safe-area-inset-left));
+  left: max(1.25rem, calc(env(safe-area-inset-left) + 1.25rem));
   right: auto;
-  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 1.25rem));
   direction: ltr;
 }
 
@@ -1875,14 +1949,8 @@ select {
   background: var(--surface-raised);
 }
 
-.assistant-avatar {
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+.assistant-header-icon {
   flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--brand-50);
   color: var(--brand-800);
 }
 
@@ -1903,8 +1971,9 @@ select {
 
 .assistant-close {
   display: grid;
-  width: 2.75rem;
-  min-height: 2.75rem;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   flex: 0 0 auto;
   place-items: center;
   margin-inline-start: auto;
@@ -1912,6 +1981,19 @@ select {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
+  transition:
+    background var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+.assistant-close:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.assistant-close:active {
+  background: var(--brand-50);
+  color: var(--brand-900);
 }
 
 .assistant-privacy-note,
@@ -2026,8 +2108,8 @@ select {
 
 @media (max-width: 700px) {
   .assistant-widget {
-    left: max(0.75rem, env(safe-area-inset-left));
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    left: max(0.75rem, calc(env(safe-area-inset-left) + 0.75rem));
+    bottom: max(5rem, calc(env(safe-area-inset-bottom) + 5rem));
   }
 
   .assistant-launcher {
@@ -2037,7 +2119,10 @@ select {
 
   .assistant-panel {
     height: min(33rem, calc(100dvh - 5.25rem));
-    width: min(23rem, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 1.5rem));
+    width: min(
+      23rem,
+      calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 1.5rem)
+    );
   }
 }
 

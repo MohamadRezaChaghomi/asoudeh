@@ -20,8 +20,9 @@ export function ServiceWorkerRegistration() {
   const reloadAfterUpdate = useRef(false);
 
   useEffect(() => {
-    let wasOffline = false;
+    let wasOffline = !navigator.onLine;
     let restoredTimer: number | undefined;
+    if (wasOffline) setConnectivityNotice('offline');
     const showOffline = () => {
       wasOffline = true;
       window.clearTimeout(restoredTimer);

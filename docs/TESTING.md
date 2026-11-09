@@ -30,6 +30,8 @@ Install the Playwright browser once if needed, then run browser tests:
 npm --prefix frontend run test:e2e
 ```
 
+The Playwright origin defaults to `http://localhost:3000` to match the backend's default `CLIENT_URL`. If `PLAYWRIGHT_BASE_URL` uses another hostname, configure `CLIENT_URL` to match it; `localhost` and `127.0.0.1` are different browser origins and a mismatch will block API requests through CORS.
+
 To run the production PWA path in Microsoft Edge:
 
 ```powershell

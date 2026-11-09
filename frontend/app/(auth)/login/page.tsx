@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { AuthBackButton } from '@/components/auth/AuthBackButton';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { savePendingOtpFlow } from '@/lib/auth/otpFlow';
@@ -92,6 +93,7 @@ export default function LoginPage() {
       <section className="app-panel auth-card w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
         <div className="auth-card-tools">
           <LoginBackButton />
+          <ThemeToggle compact />
         </div>
         <BrandLogo
           className="mx-auto mb-4"
@@ -178,9 +180,6 @@ function LoginBackButton() {
   }
 
   return (
-    <button aria-label="بازگشت" className="auth-back-button" onClick={goBack} type="button">
-      <ArrowRight aria-hidden="true" size={18} />
-      <span>بازگشت</span>
-    </button>
+    <AuthBackButton onClick={goBack} />
   );
 }

@@ -1,21 +1,19 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { BellRing } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
+import { Select } from '@/components/ui/Select';
 import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
-  getJalaliMonthDays,
-  getJalaliParts,
   getTehranTodayIso,
-  formatJalaliYear,
   getCurrentJalaliMonthKey,
-  jalaliToGregorianIso,
 } from '@/lib/jalaliDate';
 import {
   formatTomanAmount,
@@ -43,94 +41,12 @@ interface ReminderData {
 }
 
 const MAX_AMOUNT = 1_000_000_000_000;
-const MONTHS = [
-  'فروردین',
-  'اردیبهشت',
-  'خرداد',
-  'تیر',
-  'مرداد',
-  'شهریور',
-  'مهر',
-  'آبان',
-  'آذر',
-  'دی',
-  'بهمن',
-  'اسفند',
-];
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
     dateStyle: 'long',
     timeZone: 'UTC',
   }).format(new Date(`${value}T00:00:00.000Z`));
-}
-
-function JalaliDateInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (date: string) => void;
-}) {
-  const selected = getJalaliParts(value);
-  const currentYear = getJalaliParts(getTehranTodayIso()).year;
-  const years = useMemo(() => {
-    const first = Math.max(1200, Math.min(currentYear - 10, selected.year));
-    const last = Math.min(1600, Math.max(currentYear + 20, selected.year));
-    return Array.from({ length: last - first + 1 }, (_, index) => first + index);
-  }, [currentYear, selected.year]);
-  const days = getJalaliMonthDays(selected.year, selected.month);
-
-  function changeMonth(year: number, month: number, day: number) {
-    const availableDays = getJalaliMonthDays(year, month);
-    const safeDay = Math.min(day, availableDays.length);
-    onChange(jalaliToGregorianIso({ year, month, day: safeDay }));
-  }
-
-  return (
-    <fieldset className="rounded-lg border border-slate-300 p-4">
-      <legend className="px-1 font-medium">تاریخ سررسید شمسی</legend>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm" htmlFor="reminder-year">سال</label>
-          <select
-            className="w-full rounded-lg border border-slate-300 bg-white px-3"
-            id="reminder-year"
-            onChange={(event) => changeMonth(Number(event.target.value), selected.month, selected.day)}
-            value={selected.year}
-          >
-            {years.map((year) => <option key={year} value={year}>{formatJalaliYear(year)}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm" htmlFor="reminder-month">ماه</label>
-          <select
-            className="w-full rounded-lg border border-slate-300 bg-white px-3"
-            id="reminder-month"
-            onChange={(event) => changeMonth(selected.year, Number(event.target.value), selected.day)}
-            value={selected.month}
-          >
-            {MONTHS.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm" htmlFor="reminder-day">روز</label>
-          <select
-            className="w-full rounded-lg border border-slate-300 bg-white px-3"
-            id="reminder-day"
-            onChange={(event) => onChange(days[Number(event.target.value) - 1])}
-            value={selected.day}
-          >
-            {days.map((_, index) => (
-              <option key={index + 1} value={index + 1}>
-                {new Intl.NumberFormat('fa-IR').format(index + 1)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </fieldset>
-  );
 }
 
 export default function RemindersPage() {
@@ -337,14 +253,13 @@ export default function RemindersPage() {
 
           {!data?.reminders.length ? (
             <div className="app-muted mt-6 rounded-lg bg-slate-50 p-5">
-              <Image
-                alt=""
+              <div
                 aria-hidden="true"
-                className="mb-3 h-auto w-32"
-                height={96}
-                src="/illustrations/empty-reminders.svg"
-                width={128}
-              />
+                className="mb-3 flex size-24 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--info)]"
+                data-testid="empty-reminders-illustration"
+              >
+                <BellRing size={44} strokeWidth={1.5} />
+              </div>
               <p>برای قبض یا پرداخت بعدی یادآور بسازید تا سررسیدش را به‌خاطر بسپارید.</p>
               <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#reminder-form">
                 ساخت نخستین یادآور
@@ -449,7 +364,10 @@ export default function RemindersPage() {
                 value={title}
               />
             </div>
-            <JalaliDateInput value={date} onChange={setDate} />
+            <div>
+              <p className="mb-2 font-medium">تاریخ سررسید شمسی</p>
+              <JalaliDatePicker label="انتخاب تاریخ سررسید شمسی" onChange={setDate} value={date} />
+            </div>
             <div>
               <label className="mb-1 block font-medium" htmlFor="reminder-amount">
                 مبلغ (اختیاری، تومان)
@@ -472,18 +390,22 @@ export default function RemindersPage() {
             </div>
             <div>
               <label className="mb-1 block font-medium" htmlFor="reminder-recurrence">تکرار</label>
-              <select
-                className="w-full rounded-lg border border-slate-300 bg-white px-4"
+              <Select
                 id="reminder-recurrence"
-                onChange={(event) => setRecurrence(event.target.value as Recurrence)}
+                onChange={(value) => {
+                  if (value === 'none' || value === 'monthly' || value === 'yearly') {
+                    setRecurrence(value);
+                  }
+                }}
+                options={[
+                  { value: 'none', label: 'بدون تکرار' },
+                  { value: 'monthly', label: 'ماهانه' },
+                  ...(editing?.recurrence === 'yearly'
+                    ? [{ value: 'yearly', label: 'سالانه (نوع قدیمی؛ بدون تغییر حفظ می‌شود)' }]
+                    : []),
+                ]}
                 value={recurrence}
-              >
-                <option value="none">بدون تکرار</option>
-                <option value="monthly">ماهانه</option>
-                {editing?.recurrence === 'yearly' && (
-                  <option value="yearly">سالانه (نوع قدیمی؛ بدون تغییر حفظ می‌شود)</option>
-                )}
-              </select>
+              />
             </div>
             <div className="flex flex-wrap gap-3">
               <button

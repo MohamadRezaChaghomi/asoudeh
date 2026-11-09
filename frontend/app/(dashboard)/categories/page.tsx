@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { Select } from '@/components/ui/Select';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 
@@ -203,17 +204,15 @@ export default function CategoriesPage() {
           </div>
           <div>
             <label className="mb-2 block font-medium" htmlFor="categoryType">نوع</label>
-            <select
-              className="w-full rounded-lg border border-slate-300 bg-white px-4"
+            <Select
               id="categoryType"
-              onChange={(event) =>
-                setType(event.target.value === 'income' ? 'income' : 'expense')
-              }
+              onChange={(value) => setType(value === 'income' ? 'income' : 'expense')}
+              options={[
+                { value: 'expense', label: 'هزینه' },
+                { value: 'income', label: 'درآمد' },
+              ]}
               value={type}
-            >
-              <option value="expense">هزینه</option>
-              <option value="income">درآمد</option>
-            </select>
+            />
           </div>
           <button
             className="self-end rounded-lg bg-asoudeh-navy px-5 py-3 font-semibold text-white disabled:opacity-60"

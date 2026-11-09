@@ -3,28 +3,76 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#1F5C4A">
+    <meta name="theme-color" content="#f6f7f2">
     <title>آسوده | بدون اتصال</title>
     <style>
-      :root { color-scheme: light; font-family: system-ui, "Segoe UI", Tahoma, sans-serif; }
-      body { margin: 0; background: #F6F7F2; color: #1D2925; }
-      main { box-sizing: border-box; margin: 10vh auto; max-width: 38rem; padding: 2rem; }
-      section { background: white; border: 0; border-radius: 1rem; padding: 2rem; }
-      img { display: block; width: 3.5rem; height: 3.5rem; margin-block-end: 1rem; }
-      a { display: inline-block; margin-block-start: 1rem; min-height: 2.75rem; border: 0; border-radius: .5rem; padding: .7rem 1rem; background: #1F5C4A; color: white; font: inherit; text-decoration: none; }
-      :focus-visible { outline: 3px solid #D89A5B; outline-offset: 3px; }
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, "Segoe UI", Tahoma, sans-serif;
+        --canvas: #f6f7f2;
+        --surface: #fff;
+        --surface-muted: #e8eee8;
+        --text: #1d2925;
+        --muted: #586b62;
+        --action: #1f5c4a;
+        --action-text: #fff;
+        --focus: #8a4f1d;
+        --border: #6f7f74;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --canvas: #111a17;
+          --surface: #19231f;
+          --surface-muted: #24352c;
+          --text: #edf2ed;
+          --muted: #b4c0b7;
+          --action: #2e7d5b;
+          --focus: #f0b06f;
+          --border: #91a197;
+        }
+      }
+      * { box-sizing: border-box; }
+      body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--canvas); color: var(--text); }
+      main { display: grid; min-height: 100vh; place-items: center; padding: 1.25rem; }
+      section { width: min(100%, 38rem); border: 1px solid var(--border); border-radius: 1.25rem; background: var(--surface); padding: clamp(1.5rem, 5vw, 2.5rem); box-shadow: 0 12px 32px rgb(0 0 0 / 10%); }
+      .mark { display: block; width: 3.75rem; height: 3.75rem; margin-block-end: 1.25rem; color: var(--action); }
+      h1 { margin-block: 0 .75rem; font-size: clamp(1.5rem, 5vw, 2rem); }
+      p { color: var(--muted); line-height: 1.8; }
+      .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block-start: 1.5rem; }
+      button, a { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: .65rem; padding: .65rem 1rem; font: inherit; font-weight: 650; text-decoration: none; cursor: pointer; }
+      button { background: var(--action); color: var(--action-text); }
+      a { border-color: var(--border); background: var(--surface-muted); color: var(--text); }
+      [role="status"] { min-height: 1.7em; }
+      :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
     </style>
   </head>
   <body>
     <main>
       <section>
-        <img src="/icons/app-icon.svg" alt="نشان آسوده" width="56" height="56">
+        <svg class="mark" role="img" aria-label="نشان آسوده" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 47c9 5 39 5 48 0-5-3-39-5-48 0Z" fill="currentColor"/>
+          <path d="M18 42c0-12 5-20 11-13l2 12M31 40c1-12 6-19 12-12l2 13M44 41c1-12 5-18 10-12l1 11" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+          <path d="M18 17c10-8 22 4 34-4-7 11-23 13-34 4Z" fill="#d89a5b"/>
+        </svg>
         <h1>اتصال اینترنت در دسترس نیست</h1>
         <p>اطلاعات مالی شما در حالت آفلاین بارگذاری نمی‌شود.</p>
         <p>پس از اتصال دوباره می‌توانید به برنامه برگردید.</p>
-        <a href="/">بررسی دوبارهٔ اتصال</a>
-        <a href="/transactions">بازگشت به برنامه</a>
+        <div class="actions">
+          <button id="retry" type="button">تلاش دوباره</button>
+          <a href="/">صفحهٔ اصلی</a>
+        </div>
+        <p id="connection-status" role="status" aria-live="polite"></p>
       </section>
     </main>
+    <script>
+      document.getElementById('retry').addEventListener('click', function () {
+        const status = document.getElementById('connection-status');
+        if (!navigator.onLine) {
+          status.textContent = 'هنوز اتصال اینترنت برقرار نیست. پس از اتصال دوباره تلاش کنید.';
+          return;
+        }
+        window.location.reload();
+      });
+    </script>
   </body>
 </html>

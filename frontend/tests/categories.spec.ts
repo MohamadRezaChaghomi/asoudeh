@@ -97,7 +97,31 @@ test('lists, creates, edits, activates and deactivates categories in RTL; deleti
   await expect(page.getByRole('button', { name: /حذف/ })).toHaveCount(0);
 
   await page.getByLabel('نام دسته‌بندی').fill('قبض‌ها');
-  await page.getByLabel('نوع').selectOption('expense');
+  const typeSelect = page.getByLabel('نوع');
+  await typeSelect.click();
+  const typeListbox = page.getByRole('listbox');
+  await expect(typeListbox).toBeVisible();
+  await expect(typeListbox.getByRole('option', { name: 'هزینه' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(typeListbox.getByRole('option', { name: 'هزینه' }).locator('svg')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(typeListbox).toHaveCount(0);
+  await expect(typeSelect).toBeFocused();
+
+  await typeSelect.click();
+  await page.getByRole('heading', { name: 'فهرست دسته‌بندی‌ها' }).click();
+  await expect(typeListbox).toHaveCount(0);
+
+  await typeSelect.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(typeSelect).toHaveAttribute('data-value', 'income');
+  await typeSelect.click();
+  await page.getByRole('option', { name: 'هزینه' }).click();
+  await expect(typeSelect).toHaveAttribute('data-value', 'expense');
   await page.getByRole('button', { name: 'افزودن' }).click();
   await expect(page.getByText('قبض‌ها', { exact: true })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'دسته‌بندی با موفقیت اضافه شد' })).toContainText(

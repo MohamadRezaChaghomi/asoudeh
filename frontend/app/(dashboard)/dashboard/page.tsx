@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { BellRing, ReceiptText } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api } from '@/lib/api/client';
@@ -193,15 +193,12 @@ export default function DashboardPage() {
                 </div>
                 {dashboard.recentTransactions.length === 0 ? (
                   <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-                    <Image
-                      alt=""
+                    <div
                       aria-hidden="true"
-                      className="mb-3 h-auto w-32"
-                      height={96}
-                      priority
-                      src="/illustrations/empty-transactions.svg"
-                      width={128}
-                    />
+                      className="mb-3 flex size-24 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--info)]"
+                    >
+                      <ReceiptText size={44} strokeWidth={1.5} />
+                    </div>
                     <p>با ثبت نخستین درآمد یا هزینه، روند مالی ماه را ببینید.</p>
                     <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="/transactions#transaction-form">
                       ثبت نخستین تراکنش
@@ -246,14 +243,12 @@ export default function DashboardPage() {
                 </div>
                 {dashboard.upcomingReminders.length === 0 ? (
                   <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-                    <Image
-                      alt=""
+                    <div
                       aria-hidden="true"
-                      className="mb-3 h-auto w-32"
-                      height={96}
-                      src="/illustrations/empty-reminders.svg"
-                      width={128}
-                    />
+                      className="mb-3 flex size-24 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--info)]"
+                    >
+                      <BellRing size={44} strokeWidth={1.5} />
+                    </div>
                     <p>برای قبض‌ها و پرداخت‌های آینده یادآور بسازید تا سررسیدشان را فراموش نکنید.</p>
                     <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg border border-slate-300 px-4 font-medium" href="/reminders#reminder-form">
                       افزودن یادآور

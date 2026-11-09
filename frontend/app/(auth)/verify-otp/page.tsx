@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { AuthBackButton } from '@/components/auth/AuthBackButton';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
@@ -161,7 +163,11 @@ export default function VerifyOtpPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-5" id="main-content" tabIndex={-1}>
-      <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+      <section className="app-panel auth-card w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="auth-card-tools">
+          <AuthBackButton onClick={returnToLogin} />
+          <ThemeToggle compact />
+        </div>
         <BrandLogo
           className="mx-auto mb-4"
           priority
@@ -242,15 +248,6 @@ export default function VerifyOtpPage() {
             </button>
           </form>
         )}
-
-        <button
-          className="mt-3 w-full rounded-lg border border-slate-300 px-4 font-medium"
-          disabled={loading}
-          onClick={returnToLogin}
-          type="button"
-        >
-          تغییر شماره همراه
-        </button>
 
         {error && (
           <p

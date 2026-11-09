@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { Select } from '@/components/ui/Select';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { normalizeDigits } from '@/lib/normalizeDigits';
@@ -268,17 +269,17 @@ export default function SettingsPage() {
 
           <div>
             <label className="mb-2 block font-medium" htmlFor="fontScale">اندازه متن</label>
-            <select
-              className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
+            <Select
               id="fontScale"
-              onChange={(event) => setFontScale(Number(event.target.value))}
-              value={fontScale}
-            >
-              <option value={1}>۱۰۰٪</option>
-              <option value={1.25}>۱۲۵٪</option>
-              <option value={1.5}>۱۵۰٪</option>
-              <option value={2}>۲۰۰٪</option>
-            </select>
+              onChange={(value) => setFontScale(Number(value))}
+              options={[
+                { value: '1', label: '۱۰۰٪' },
+                { value: '1.25', label: '۱۲۵٪' },
+                { value: '1.5', label: '۱۵۰٪' },
+                { value: '2', label: '۲۰۰٪' },
+              ]}
+              value={String(fontScale)}
+            />
           </div>
 
           <label className="flex min-h-12 items-center gap-3 font-medium" htmlFor="highContrast">

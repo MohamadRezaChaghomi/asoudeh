@@ -34,8 +34,9 @@ test('shows the symbol mark on login and OTP registration without duplicating th
     page.getByRole('button', { name: 'بازگشت' }).boundingBox(),
   ]);
   expect(logoBounds?.width).toBeGreaterThanOrEqual(56);
-  expect(logoBounds?.width).toBeLessThanOrEqual(64);
+  expect(logoBounds?.width).toBe(56);
   expect(backBounds?.height).toBeGreaterThanOrEqual(44);
+  expect(backBounds?.x ?? Infinity).toBeLessThan(logoBounds?.x ?? 0);
   expect(backBounds?.x ?? Infinity).toBeLessThan((logoBounds?.x ?? 0) + (logoBounds?.width ?? 0) / 2);
   expect(
     logoBounds &&
@@ -65,6 +66,16 @@ test('shows the symbol mark on login and OTP registration without duplicating th
     .poll(() => verificationLogo.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0);
   await expect(page.getByRole('heading', { name: 'ساخت حساب کاربری' })).toBeVisible();
+  const [verificationLogoBounds, verificationBackBounds] = await Promise.all([
+    verificationLogo.boundingBox(),
+    page.getByRole('button', { name: 'بازگشت' }).boundingBox(),
+  ]);
+  expect(verificationLogoBounds?.width).toBe(56);
+  expect(verificationBackBounds?.height).toBeGreaterThanOrEqual(44);
+  expect(verificationBackBounds?.x ?? Infinity).toBeLessThan(verificationLogoBounds?.x ?? 0);
+  await page.getByRole('button', { name: 'بازگشت' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByLabel('شماره همراه')).toBeVisible();
 });
 
 test('returns from login to the public home page', async ({ page }) => {
@@ -72,6 +83,71 @@ test('returns from login to the public home page', async ({ page }) => {
   await page.getByRole('button', { name: 'بازگشت' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: /مدیریت مالی/ })).toBeVisible();
+});
+
+test('uses the system theme by default and preserves a pre-login theme choice after login', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.route('**/api/v1/auth/otp/request', async (route) => {
+    await route.fulfill({ json: { success: true, data: { resendAfterSeconds: 60 } } });
+  });
+  await page.route('**/api/v1/auth/otp/verify', async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { registrationRequired: false, csrfToken: 'login-theme-csrf' } },
+    });
+  });
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({ json: { success: true, data: { profile } } });
+  });
+  await page.route('**/api/v1/dashboard', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          period: {
+            calendar: 'jalali',
+            year: 1405,
+            month: 8,
+            startDate: '2026-10-23',
+            endDateExclusive: '2026-11-22',
+          },
+          balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+          recentTransactions: [],
+          upcomingReminders: [],
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    await route.fulfill({ json: { success: true, data: { active: true } } });
+  });
+
+  await page.goto('/login');
+  const themeToggle = page.getByRole('button', { name: 'فعال‌کردن پوسته روشن' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  const toggleBounds = await themeToggle.boundingBox();
+  expect(toggleBounds?.width).toBeGreaterThanOrEqual(44);
+  expect(toggleBounds?.height).toBeGreaterThanOrEqual(44);
+  await themeToggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('asoudeh.theme'))).toBe('light');
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByLabel('شماره همراه').fill(profile.phone);
+  await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
+  await page.getByLabel('کد تأیید').fill('123456');
+  await page.getByRole('button', { name: 'تأیید و ادامه' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.goto('/settings');
+  const settingsThemeToggle = page.getByRole('button', { name: 'فعال‌کردن پوسته تیره' });
+  await expect(settingsThemeToggle).toBeVisible();
+  await settingsThemeToggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('asoudeh.theme'))).toBe('dark');
 });
 
 test('requires manual OTP entry and never returns or stores the development OTP', async ({
@@ -289,9 +365,7 @@ test('rejects an invalid OTP without authenticating or leaving the verification 
   await expect(page.locator('p[role="alert"]')).toContainText('کد تأیید معتبر نیست');
 });
 
-test('navigates to the protected app only after the backend confirms OTP verification', async ({
-  page,
-}) => {
+test('keeps browser errors clear after confirmed OTP login', async ({ page }) => {
   let verificationPayload: Record<string, string> | undefined;
   let csrfRequests = 0;
   let profileRequests = 0;
@@ -371,6 +445,7 @@ test('navigates to the protected app only after the backend confirms OTP verific
   await expect.poll(() => profileRequests).toBe(1);
   await expect.poll(() => dashboardRequests).toBeGreaterThan(0);
   expect(csrfRequests).toBe(1);
+  await page.waitForTimeout(3000);
   expect(browserErrors).toEqual([]);
   await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toHaveCount(0);
   expect(verificationPayload).toEqual({ phone: profile.phone, code: '123456' });
@@ -481,7 +556,8 @@ test('loads and updates profile accessibility preferences in Persian RTL', async
   await page.getByLabel('نام نمایشی').fill('نام تازه');
   await page.getByLabel('سال تولد شمسی (اختیاری)').fill('۱۳۴۰');
   await page.getByLabel('موجودی اولیه (تومان)').fill('۵۰۰۰۰۰');
-  await page.getByLabel('اندازه متن').selectOption('1.5');
+  await page.getByLabel('اندازه متن').click();
+  await page.getByRole('option', { name: '۱۵۰٪' }).click();
   await page.getByLabel('کنتراست بالا').check();
   await page.getByRole('button', { name: 'ذخیره تغییرات' }).click();
 

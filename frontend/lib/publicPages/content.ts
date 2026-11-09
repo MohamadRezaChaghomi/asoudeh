@@ -27,7 +27,7 @@ export const contactDetails = {
   phone: '۰۰۰-۰۰۰-۰۰۰۰',
   phoneHref: 'tel:+980000000000',
   workingHours: 'شنبه تا چهارشنبه، ساعت ۹ تا ۱۷ (زمان نمونه)',
-  cityAddress: 'تهران، نشانی نمونه، پلاک ۰۰',
+  city: 'شهر نمونه',
 } as const;
 
 export const publicPages = {
@@ -209,20 +209,20 @@ export const publicPages = {
   contact: {
     path: '/contact',
     title: 'تماس با ما',
-    description: 'برای پرسش دربارهٔ آسوده می‌توانید از راه‌های ارتباطی زیر استفاده کنید.',
+    description: 'برای پرسش یا دریافت راهنمایی، از اطلاعات تماس نمونهٔ زیر استفاده کنید.',
     notice: 'اطلاعات تماس این صفحه نمونه است و باید پیش از انتشار با اطلاعات تأییدشده جایگزین شود.',
     sections: [
       {
         id: 'contact-details',
         title: 'راه‌های ارتباطی',
         paragraphs: [
-          'این صفحه فرم ارسال پیام ندارد؛ برای تماس، ایمیل پشتیبانی را انتخاب کنید.',
+          'برای دریافت راهنمایی با پشتیبانی در تماس باشید. این صفحه فرم ارسال پیام ندارد.',
         ],
         items: [
           `ایمیل پشتیبانی: ${contactDetails.email}`,
           `تلفن: ${contactDetails.phone}`,
           `ساعت پاسخ‌گویی: ${contactDetails.workingHours}`,
-          `شهر و نشانی: ${contactDetails.cityAddress}`,
+          `شهر: ${contactDetails.city}`,
         ],
         links: [
           { href: `mailto:${contactDetails.email}`, label: 'ارسال ایمیل به پشتیبانی' },

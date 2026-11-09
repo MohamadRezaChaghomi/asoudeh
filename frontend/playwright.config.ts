@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const browserChannel = process.env.PLAYWRIGHT_CHANNEL === 'msedge' ? 'msedge' : undefined;
 const isProductionPwaTest = process.env.PWA_TEST === 'true';
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3000';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
 export default defineConfig({
   testDir: './tests',

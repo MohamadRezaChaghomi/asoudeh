@@ -108,7 +108,7 @@ export default function RootLayout({
     >
       <head>
         <Script id="theme-initializer" strategy="beforeInteractive">
-          {`try { document.documentElement.dataset.theme = localStorage.getItem('asoudeh.theme') === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }`}
+          {`try { const saved = localStorage.getItem('asoudeh.theme'); document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }`}
         </Script>
       </head>
       <body>

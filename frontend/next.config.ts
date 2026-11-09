@@ -30,7 +30,7 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  distDir: process.env.NEXT_BUILD_DIR || '.next',
+  distDir: process.env.NEXT_BUILD_DIR || (isProduction ? '.next' : '.next-dev'),
   poweredByHeader: false,
   compress: true,
   async headers() {

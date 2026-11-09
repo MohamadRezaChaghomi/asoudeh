@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { Select } from '@/components/ui/Select';
 import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
@@ -378,34 +379,35 @@ export default function BudgetsPage() {
           <form className="mt-5 space-y-4" noValidate onSubmit={saveBudget}>
             <div>
               <label className="mb-2 block font-medium" htmlFor="budgetCategory">دستهٔ هزینه</label>
-              <select
-                className="w-full rounded-lg border border-slate-300 bg-white px-4"
+              <Select
                 disabled={!activeExpenseCategories.length && !editingBudget}
                 id="budgetCategory"
                 aria-invalid={fieldError === 'category'}
                 aria-describedby={fieldError === 'category' ? 'budget-field-error' : undefined}
-                onChange={(event) => {
-                  setCategoryId(event.target.value);
+                onChange={(value) => {
+                  setCategoryId(value);
                   setFieldError(null);
                 }}
+                options={(
+                  activeExpenseCategories.length === 0 && !editingBudget
+                    ? [{ value: '', label: 'دستهٔ هزینهٔ فعالی ندارید' }]
+                    : activeExpenseCategories.map((category) => ({
+                        value: category.id,
+                        label: category.name,
+                      }))
+                ).concat(
+                  editingBudget &&
+                    !editingBudget.categoryIsActive &&
+                    editingBudget.categoryId === categoryId
+                    ? [{
+                        value: editingBudget.categoryId,
+                        label: `${editingBudget.categoryName} (غیرفعال)`,
+                      }]
+                    : [],
+                )}
                 required
                 value={categoryId}
-              >
-                {activeExpenseCategories.length === 0 && !editingBudget ? (
-                  <option value="">دستهٔ هزینهٔ فعالی ندارید</option>
-                ) : (
-                  activeExpenseCategories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))
-                )}
-                {editingBudget &&
-                  !editingBudget.categoryIsActive &&
-                  editingBudget.categoryId === categoryId && (
-                    <option value={editingBudget.categoryId}>
-                      {editingBudget.categoryName} (غیرفعال)
-                    </option>
-                  )}
-              </select>
+              />
               {!activeExpenseCategories.length && !editingBudget && (
                 <Link className="mt-2 inline-block text-sm text-asoudeh-teal underline" href="/categories">
                   ابتدا یک دستهٔ هزینهٔ شخصی و فعال بسازید

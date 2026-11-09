@@ -10,10 +10,8 @@ import {
   HandCoins,
   LayoutDashboard,
   Menu,
-  Moon,
   PiggyBank,
   Settings,
-  Sun,
   Volume2,
   VolumeX,
   UsersRound,
@@ -22,6 +20,7 @@ import {
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { AssistantWidget } from '@/components/assistant/AssistantWidget';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { cn } from '@/lib/utils/cn';
 
 const navigation = [
@@ -41,7 +40,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const [speechMessage, setSpeechMessage] = useState('');
-  const [themeReady, setThemeReady] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -94,19 +92,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem('asoudeh.theme');
-    const nextTheme = savedTheme === 'dark' ? 'dark' : 'light';
-    document.documentElement.dataset.theme = nextTheme;
-    setTheme(nextTheme);
-    setThemeReady(true);
+    const syncTheme = () => {
+      setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    };
+    syncTheme();
+    window.addEventListener('asoudeh-theme-change', syncTheme);
+    return () => window.removeEventListener('asoudeh-theme-change', syncTheme);
   }, []);
-
-  function toggleTheme() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = nextTheme;
-    window.localStorage.setItem('asoudeh.theme', nextTheme);
-    setTheme(nextTheme);
-  }
 
   function togglePageSpeech() {
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
@@ -161,7 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <aside className="app-sidebar" aria-label="ناوبری اصلی">
-        <Link className="app-brand" href="/dashboard" aria-label="آسوده، نمای کلی">
+        <Link className="app-brand brand-link" href="/dashboard" aria-label="آسوده، نمای کلی">
           <BrandLogo
             alt=""
             size="sidebar"
@@ -193,9 +185,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-note">
-          <span className="sidebar-note-icon" aria-hidden="true">
-            <CircleUserRound size={18} />
-          </span>
+          <CircleUserRound aria-hidden="true" className="sidebar-note-icon" size={18} />
           <p>اطلاعات مالی شما خصوصی و فقط در اختیار خودتان است.</p>
         </div>
       </aside>
@@ -213,22 +203,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <Link
               aria-label="آسوده، نمای کلی"
-              className="app-topbar-brand"
+              className="app-topbar-brand brand-link"
               href="/dashboard"
             >
               <BrandLogo alt="" size="mobile" variant="symbol" />
             </Link>
           </div>
-          <button
-            aria-label={theme === 'dark' ? 'فعال‌کردن پوسته روشن' : 'فعال‌کردن پوسته تیره'}
-            className="theme-toggle"
-            onClick={toggleTheme}
-            disabled={!themeReady}
-            type="button"
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            <span>{theme === 'dark' ? 'پوسته روشن' : 'پوسته تیره'}</span>
-          </button>
+          <ThemeToggle />
           <button
             aria-describedby="page-reader-help"
             aria-pressed={isSpeaking}

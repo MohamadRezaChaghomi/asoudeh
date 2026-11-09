@@ -13,6 +13,7 @@ const config = [
   {
     ignores: [
       '.next/**',
+      '.next-dev/**',
       'node_modules/**',
       'out/**',
       'test-results/**',

@@ -1,4 +1,5 @@
 import { expect, test } from './diagnostics-test';
+import { expectThemeAwareIllustration } from './assert-theme-aware-illustration';
 import {
   formatTomanAmount,
   formatTomanAmountInput,
@@ -109,17 +110,28 @@ test('creates an income through the three-step form with Persian amount and Jala
   });
 
   await page.goto('/transactions');
+  await expect(page.getByTestId('empty-transactions-illustration')).toBeVisible();
+  await expectThemeAwareIllustration(page, 'empty-transactions-illustration');
   await page.getByLabel('ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر').check();
   const amount = page.getByLabel('مبلغ (تومان)');
   await amount.fill('۱۲۳۴۵۶');
   await expect(amount).toHaveValue(/۱۲۳[٬\u066c]۴۵۶/);
-  await page.getByLabel('نوع').selectOption('income');
+  const transactionType = page.getByRole('group', { name: 'نوع تراکنش' });
+  await transactionType.getByRole('button', { name: 'درآمد' }).click();
+  await expect(transactionType.getByRole('button', { name: 'درآمد' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.getByRole('button', { name: 'ادامه' }).click();
 
   const category = page.getByLabel('دسته‌بندی');
-  await expect(category.locator('option')).toHaveText(['حقوق']);
-  await expect(category).toHaveValue(incomeCategory.id);
-  await page.locator('button[aria-pressed="true"]').click();
+  await expect(category).toHaveAttribute('data-value', incomeCategory.id);
+  await category.click();
+  await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['حقوق']);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'تغییر تاریخ' }).click();
+  const dateCalendar = page.getByRole('dialog', { name: 'انتخاب تاریخ شمسی' });
+  await dateCalendar.locator('[aria-pressed="true"]').click();
   expect(createPayload).toBeUndefined();
   await page.getByRole('button', { name: 'ادامه' }).click();
   await expect(
@@ -130,9 +142,11 @@ test('creates an income through the three-step form with Persian amount and Jala
   await expect(page.getByText('حقوق', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'بازگشت' }).click();
-  await expect(page.getByLabel('دسته‌بندی')).toHaveValue(incomeCategory.id);
+  await expect(page.getByLabel('دسته‌بندی')).toHaveAttribute('data-value', incomeCategory.id);
   await page.getByRole('button', { name: 'بازگشت' }).click();
-  await expect(page.getByLabel('نوع')).toHaveValue('income');
+  await expect(
+    page.getByRole('group', { name: 'نوع تراکنش' }).getByRole('button', { name: 'درآمد' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('مبلغ (تومان)')).toHaveValue(/۱۲۳[٬\u066c]۴۵۶/);
 
   await page.getByRole('button', { name: 'ادامه' }).click();
@@ -223,7 +237,7 @@ test('allows editing an existing transaction while retaining its inactive catego
   await page.getByRole('button', { name: 'ویرایش' }).click();
   await expect(page.getByLabel('مبلغ (تومان)')).toHaveValue('۴٬۵۰۰');
   await page.getByRole('button', { name: 'ادامه' }).click();
-  await expect(page.getByLabel('دسته‌بندی')).toHaveValue(inactiveCategory.id);
+  await expect(page.getByLabel('دسته‌بندی')).toHaveAttribute('data-value', inactiveCategory.id);
   await expect(page.getByRole('button', { name: 'ادامه' })).toBeEnabled();
   await page.getByRole('button', { name: 'ادامه' }).click();
   await expect(
@@ -367,7 +381,8 @@ test('searches transactions and applies the selected sort on the server', async 
   await page.goto('/transactions');
   await expect(page.getByText('اجاره ماهانه')).toBeVisible();
   await page.getByLabel('جست‌وجو در توضیحات یا نام گروه مالی').fill('اجاره');
-  await page.getByLabel('مرتب‌سازی فهرست').selectOption('amount-asc');
+  await page.getByLabel('مرتب‌سازی فهرست').click();
+  await page.getByRole('option', { name: 'کمترین مبلغ' }).click();
   await page.getByRole('button', { name: 'اعمال جست‌وجو' }).click();
 
   await expect.poll(() => requestedQueries.length).toBe(2);
@@ -413,10 +428,11 @@ test('restores an opted-in draft only for the same authenticated account', async
       },
     });
   });
-
+  await page.goto('/transactions');
   await page.goto('/transactions');
   await page.getByLabel('ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر').check();
-  await page.getByLabel('نوع').selectOption('income');
+  const transactionType = page.getByRole('group', { name: 'نوع تراکنش' });
+  await transactionType.getByRole('button', { name: 'درآمد' }).click();
   await page.getByLabel('مبلغ (تومان)').fill('۷۵۰۰۰');
   await page.getByRole('button', { name: 'ادامه' }).click();
   const firstAccountDraftKey = `asoudeh.transactionDraft.v1.${firstAccountId}`;
@@ -427,17 +443,21 @@ test('restores an opted-in draft only for the same authenticated account', async
   await expect(
     page.getByRole('status').filter({ hasText: 'پیش‌نویس محلی این حساب بازیابی شد' }),
   ).toContainText('پیش‌نویس محلی این حساب بازیابی شد');
-  await expect(page.getByLabel('دسته‌بندی')).toHaveValue(incomeCategory.id);
+  await expect(page.getByLabel('دسته‌بندی')).toHaveAttribute('data-value', incomeCategory.id);
   await expect(page.getByRole('list', { name: 'مراحل ثبت تراکنش' }).getByRole('listitem').nth(1))
     .toHaveAttribute('aria-current', 'step');
   await page.getByRole('button', { name: 'بازگشت' }).click();
-  await expect(page.getByLabel('نوع')).toHaveValue('income');
+  await expect(
+    page.getByRole('group', { name: 'نوع تراکنش' }).getByRole('button', { name: 'درآمد' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('مبلغ (تومان)')).toHaveValue('۷۵٬۰۰۰');
   expect(createRequests).toBe(0);
 
   activeUserId = '64b000000000000000000098';
   await page.reload();
-  await expect(page.getByLabel('نوع')).toHaveValue('expense');
+  await expect(
+    page.getByRole('group', { name: 'نوع تراکنش' }).getByRole('button', { name: 'هزینه' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('مبلغ (تومان)')).toHaveValue('');
   await expect(page.getByLabel('ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر')).not.toBeChecked();
 
@@ -475,7 +495,9 @@ test('restores an opted-in draft only for the same authenticated account', async
   ).toBeNull();
   await expect(page.getByText('پیش‌نویس ذخیره‌شده معتبر نبود و حذف شد.', { exact: true }))
     .toBeVisible();
-  await expect(page.getByLabel('نوع')).toHaveValue('expense');
+  await expect(
+    page.getByRole('group', { name: 'نوع تراکنش' }).getByRole('button', { name: 'هزینه' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('مبلغ (تومان)')).toHaveValue('');
 });
 

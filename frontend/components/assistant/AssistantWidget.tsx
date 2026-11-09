@@ -163,9 +163,7 @@ export function AssistantWidget() {
           role="dialog"
         >
           <header className="assistant-panel-header">
-            <span className="assistant-avatar" aria-hidden="true">
-              <Bot size={20} />
-            </span>
+            <Bot aria-hidden="true" className="assistant-header-icon" size={20} />
             <div>
               <h2 id="assistant-title">راهنمای آسوده</h2>
               <p>
@@ -180,7 +178,7 @@ export function AssistantWidget() {
               onClick={() => setIsOpen(false)}
               type="button"
             >
-              <X aria-hidden="true" size={19} />
+              <X aria-hidden="true" size={20} />
             </button>
           </header>
 
