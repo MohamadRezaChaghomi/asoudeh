@@ -1,4 +1,5 @@
 import { fa } from '@/lib/messages/fa';
+import { cn } from '@/lib/utils/cn';
 import { formatTomanAmount } from '@/lib/tomanAmount';
 
 interface TomanAmountProps {
@@ -10,7 +11,7 @@ interface TomanAmountProps {
 export function TomanAmount({ amount, className, unitClassName }: TomanAmountProps) {
   return (
     <>
-      <bdi className={className} dir="ltr">
+      <bdi className={cn('financial-amount', className)} dir="ltr">
         {formatTomanAmount(amount)}
       </bdi>{' '}
       <span className={unitClassName}>{fa.glossary.toman}</span>

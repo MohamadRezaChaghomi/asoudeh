@@ -5,7 +5,8 @@
 :root {
   color-scheme: light;
   --font-scale: 100%;
-  --font-sans: var(--font-vazirmatn), sans-serif;
+  --font-sans: var(--font-estedad-arabic), var(--font-estedad-latin),
+    var(--font-estedad-latin-ext), system-ui, "Segoe UI", Tahoma, sans-serif;
   --brand-950: #1d2925;
   --brand-900: #1f5c4a;
   --brand-800: #245f4c;
@@ -116,6 +117,12 @@ body {
   transition:
     background-color var(--motion-standard) var(--ease-standard),
     color var(--motion-standard) var(--ease-standard);
+}
+
+bdi.financial-amount,
+table,
+[role='table'] {
+  font-variant-numeric: tabular-nums;
 }
 
 .global-skip-link:not(:focus) {

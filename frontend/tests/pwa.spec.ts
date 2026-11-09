@@ -66,8 +66,47 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   const appIcon = await page.request.get('/icons/app-icon.svg');
   expect(appIcon.ok()).toBe(true);
 
-  await page.goto('/login');
+  const fontIssues: string[] = [];
+  const fontResponses: Array<{ url: string; status: number }> = [];
+  page.on('console', (message) => {
+    if (
+      message.type() === 'error' &&
+      /content security policy|refused to load.*font|hydration/i.test(message.text())
+    ) {
+      fontIssues.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => {
+    if (/hydration/i.test(error.message)) fontIssues.push(error.message);
+  });
+  page.on('response', (response) => {
+    if (/\.woff2?(?:\?|$)/i.test(response.url())) {
+      fontResponses.push({ url: response.url(), status: response.status() });
+    }
+  });
+
+  const loginResponse = await page.goto('/login');
+  expect(loginResponse?.headers()['content-security-policy']).toContain("font-src 'self'");
   await expect(page.getByRole('heading', { name: /ورود/ })).toBeVisible();
+  const fontOrigins = await page.evaluate(async () => {
+    const sample = 'آسوده Asoudeh ۱۲۳ ۱۲۳٬۴۵۶ 123,456';
+    const probe = document.createElement('span');
+    probe.textContent = sample;
+    probe.style.fontFamily = getComputedStyle(document.body).fontFamily;
+    document.body.append(probe);
+    await document.fonts.load(`400 18px ${probe.style.fontFamily}`, sample);
+    await document.fonts.ready;
+    probe.remove();
+    return performance
+      .getEntriesByType('resource')
+      .filter((entry) => /\.woff2?(?:\?|$)/i.test(entry.name))
+      .map((entry) => new URL(entry.name).origin);
+  });
+  expect(fontOrigins.length).toBeGreaterThanOrEqual(2);
+  expect(fontOrigins.every((origin) => origin === new URL(page.url()).origin)).toBe(true);
+  expect(fontResponses.length).toBeGreaterThanOrEqual(2);
+  expect(fontResponses.every(({ status }) => status === 200)).toBe(true);
+  expect(fontIssues).toEqual([]);
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
     'href',
     '/manifest.webmanifest',

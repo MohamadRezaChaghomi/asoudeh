@@ -35,7 +35,7 @@ All referenced files were verified to exist. PNG dimensions were read from their
 
 The light-theme design tokens now use the supplied forest green `#1F5C4A`, balance green `#2E7D5B`, mint `#D9EBDD`, warm neutral `#F6F7F2`, charcoal `#1D2925`, secondary text `#63756D`, and amber focus accent `#D89A5B`. Dark theme retains accessible light text colors and uses dedicated dark-theme action colors to keep white button labels legible. Existing status colors and focus-visible outlines remain.
 
-The SVG wordmarks contain editable Persian/Latin text and specify Vazirmatn/Inter font families. No font files were included in the supplied package or frontend assets, so browsers use the documented font fallback stack. For identical wordmark shaping on systems without Vazirmatn, supply a licensed local font file or path-based logo artwork.
+The application self-hosts the variable Estedad font (SIL Open Font License 1.1) through `next/font/local`, with Arabic, Latin, and Latin Extended subsets, `font-display: swap`, and a system fallback stack. No font request is made to an external host. The offline page intentionally uses only system fonts. The current SVG logo assets were checked and contain no `font-family` declarations or text; the Persian wordmark in the interface is HTML text.
 
 ## Metadata, favicon, manifest, and offline shell
 
@@ -78,4 +78,4 @@ Verified with the installed Next.js 15.5.28 toolchain and Microsoft Edge:
 
 An initial run used the default parallel workers while a production PWA server was being started at the same time. The competing dev/production processes affected the shared Next.js build directory and caused browser-test timeouts. The production PWA test was rerun after a fresh build, and the complete browser suite was rerun serially; both passed as reported above.
 
-Remaining issue: Vazirmatn and Inter font files are absent, so wordmark typography depends on fonts available on the client device. The legacy exported logos were removed from the current worktree by the supplied asset update and are no longer referenced; other unreferenced supplied icon sizes are retained.
+Remaining issues: typography scale and shared component styling have not yet been consolidated into design tokens. Responsive viewport coverage exists, but an additional visual review is still recommended after broader component migrations. The legacy exported logos were removed from the current worktree by the supplied asset update and are no longer referenced; other unreferenced supplied icon sizes are retained.

@@ -4,9 +4,72 @@ test('serves the configured security response headers', async ({ page }) => {
   const response = await page.goto('/');
 
   expect(response?.headers()['content-security-policy']).toContain("default-src 'self'");
+  expect(response?.headers()['content-security-policy']).toContain("font-src 'self'");
   expect(response?.headers()['x-content-type-options']).toBe('nosniff');
   expect(response?.headers()['x-frame-options']).toBe('DENY');
   expect(response?.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin');
+});
+
+test('loads self-hosted Estedad for Persian and Latin without CSP or hydration errors', async ({
+  page,
+}) => {
+  const fontErrors: string[] = [];
+  const fontResponses: Array<{ url: string; status: number }> = [];
+  page.on('console', (message) => {
+    if (
+      message.type() === 'error' &&
+      /content security policy|refused to load.*font|hydration/i.test(message.text())
+    ) {
+      fontErrors.push(message.text());
+    }
+  });
+  page.on('pageerror', (error) => {
+    if (/hydration/i.test(error.message)) fontErrors.push(error.message);
+  });
+  page.on('response', (response) => {
+    if (/\.woff2?(?:\?|$)/i.test(response.url())) {
+      fontResponses.push({ url: response.url(), status: response.status() });
+    }
+  });
+
+  await page.goto('/');
+  const fontFamily = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  expect(fontFamily).toContain('system-ui');
+
+  const fontLoading = await page.evaluate(async () => {
+    const sample = `آسوده Asoudeh ۱۲۳ ۱۲۳٬۴۵۶ 123,456`;
+    const probe = document.createElement('span');
+    probe.textContent = sample;
+    probe.style.fontFamily = getComputedStyle(document.body).fontFamily;
+    probe.style.fontWeight = '400';
+    document.body.append(probe);
+    await document.fonts.load(`400 18px ${probe.style.fontFamily}`, sample);
+    await document.fonts.ready;
+    const formattedAmount = new Intl.NumberFormat('fa-IR').format(123456);
+    const amountProbe = document.createElement('bdi');
+    amountProbe.className = 'financial-amount';
+    document.body.append(amountProbe);
+    const amountNumericStyle = getComputedStyle(amountProbe).fontVariantNumeric;
+    probe.remove();
+    amountProbe.remove();
+
+    return {
+      fontOrigins: performance
+        .getEntriesByType('resource')
+        .filter((entry) => /\.woff2?(?:\?|$)/i.test(entry.name))
+        .map((entry) => new URL(entry.name).origin),
+      formattedAmount,
+      amountNumericStyle,
+    };
+  });
+
+  expect(fontLoading.fontOrigins.length).toBeGreaterThanOrEqual(2);
+  expect(fontLoading.fontOrigins.every((origin) => origin === new URL(page.url()).origin)).toBe(true);
+  expect(fontLoading.formattedAmount).toBe('۱۲۳٬۴۵۶');
+  expect(fontLoading.amountNumericStyle).toContain('tabular-nums');
+  expect(fontResponses.length).toBeGreaterThanOrEqual(2);
+  expect(fontResponses.every(({ status }) => status === 200)).toBe(true);
+  expect(fontErrors).toEqual([]);
 });
 
 test('compresses production pages and caches static assets', async ({ page }) => {

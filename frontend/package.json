@@ -15,6 +15,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource-variable/estedad": "^5.3.0",
     "asoudeh": "file:..",
     "axios": "^1.7.9",
     "clsx": "^2.1.1",
@@ -23,8 +24,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.0",
-    "tailwind-merge": "^2.6.0",
-    "vazirmatn": "^33.0.3"
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
