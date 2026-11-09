@@ -11,6 +11,7 @@ import {
   getJalaliParts,
   getTehranTodayIso,
 } from '@/lib/jalaliDate';
+import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
 
 type TransactionType = 'income' | 'expense';
 type CategoryType = TransactionType | 'both';
@@ -104,12 +105,6 @@ interface ApiErrorBody {
   error?: { message?: string };
 }
 
-function toAsciiDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
-}
-
 function errorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
     return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
@@ -123,11 +118,6 @@ function todayDate(): string {
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('fa-IR').format(amount);
-}
-
-function formatAmountInput(value: string): string {
-  const normalized = toAsciiDigits(value).replace(/[^\d]/g, '');
-  return normalized ? new Intl.NumberFormat('fa-IR').format(Number(normalized)) : '';
 }
 
 function formatDate(date: string): string {
@@ -515,12 +505,11 @@ export default function TransactionsPage() {
 
   function validatedAmount(): number | undefined {
     setError('');
-    const normalizedAmount = toAsciiDigits(amount).replace(/[,\s٬]/g, '');
-    if (!/^\d+$/.test(normalizedAmount)) {
+    const numericAmount = parseTomanAmount(amount);
+    if (numericAmount === undefined) {
       setError('مبلغ باید عدد صحیح مثبت به تومان باشد.');
       return undefined;
     }
-    const numericAmount = Number(normalizedAmount);
     if (
       !Number.isSafeInteger(numericAmount) ||
       numericAmount < 1 ||
@@ -990,7 +979,7 @@ export default function TransactionsPage() {
                     dir="ltr"
                     id="transactionAmount"
                     inputMode="numeric"
-                    onChange={(event) => setAmount(formatAmountInput(event.target.value))}
+                    onChange={(event) => setAmount(formatTomanAmountInput(event.target.value))}
                     placeholder="۲۰۰٬۰۰۰"
                     required
                     value={amount}
@@ -1059,7 +1048,7 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">مبلغ</dt>
-                    <dd className="font-semibold">{formatAmount(Number(toAsciiDigits(amount).replace(/[^\d]/g, '')))} تومان</dd>
+                    <dd className="font-semibold">{formatAmount(parseTomanAmount(amount) ?? 0)} تومان</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">دسته</dt>

@@ -160,14 +160,12 @@ export async function getMonthlyReport(
       const category = categoryById.get(categoryId);
       if (!category) return undefined;
       const amount = decimalIntegerToBigInt(group.amount.toString());
-      const shareTenths =
-        expenses === 0n ? 0n : (amount * 1000n + expenses / 2n) / expenses;
       return {
         categoryId,
         categoryName: category?.name ?? 'دسته‌بندی ناموجود',
         categoryIcon: category?.icon ?? 'wallet',
         amount: amount.toString(),
-        sharePercentage: Number(shareTenths) / 10,
+        sharePercentage: 0,
       };
     })
     .filter((category): category is NonNullable<typeof category> => category !== undefined);
@@ -177,14 +175,12 @@ export async function getMonthlyReport(
       : sum + decimalIntegerToBigInt(group.amount.toString());
   }, 0n);
   if (unavailableAmount > 0n) {
-    const shareTenths =
-      expenses === 0n ? 0n : (unavailableAmount * 1000n + expenses / 2n) / expenses;
     expensesByCategory.push({
       categoryId: 'unavailable',
       categoryName: 'دسته‌بندی ناموجود',
       categoryIcon: 'wallet',
       amount: unavailableAmount.toString(),
-      sharePercentage: Number(shareTenths) / 10,
+      sharePercentage: 0,
     });
   }
   expensesByCategory.sort((left, right) => {
@@ -196,6 +192,37 @@ export async function getMonthlyReport(
         ? -1
         : 1;
   });
+  if (expenses > 0n) {
+    const shares = expensesByCategory.map((category) => {
+      const numerator = BigInt(category.amount) * 1000n;
+      return {
+        category,
+        tenths: numerator / expenses,
+        remainder: numerator % expenses,
+      };
+    });
+    const remainingTenths =
+      1000n - shares.reduce((sum, share) => sum + share.tenths, 0n);
+    const remainderOrder = [...shares].sort((left, right) =>
+      left.remainder === right.remainder
+        ? left.category.categoryId.localeCompare(right.category.categoryId)
+        : left.remainder > right.remainder
+          ? -1
+          : 1,
+    );
+    for (let index = 0; index < Number(remainingTenths); index += 1) {
+      remainderOrder[index].tenths += 1n;
+    }
+    for (const share of shares) {
+      share.category.sharePercentage = Number(share.tenths) / 10;
+    }
+    const lastShare = shares[shares.length - 1];
+    lastShare.category.sharePercentage =
+      100 -
+      shares
+        .slice(0, -1)
+        .reduce((sum, share) => sum + share.category.sharePercentage, 0);
+  }
   return {
     monthKey,
     period: {

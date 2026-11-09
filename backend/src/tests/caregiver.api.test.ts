@@ -142,6 +142,15 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
       date: current.today,
     });
     transactionIds.push(transaction._id);
+    const deletedTransaction = await Transaction.create({
+      userId: new mongoose.Types.ObjectId(senior.userId),
+      type: 'expense',
+      amount: 90_000,
+      categoryId: transactionCategoryId,
+      date: current.today,
+      deletedAt: new Date(),
+    });
+    transactionIds.push(deletedTransaction._id);
   }, 20_000);
 
   afterAll(async () => {

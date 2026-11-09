@@ -284,6 +284,91 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Budget API', () => {
     expect(ownerInjection.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it.each([
+    [7_999, 80, 'normal'],
+    [8_000, 80, 'warning'],
+    [10_000, 100, 'exceeded'],
+    [10_001, 100, 'exceeded'],
+  ] as const)(
+    'classifies %i spent against a 10,000 toman budget at the exact threshold',
+    async (spent, roundedPercentage, status) => {
+      const categoryId = await createCategory(owner, `Boundary ${spent}`);
+      const budget = await createApiBudget(categoryId, 10_000);
+      const transaction = await Transaction.create({
+        userId: new mongoose.Types.ObjectId(owner.userId),
+        type: 'expense',
+        amount: spent,
+        categoryId: new mongoose.Types.ObjectId(categoryId),
+        date: today,
+      });
+      transactionIds.push(transaction._id);
+
+      const response = await authenticatedGet(`/api/v1/budgets?month=${monthKey}`, owner);
+      const result = response.body.data.budgets.find(
+        (item: { id: string }) => item.id === budget.id,
+      );
+      expect(result).toMatchObject({
+        spentAmount: String(spent),
+        percentageUsed: roundedPercentage,
+        status,
+      });
+    },
+  );
+
+  it('keeps dashboard, report, and budget totals consistent for the same non-deleted month data', async () => {
+    const identity = await createIdentity('Cross-endpoint finance owner');
+    const expenseCategoryId = await createCategory(identity, 'Cross endpoint expense');
+    const incomeCategoryId = await createCategory(identity, 'Cross endpoint income', 'income');
+    await createApiBudget(expenseCategoryId, 500, identity);
+    const current = getCurrentJalaliMonthRange();
+    const transactions = await Transaction.insertMany([
+      {
+        userId: new mongoose.Types.ObjectId(identity.userId),
+        type: 'income',
+        amount: 1_234,
+        categoryId: new mongoose.Types.ObjectId(incomeCategoryId),
+        date: current.today,
+      },
+      {
+        userId: new mongoose.Types.ObjectId(identity.userId),
+        type: 'expense',
+        amount: 321,
+        categoryId: new mongoose.Types.ObjectId(expenseCategoryId),
+        date: current.today,
+      },
+      {
+        userId: new mongoose.Types.ObjectId(identity.userId),
+        type: 'expense',
+        amount: 9_999,
+        categoryId: new mongoose.Types.ObjectId(expenseCategoryId),
+        date: current.today,
+        deletedAt: new Date(),
+      },
+    ]);
+    transactionIds.push(...transactions.map(({ _id }) => _id));
+
+    const [dashboard, report, budgets] = await Promise.all([
+      authenticatedGet('/api/v1/dashboard', identity),
+      authenticatedGet(
+        `/api/v1/reports/monthly?month=${monthKey}`,
+        identity,
+      ),
+      authenticatedGet(`/api/v1/budgets?month=${monthKey}`, identity),
+    ]);
+    expect(dashboard.body.data.balance).toMatchObject({
+      income: '1234',
+      expenses: '321',
+      remaining: '913',
+    });
+    expect(report.body.data.report.totals).toMatchObject({
+      income: dashboard.body.data.balance.income,
+      expenses: dashboard.body.data.balance.expenses,
+    });
+    expect(budgets.body.data.budgets).toMatchObject([
+      expect.objectContaining({ spentAmount: report.body.data.report.totals.expenses }),
+    ]);
+  });
+
   it('requires authentication, valid identifiers, valid query, Origin, and CSRF for mutations', async () => {
     const categoryId = await createCategory(owner, 'Protected');
     const budget = await createApiBudget(categoryId);

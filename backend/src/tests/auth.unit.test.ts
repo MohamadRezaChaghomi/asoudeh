@@ -153,4 +153,15 @@ describe('Authentication validation and hashing', () => {
     );
     expect(updateProfileSchema.safeParse({}).success).toBe(false);
   });
+
+  it.each([
+    [0, true],
+    [1, true],
+    [1.5, false],
+    [-1, false],
+    [Number.MAX_SAFE_INTEGER, true],
+    [Number.MAX_SAFE_INTEGER + 1, false],
+  ])('validates initial toman balance %s', (initialBalance, expected) => {
+    expect(updateProfileSchema.safeParse({ initialBalance }).success).toBe(expected);
+  });
 });

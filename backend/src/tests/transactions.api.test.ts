@@ -438,8 +438,10 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
     };
     const invalidBodies: Array<Record<string, unknown>> = [
       { ...validBody, amount: 0 },
+      { ...validBody, amount: -1 },
       { ...validBody, amount: 1.5 },
       { ...validBody, amount: 1_000_000_000_001 },
+      { ...validBody, amount: Number.MAX_SAFE_INTEGER + 1 },
       { ...validBody, type: 'transfer' },
       { ...validBody, date: '2024-02-30' },
       { ...validBody, date: 'not-a-date' },
@@ -480,6 +482,20 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
     expect(incompatibleCategory.status).toBe(400);
     expect(incompatibleCategory.body.error.code).toBe('CATEGORY_TYPE_MISMATCH');
   });
+
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'model validation rejects invalid persisted transaction amount %s',
+    (amount) => {
+      const transaction = new Transaction({
+        userId: new mongoose.Types.ObjectId(owner.userId),
+        type: 'expense',
+        amount,
+        categoryId: new mongoose.Types.ObjectId(ownedExpenseCategoryId),
+        date: new Date('2024-05-12T00:00:00.000Z'),
+      });
+      expect(transaction.validateSync()?.errors.amount).toBeDefined();
+    },
+  );
 
   it('requires authentication and rejects client-supplied owners and invalid identifiers', async () => {
     const unauthenticatedGet = await request(app).get('/api/v1/transactions');

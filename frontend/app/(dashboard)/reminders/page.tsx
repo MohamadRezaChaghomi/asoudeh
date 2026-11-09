@@ -13,6 +13,7 @@ import {
   formatJalaliYear,
   jalaliToGregorianIso,
 } from '@/lib/jalaliDate';
+import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
 
 type Recurrence = 'none' | 'monthly' | 'yearly';
 
@@ -53,19 +54,8 @@ const MONTHS = [
   'اسفند',
 ];
 
-function toAsciiDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
-}
-
 function formatAmount(value: number | string): string {
   return new Intl.NumberFormat('fa-IR').format(BigInt(value));
-}
-
-function formatAmountInput(value: string): string {
-  const digits = toAsciiDigits(value).replace(/\D/g, '');
-  return digits ? new Intl.NumberFormat('fa-IR').format(BigInt(digits)) : '';
 }
 
 function formatDate(value: string): string {
@@ -237,11 +227,11 @@ export default function RemindersPage() {
     event.preventDefault();
     setError('');
     setNotice('');
-    const normalizedAmount = toAsciiDigits(amount).replace(/[,\s٬]/g, '');
-    const numericAmount = normalizedAmount ? Number(normalizedAmount) : undefined;
+    const numericAmount = amount.trim() ? parseTomanAmount(amount) : undefined;
     if (
-      numericAmount !== undefined &&
-      (!Number.isSafeInteger(numericAmount) || numericAmount < 1 || numericAmount > MAX_AMOUNT)
+      (amount.trim() && numericAmount === undefined) ||
+      (numericAmount !== undefined &&
+        (!Number.isSafeInteger(numericAmount) || numericAmount < 1 || numericAmount > MAX_AMOUNT))
     ) {
       setError('مبلغ باید عدد صحیحی بین ۱ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰٬۰۰۰ تومان باشد.');
       return;
@@ -459,7 +449,7 @@ export default function RemindersPage() {
                 dir="ltr"
                 id="reminder-amount"
                 inputMode="numeric"
-                onChange={(event) => setAmount(formatAmountInput(event.target.value))}
+                onChange={(event) => setAmount(formatTomanAmountInput(event.target.value))}
                 placeholder="۱٬۰۰۰٬۰۰۰"
                 value={amount}
               />

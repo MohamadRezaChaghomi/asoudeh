@@ -252,6 +252,60 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Monthly reports API', () 
     expect(invalid.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('returns null for a zero previous-month total and allocates category shares to exactly 100%', async () => {
+    const identity = await createIdentity('Report share rounding owner');
+    const categories = await Promise.all(
+      ['Share A', 'Share B', 'Share C'].map((name) =>
+        Category.create({
+          userId: new mongoose.Types.ObjectId(identity.userId),
+          name: `${name} ${randomUUID()}`,
+          type: 'expense',
+        }),
+      ),
+    );
+    categoryIds.push(...categories.map(({ _id }) => _id));
+    const current = getCurrentJalaliMonthRange();
+    const transactions = await Transaction.insertMany(
+      categories.map((category) => ({
+        userId: new mongoose.Types.ObjectId(identity.userId),
+        type: 'expense' as const,
+        amount: 1,
+        categoryId: category._id,
+        date: current.today,
+      })),
+    );
+    transactionIds.push(...transactions.map(({ _id }) => _id));
+
+    const response = await authenticatedGet(
+      `/api/v1/reports/monthly?month=${formatJalaliMonthKey(current.year, current.month)}`,
+      identity,
+    );
+    const report = response.body.data.report;
+    expect(report.comparison).toMatchObject({
+      previousExpenses: '0',
+      expenseChangePercentage: null,
+    });
+    const categoryShares = report.expensesByCategory as Array<{
+      categoryId: string;
+      sharePercentage: number;
+    }>;
+    expect(
+      categoryShares
+        .map(({ sharePercentage }) => Number(sharePercentage.toFixed(1)))
+        .sort(),
+    ).toEqual([33.3, 33.3, 33.4]);
+    expect(categoryShares.reduce((sum, { sharePercentage }) => sum + sharePercentage, 0)).toBe(
+      100,
+    );
+    expect(
+      categoryShares.find(
+        ({ categoryId }) =>
+          categoryId ===
+          categories.map(({ id }) => id).sort()[0],
+      )?.sharePercentage,
+    ).toBeCloseTo(33.4, 10);
+  });
+
   it('compares report totals across the Solar Hijri year boundary', async () => {
     const previous = getJalaliMonthRange(1404, 12);
     const current = getJalaliMonthRange(1405, 1);

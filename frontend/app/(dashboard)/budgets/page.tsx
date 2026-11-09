@@ -7,6 +7,7 @@ import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getJalaliParts, getTehranTodayIso, jalaliToGregorianIso } from '@/lib/jalaliDate';
+import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
 
 type CategoryType = 'income' | 'expense' | 'both';
 
@@ -53,18 +54,6 @@ function errorMessage(error: unknown): string {
 
 function formatAmount(amount: number | string): string {
   return new Intl.NumberFormat('fa-IR').format(BigInt(amount));
-}
-
-function toAsciiDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - '۰'.charCodeAt(0)))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - '٠'.charCodeAt(0)));
-}
-
-function formatAmountInput(value: string): string {
-  const digits = toAsciiDigits(value).replace(/\D/g, '');
-  if (!digits) return '';
-  return new Intl.NumberFormat('fa-IR').format(BigInt(digits));
 }
 
 function currentMonthKey(): string {
@@ -189,12 +178,11 @@ export default function BudgetsPage() {
     setError('');
     setNotice('');
 
-    const normalizedAmount = toAsciiDigits(limitAmount).replace(/[,\s٬]/g, '');
-    if (!/^\d+$/.test(normalizedAmount)) {
+    const amount = parseTomanAmount(limitAmount);
+    if (amount === undefined) {
       setError('مبلغ بودجه باید عدد صحیح مثبت به تومان باشد.');
       return;
     }
-    const amount = Number(normalizedAmount);
     if (
       !Number.isSafeInteger(amount) ||
       amount < 1 ||
@@ -442,7 +430,7 @@ export default function BudgetsPage() {
                 dir="ltr"
                 id="budgetAmount"
                 inputMode="numeric"
-                onChange={(event) => setLimitAmount(formatAmountInput(event.target.value))}
+                onChange={(event) => setLimitAmount(formatTomanAmountInput(event.target.value))}
                 placeholder="۱٬۰۰۰٬۰۰۰"
                 required
                 value={limitAmount}

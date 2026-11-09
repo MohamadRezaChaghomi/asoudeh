@@ -6,6 +6,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { parseTomanAmount } from '@/lib/tomanAmount';
 
 interface Profile {
   id: string;
@@ -98,8 +99,8 @@ export default function SettingsPage() {
     setError('');
     setNotice('');
 
-    const normalizedBalance = toAsciiDigits(initialBalance).replace(/,/g, '');
-    if (!/^\d+$/.test(normalizedBalance)) {
+    const amount = parseTomanAmount(initialBalance);
+    if (amount === undefined) {
       setError('موجودی اولیه را به‌صورت عدد صحیح و غیرمنفی وارد کنید.');
       return;
     }
@@ -115,7 +116,7 @@ export default function SettingsPage() {
       const response = await api.patch('/me/profile', {
         displayName,
         birthYear: normalizedBirthYear ? Number(normalizedBirthYear) : null,
-        initialBalance: Number(normalizedBalance),
+        initialBalance: amount,
         accessibilitySettings: { fontScale, highContrast },
       });
       const updated = response.data.data.profile as Profile;

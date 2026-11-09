@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { formatTomanAmountInput, parseTomanAmount } from '../lib/tomanAmount';
 
 const csrfToken = 'transaction-e2e-csrf-token';
 let activeUserId = '64b000000000000000000099';
@@ -18,6 +19,23 @@ const incomeCategory = {
   isActive: true,
   isDefault: true,
 };
+
+test('parses and formats toman amounts across digit scripts and separators', () => {
+  for (const [input, expected] of [
+    ['123456', 123456],
+    ['۱۲۳٬۴۵۶', 123456],
+    ['١٢٣,٤٥٦', 123456],
+    ['۱۲۳ ۴۵۶', 123456],
+    ['9007199254740991', Number.MAX_SAFE_INTEGER],
+  ] as const) {
+    expect(parseTomanAmount(input)).toBe(expected);
+  }
+  for (const input of ['1.5', '-1', '1,23', '9007199254740992']) {
+    expect(parseTomanAmount(input)).toBeUndefined();
+  }
+  expect(formatTomanAmountInput('١٢٣٬٤٥٦')).toBe('۱۲۳٬۴۵۶');
+  expect(formatTomanAmountInput('12.5')).toBe('12.5');
+});
 
 test('creates an income through the three-step form with Persian amount and Jalali date', async ({
   page,
