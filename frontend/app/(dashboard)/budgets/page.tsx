@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
@@ -312,16 +313,16 @@ export default function BudgetsPage() {
                       <dl className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div>
                           <dt className="app-muted text-sm">سقف بودجه</dt>
-                          <dd className="mt-1 font-semibold">{formatTomanAmount(budget.limitAmount)} تومان</dd>
+                          <dd className="mt-1 font-semibold"><TomanAmount amount={budget.limitAmount} /></dd>
                         </div>
                         <div>
                           <dt className="app-muted text-sm">هزینهٔ واقعی</dt>
-                          <dd className="mt-1 font-semibold">{formatTomanAmount(budget.spentAmount)} تومان</dd>
+                          <dd className="mt-1 font-semibold"><TomanAmount amount={budget.spentAmount} /></dd>
                         </div>
                         <div>
                           <dt className="app-muted text-sm">باقی‌مانده</dt>
                           <dd className={`mt-1 font-semibold ${budget.remainingAmount.startsWith('-') ? 'text-rose-700' : ''}`}>
-                            {formatTomanAmount(budget.remainingAmount)} تومان
+                            <TomanAmount amount={budget.remainingAmount} />
                           </dd>
                         </div>
                       </dl>

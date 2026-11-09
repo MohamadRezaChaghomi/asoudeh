@@ -8,6 +8,7 @@ import {
 } from '../services/reminders.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
+import { fa } from '../messages/fa.js';
 import type {
   CreateReminderInput,
   UpdateReminderInput,
@@ -49,11 +50,11 @@ export const completeReminderHandler: RequestHandler = asyncHandler(async (req, 
   res.json({
     success: true,
     data: { completion },
-    message: 'یادآور انجام شد.',
+    message: fa.confirmations.reminderCompleted,
   });
 });
 
 export const removeReminder: RequestHandler = asyncHandler(async (req, res) => {
   await deleteReminder(requireUserId(req), req.params.id);
-  res.json({ success: true, message: 'یادآور بایگانی شد.' });
+  res.json({ success: true, message: fa.confirmations.reminderArchived });
 });

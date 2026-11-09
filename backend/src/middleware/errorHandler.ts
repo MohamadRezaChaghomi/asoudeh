@@ -2,6 +2,7 @@ import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { HttpError } from '../utils/httpError.js';
 import { logger } from '../utils/logger.js';
+import { fa, formatZodIssueMessage } from '../messages/fa.js';
 
 interface NormalizedError {
   statusCode: number;
@@ -29,8 +30,11 @@ function normalizeError(error: unknown): NormalizedError {
     return {
       statusCode: 400,
       code: 'VALIDATION_ERROR',
-      message: 'اطلاعات واردشده معتبر نیست.',
-      details: error.issues.map(({ path, message }) => ({ field: path.join('.'), message })),
+      message: fa.errors.invalidBody,
+      details: error.issues.map(({ path, code, message }) => ({
+        field: path.join('.'),
+        message: formatZodIssueMessage({ code, message }),
+      })),
     };
   }
 

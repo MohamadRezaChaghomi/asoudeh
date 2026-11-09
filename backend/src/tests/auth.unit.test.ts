@@ -61,13 +61,13 @@ describe('Authentication validation and hashing', () => {
     ).toThrow(/JWT_SECRET/);
     expect(() =>
       parseEnvironment({ ...productionConfig, AUTH_HASH_SECRET: 'j'.repeat(32) }),
-    ).toThrow(/distinct/);
+    ).toThrow(/متفاوت/);
     expect(() =>
       parseEnvironment({ ...productionConfig, CLIENT_URL: 'http://app.example.test' }),
     ).toThrow(/HTTPS/);
     expect(() =>
       parseEnvironment({ ...productionConfig, OTP_DEV_SIMULATOR_ENABLED: 'true' }),
-    ).toThrow(/disabled/);
+    ).toThrow(/غیرفعال/);
     expect(() =>
       parseEnvironment({ ...productionConfig, NODE_ENV: 'staging' }),
     ).toThrow(/NODE_ENV/);

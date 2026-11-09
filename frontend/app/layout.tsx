@@ -1,8 +1,22 @@
 import type { Metadata, Viewport } from 'next';
+import localFont from 'next/font/local';
 import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { AccessibilityNavigation } from '@/components/AccessibilityNavigation';
 import './globals.css';
+
+const vazirmatn = localFont({
+  src: '../node_modules/vazirmatn/fonts/webfonts/Vazirmatn[wght].woff2',
+  display: 'swap',
+  weight: '100 900',
+  variable: '--font-vazirmatn',
+  declarations: [
+    {
+      prop: 'unicode-range',
+      value: 'U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C',
+    },
+  ],
+});
 
 export const metadata: Metadata = {
   applicationName: 'آسوده | Asoudeh',
@@ -32,7 +46,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl" suppressHydrationWarning>
+    <html className={vazirmatn.variable} lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
         <Script id="theme-initializer" strategy="beforeInteractive">
           {`try { document.documentElement.dataset.theme = localStorage.getItem('asoudeh.theme') === 'dark' ? 'dark' : 'light'; } catch { document.documentElement.dataset.theme = 'light'; }`}

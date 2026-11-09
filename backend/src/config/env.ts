@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { fa, formatZodIssueMessage } from '../messages/fa.js';
 
 const environmentSchema = z
   .object({
@@ -32,7 +33,7 @@ const environmentSchema = z
       context.addIssue({
         code: 'custom',
         path: ['CLIENT_URL'],
-        message: 'must be an origin without credentials, path, query, or fragment.',
+        message: 'نشانی کاربر باید فقط مبدأ باشد و نباید شامل مسیر، شناسه، پرس‌وجو یا بخش پایانی باشد.',
       });
     }
 
@@ -44,7 +45,7 @@ const environmentSchema = z
       context.addIssue({
         code: 'custom',
         path: ['JWT_SECRET'],
-        message: 'must be at least 32 bytes in production.',
+        message: 'در محیط عملیاتی باید دست‌کم ۳۲ بایت باشد.',
       });
     }
 
@@ -52,13 +53,13 @@ const environmentSchema = z
       context.addIssue({
         code: 'custom',
         path: ['AUTH_HASH_SECRET'],
-        message: 'must be set to at least 32 bytes in production.',
+        message: 'در محیط عملیاتی باید تنظیم شود و دست‌کم ۳۲ بایت باشد.',
       });
     } else if (config.AUTH_HASH_SECRET === config.JWT_SECRET) {
       context.addIssue({
         code: 'custom',
         path: ['AUTH_HASH_SECRET'],
-        message: 'must be distinct from JWT_SECRET in production.',
+        message: 'در محیط عملیاتی باید با کلید نشست متفاوت باشد.',
       });
     }
 
@@ -66,7 +67,7 @@ const environmentSchema = z
       context.addIssue({
         code: 'custom',
         path: ['CLIENT_URL'],
-        message: 'must use HTTPS in production.',
+        message: 'در محیط عملیاتی باید از HTTPS استفاده کند.',
       });
     }
 
@@ -74,7 +75,7 @@ const environmentSchema = z
       context.addIssue({
         code: 'custom',
         path: ['OTP_DEV_SIMULATOR_ENABLED'],
-        message: 'must be disabled in production.',
+        message: 'در محیط عملیاتی باید غیرفعال باشد.',
       });
     }
   });
@@ -84,9 +85,11 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
 
   if (!parsed.success) {
     const issues = parsed.error.issues
-      .map(({ path, message }) => `${path.join('.') || 'environment'} ${message}`)
+      .map(({ path, code, message }) =>
+        `${path.join('.') || 'پیکربندی'} ${formatZodIssueMessage({ code, message })}`,
+      )
       .join('; ');
-    throw new Error(`Invalid environment configuration: ${issues}`);
+    throw new Error(`${fa.errors.configuration} ${issues}`);
   }
 
   return parsed.data;

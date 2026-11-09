@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
@@ -360,7 +361,7 @@ export default function RemindersPage() {
                               : ' · بدون تکرار'}
                         </p>
                         {reminder.amount !== undefined && (
-                          <p className="mt-2 font-medium">{formatTomanAmount(reminder.amount)} تومان</p>
+                          <p className="mt-2 font-medium"><TomanAmount amount={reminder.amount} /></p>
                         )}
                         <p className={`mt-2 text-sm font-semibold ${completed ? 'text-emerald-700' : reminder.isActive ? 'text-asoudeh-teal' : 'app-muted'}`}>
                           وضعیت: {status}

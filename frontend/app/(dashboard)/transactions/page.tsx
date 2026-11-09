@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
@@ -184,8 +185,10 @@ function JalaliDatePicker({
         </button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-sm">
-        {['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map((weekday) => (
-          <span className="app-muted py-1" key={weekday}>{weekday}</span>
+        {['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'].map((weekday) => (
+          <span className="app-muted py-1 text-[10px] sm:text-xs" key={weekday} title={weekday}>
+            {weekday}
+          </span>
         ))}
         {Array.from({ length: firstDayOffset }, (_, index) => (
           <span aria-hidden="true" key={`blank-${index}`} />
@@ -863,7 +866,7 @@ export default function TransactionsPage() {
                       }`}
                     >
                       {transaction.type === 'income' ? '+' : '−'}
-                      {formatTomanAmount(transaction.amount)} تومان
+                      <TomanAmount amount={transaction.amount} />
                     </p>
                   </div>
                   <div className="mt-3 flex gap-2">
@@ -956,7 +959,7 @@ export default function TransactionsPage() {
                   ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر
                 </label>
                 <p className="app-muted mt-2 text-sm">
-                  این گزینه خاموش است مگر اینکه خودتان فعالش کنید. پیش‌نویس فقط در sessionStorage همین مرورگر و برای این حساب ذخیره می‌شود؛ تا ثبت موفق باقی می‌ماند و با پایان نشست مرورگر پاک می‌شود.
+                  این گزینه خاموش است مگر اینکه خودتان فعالش کنید. پیش‌نویس تا ثبت موفق در همین مرورگر و برای این حساب نگهداری می‌شود و با پایان نشست مرورگر پاک می‌شود.
                 </p>
               </div>
             )}
@@ -1067,7 +1070,7 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">مبلغ</dt>
-                    <dd className="font-semibold">{formatTomanAmount(parseTomanAmount(amount) ?? 0)} تومان</dd>
+                    <dd className="font-semibold"><TomanAmount amount={parseTomanAmount(amount) ?? 0} /></dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">دسته</dt>

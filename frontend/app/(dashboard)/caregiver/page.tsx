@@ -7,6 +7,7 @@ import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import { normalizeDigits } from '@/lib/normalizeDigits';
 
 type Permission = 'VIEW_SUMMARY' | 'VIEW_TRANSACTIONS' | 'VIEW_REPORTS';
 type LinkStatus = 'pending' | 'active' | 'revoked';
@@ -121,7 +122,10 @@ export default function CaregiverPage() {
     setSaving(true);
     try {
       await ensureCsrfToken();
-      await api.post('/caregiver/links', { phone, permissions });
+      await api.post('/caregiver/links', {
+        phone: normalizeDigits(phone).replace(/[\s()-]/g, ''),
+        permissions,
+      });
       await loadData();
       setPhone('');
       setPermissions([]);

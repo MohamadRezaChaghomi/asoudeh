@@ -18,6 +18,7 @@ const themes = [
   { name: 'dark', colorScheme: 'dark' as const },
   { name: 'high-contrast', colorScheme: 'light' as const },
 ];
+const allowedLatinText = new Set(['Asoudeh', 'SMS.ir', 'FAQ', 'API']);
 
 async function installApiFixtures(page: Page): Promise<(highContrast: boolean) => void> {
   let highContrastPreference = false;
@@ -345,5 +346,54 @@ test('keeps every targeted route within the viewport at a 200% zoom equivalent',
     await expect.poll(() =>
       page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
     ).toBe(true);
+  }
+});
+
+test('renders Persian-only copy with no Arabic yeh/kaf or untranslated English', async ({ page }) => {
+  await installApiFixtures(page);
+  await page.addInitScript(() => {
+    sessionStorage.setItem(
+      'asoudeh.pendingOtp',
+      JSON.stringify({
+        phone: '09121234567',
+        resendAvailableAt: Date.now() + 60_000,
+        step: 'code',
+      }),
+    );
+  });
+
+  for (const { path } of pageRoutes) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const userFacingText = await page.evaluate(() => {
+      const body = document.body;
+      const visibleText = body.innerText;
+      const accessibleText = Array.from(
+        body.querySelectorAll<HTMLElement>(
+          '[aria-label], [aria-description], [placeholder], [title], img[alt]',
+        ),
+      )
+        .filter((element) => element.getClientRects().length > 0)
+        .map((element) =>
+          [
+            element.getAttribute('aria-label'),
+            element.getAttribute('aria-description'),
+            element.getAttribute('placeholder'),
+            element.getAttribute('title'),
+            element.getAttribute('alt'),
+          ]
+            .filter(Boolean)
+            .join(' '),
+        )
+        .join(' ');
+      return `${visibleText} ${accessibleText}`;
+    });
+
+    expect(userFacingText, `${path} contains Arabic yeh or kaf`).not.toMatch(/[يىك]/u);
+    const untranslatedWords = userFacingText.match(/\b[A-Za-z]{3,}\b/g) ?? [];
+    expect(
+      untranslatedWords.filter((word) => !allowedLatinText.has(word)),
+      `${path} contains untranslated English`,
+    ).toEqual([]);
   }
 });

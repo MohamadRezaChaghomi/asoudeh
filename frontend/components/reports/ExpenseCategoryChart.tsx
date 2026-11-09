@@ -9,7 +9,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { formatTomanAmount } from '@/lib/tomanAmount';
+import { TomanAmount } from '@/components/ui/TomanAmount';
+import { fa } from '@/lib/messages/fa';
 
 export interface ExpenseCategory {
   categoryId: string;
@@ -32,7 +33,10 @@ export function ExpenseCategoryChart({ data }: { data: ExpenseCategory[] }) {
         />
         <YAxis dataKey="categoryName" type="category" width={110} />
         <Tooltip
-          formatter={(value) => [`${formatTomanAmount(String(value))} تومان`, 'هزینه']}
+          formatter={(value) => [
+            <TomanAmount amount={String(value)} key="amount" />,
+            fa.glossary.expense,
+          ]}
           labelFormatter={(label) => String(label)}
         />
         <Bar dataKey="amount" fill="#0f766e" radius={[0, 6, 6, 0]} />

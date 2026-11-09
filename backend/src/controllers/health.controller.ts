@@ -18,7 +18,7 @@ export const readinessCheck: RequestHandler = (_req, res) => {
       success: false,
       error: {
         code: 'SERVICE_NOT_READY',
-        message: 'Service is not ready.',
+        message: 'سرویس هنوز آماده نیست.',
       },
     });
     return;

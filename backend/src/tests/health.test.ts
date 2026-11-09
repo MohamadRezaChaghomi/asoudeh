@@ -120,7 +120,7 @@ describe('HTTP application baseline', () => {
       success: false,
       error: {
         code: 'SERVICE_NOT_READY',
-        message: 'Service is not ready.',
+        message: 'سرویس هنوز آماده نیست.',
       },
     });
   });
@@ -146,7 +146,7 @@ describe('HTTP application baseline', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       success: true,
-      message: 'Asoudeh API is running',
+      message: 'خدمات آسوده فعال است.',
     });
   });
 

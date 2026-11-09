@@ -5,11 +5,11 @@ export type BrandLogoVariant = 'primary' | 'horizontal' | 'symbol' | 'white' | '
 type BrandLogoSize = 'sidebar' | 'mobile' | 'auth' | 'landing' | 'footer';
 
 const logoAssets: Record<BrandLogoVariant, { src: string; width: number; height: number }> = {
-  primary: { src: '/logo/asoudeh-primary.svg', width: 430, height: 170 },
-  horizontal: { src: '/logo/asoudeh-horizontal.svg', width: 390, height: 160 },
+  primary: { src: '/logo/asoudeh-primary.svg', width: 160, height: 170 },
+  horizontal: { src: '/logo/asoudeh-horizontal.svg', width: 170, height: 160 },
   symbol: { src: '/logo/asoudeh-symbol.svg', width: 200, height: 200 },
-  white: { src: '/logo/asoudeh-white.svg', width: 390, height: 190 },
-  monochrome: { src: '/logo/asoudeh-monochrome.svg', width: 390, height: 190 },
+  white: { src: '/logo/asoudeh-white.svg', width: 190, height: 190 },
+  monochrome: { src: '/logo/asoudeh-monochrome.svg', width: 190, height: 190 },
 };
 
 const logoSizes: Record<BrandLogoSize, string> = {
@@ -55,6 +55,11 @@ export function BrandLogo({
         src={asset.src}
         width={asset.width}
       />
+      {variant !== 'symbol' && (
+        <span aria-hidden="true" className="brand-logo-wordmark">
+          آسوده
+        </span>
+      )}
     </span>
   );
 }

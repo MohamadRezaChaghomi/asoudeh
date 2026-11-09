@@ -7,7 +7,7 @@ import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { getCurrentJalaliMonthKey } from '@/lib/jalaliDate';
-import { formatTomanAmount } from '@/lib/tomanAmount';
+import { TomanAmount } from '@/components/ui/TomanAmount';
 
 type Permission = 'VIEW_SUMMARY' | 'VIEW_TRANSACTIONS' | 'VIEW_REPORTS';
 
@@ -146,10 +146,10 @@ export default function CaregiverSeniorPage() {
               <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-bold">خلاصهٔ مالی ماه {summary.period.monthKey}</h2>
                 <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div><dt className="app-muted">موجودی اولیه</dt><dd className="mt-1 font-bold">{formatTomanAmount(summary.balance.initialBalance)} تومان</dd></div>
-                  <div><dt className="app-muted">درآمد این ماه</dt><dd className="mt-1 font-bold text-emerald-700">{formatTomanAmount(summary.balance.income)} تومان</dd></div>
-                  <div><dt className="app-muted">هزینه این ماه</dt><dd className="mt-1 font-bold text-rose-700">{formatTomanAmount(summary.balance.expenses)} تومان</dd></div>
-                  <div><dt className="app-muted">باقی‌مانده</dt><dd className="mt-1 font-bold">{formatTomanAmount(summary.balance.remaining)} تومان</dd></div>
+                  <div><dt className="app-muted">موجودی اولیه</dt><dd className="mt-1 font-bold"><TomanAmount amount={summary.balance.initialBalance} /></dd></div>
+                  <div><dt className="app-muted">درآمد این ماه</dt><dd className="mt-1 font-bold text-emerald-700"><TomanAmount amount={summary.balance.income} /></dd></div>
+                  <div><dt className="app-muted">هزینه این ماه</dt><dd className="mt-1 font-bold text-rose-700"><TomanAmount amount={summary.balance.expenses} /></dd></div>
+                  <div><dt className="app-muted">باقی‌مانده</dt><dd className="mt-1 font-bold"><TomanAmount amount={summary.balance.remaining} /></dd></div>
                 </dl>
               </section>
             )}
@@ -157,15 +157,15 @@ export default function CaregiverSeniorPage() {
             {report && (
               <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-bold">گزارش ماه {report.monthKey}</h2>
-                <p className="mt-3">درآمد: {formatTomanAmount(report.totals.income)} تومان</p>
-                <p className="mt-1">هزینه: {formatTomanAmount(report.totals.expenses)} تومان</p>
+                <p className="mt-3">درآمد: <TomanAmount amount={report.totals.income} /></p>
+                <p className="mt-1">هزینه: <TomanAmount amount={report.totals.expenses} /></p>
                 <h3 className="mt-5 font-semibold">هزینه بر اساس دسته</h3>
                 {report.expensesByCategory.length ? (
                   <ul className="mt-2 divide-y divide-slate-200">
                     {report.expensesByCategory.map((item) => (
                       <li className="flex justify-between gap-3 py-3" key={item.categoryId}>
                         <span>{item.categoryName} · {new Intl.NumberFormat('fa-IR').format(item.sharePercentage)}٪</span>
-                        <span className="font-semibold">{formatTomanAmount(item.amount)} تومان</span>
+                        <span className="font-semibold"><TomanAmount amount={item.amount} /></span>
                       </li>
                     ))}
                   </ul>
@@ -187,7 +187,7 @@ export default function CaregiverSeniorPage() {
                           <p className="app-muted text-sm">{transaction.date} {transaction.note && `· ${transaction.note}`}</p>
                         </div>
                         <p className={transaction.type === 'income' ? 'font-semibold text-emerald-700' : 'font-semibold text-rose-700'}>
-                          {transaction.type === 'income' ? 'درآمد' : 'هزینه'} · {formatTomanAmount(transaction.amount)} تومان
+                          {transaction.type === 'income' ? 'درآمد' : 'هزینه'} · <TomanAmount amount={transaction.amount} />
                         </p>
                       </li>
                     ))}

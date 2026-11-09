@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { fa } from '@/lib/messages/fa';
 
 interface ApiErrorResponse {
   error?: {
@@ -14,7 +15,7 @@ const errorMessages: Record<string, string> = {
   SESSION_EXPIRED: 'نشست شما منقضی شده است؛ دوباره وارد شوید.',
   SESSION_INVALID: 'نشست معتبر نیست؛ دوباره وارد شوید.',
   TRANSACTION_UNDO_EXPIRED: 'مهلت بازگردانی تراکنش به پایان رسیده است.',
-  VALIDATION_ERROR: 'اطلاعات واردشده معتبر نیست.',
+  VALIDATION_ERROR: fa.errors.validation,
 };
 
 function retryDelay(value: string | undefined): number | undefined {
@@ -28,12 +29,12 @@ function retryDelay(value: string | undefined): number | undefined {
 
 export function getApiErrorMessage(error: unknown): string {
   if (!axios.isAxiosError<ApiErrorResponse>(error)) {
-    return 'خطایی رخ داد. دوباره تلاش کنید.';
+    return fa.errors.generic;
   }
 
   const response = error.response;
   if (!response) {
-    return 'ارتباط با سرور برقرار نشد؛ اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.';
+    return fa.errors.network;
   }
   const status = response.status;
   if (status === 429) {
@@ -41,12 +42,12 @@ export function getApiErrorMessage(error: unknown): string {
     const delay = retryDelay(header == null ? undefined : String(header));
     return delay
       ? `تعداد درخواست‌ها زیاد است؛ ${new Intl.NumberFormat('fa-IR').format(delay)} ثانیهٔ دیگر دوباره تلاش کنید.`
-      : 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.';
+      : fa.errors.tooManyRequests;
   }
   if (status >= 500) {
-    return 'سرویس موقتاً با مشکل روبه‌رو شده است؛ کمی بعد دوباره تلاش کنید.';
+    return fa.errors.serverUnavailable;
   }
 
   const code = response.data?.error?.code;
-  return (code && errorMessages[code]) || 'درخواست انجام نشد؛ اطلاعات را بررسی و دوباره تلاش کنید.';
+  return (code && errorMessages[code]) || fa.errors.requestFailed;
 }

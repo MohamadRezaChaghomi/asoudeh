@@ -27,7 +27,7 @@ const reminderCompletionSchema = new mongoose.Schema(
             return false;
           }
         },
-        message: 'monthKey must be a valid Solar Hijri month.',
+        message: 'ماه شمسی معتبر نیست.',
       },
     },
     completedAt: { type: Date, required: true, default: Date.now },

@@ -22,7 +22,7 @@ const budgetSchema = new mongoose.Schema(
             return false;
           }
         },
-        message: 'monthKey must be a valid Solar Hijri month.',
+        message: 'ماه شمسی معتبر نیست.',
       },
     },
     limitAmount: {

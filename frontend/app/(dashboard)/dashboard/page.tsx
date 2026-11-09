@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
-import { formatTomanAmount } from '@/lib/tomanAmount';
 
 type TransactionType = 'income' | 'expense';
 
@@ -139,7 +139,7 @@ export default function DashboardPage() {
             <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
               <p className="app-muted">باقیماندهٔ این ماه</p>
               <p className="mt-2 break-words text-3xl font-bold text-asoudeh-navy sm:text-4xl">
-                {formatTomanAmount(dashboard.balance.remaining)} تومان
+                <TomanAmount amount={dashboard.balance.remaining} />
               </p>
               <p className="app-muted mt-2 text-sm">
                 موجودی اولیه + درآمدهای ماه − هزینه‌های ماه
@@ -147,7 +147,7 @@ export default function DashboardPage() {
               <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-sm">
                 <span className="app-muted">موجودی آغاز ماه</span>
                 <span className="font-semibold">
-                  {formatTomanAmount(dashboard.balance.initialBalance)} تومان
+                  <TomanAmount amount={dashboard.balance.initialBalance} />
                 </span>
               </div>
             </section>
@@ -156,13 +156,13 @@ export default function DashboardPage() {
               <div className="app-panel rounded-xl border border-emerald-200 bg-white p-5">
                 <p className="app-muted">مجموع درآمد این ماه</p>
                 <p className="mt-2 break-words text-2xl font-bold text-emerald-700">
-                  {formatTomanAmount(dashboard.balance.income)} تومان
+                  <TomanAmount amount={dashboard.balance.income} />
                 </p>
               </div>
               <div className="app-panel rounded-xl border border-rose-200 bg-white p-5">
                 <p className="app-muted">مجموع هزینهٔ این ماه</p>
                 <p className="mt-2 break-words text-2xl font-bold text-rose-700">
-                  {formatTomanAmount(dashboard.balance.expenses)} تومان
+                  <TomanAmount amount={dashboard.balance.expenses} />
                 </p>
               </div>
             </section>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                             }`}
                           >
                             {transaction.type === 'income' ? '+' : '−'}
-                            {formatTomanAmount(transaction.amount)} تومان
+                            <TomanAmount amount={transaction.amount} />
                           </p>
                         </div>
                       </li>

@@ -195,7 +195,7 @@ export default function SettingsPage() {
           <div>
             <p className="app-muted text-sm">حساب کاربری</p>
             <h1 className="mt-1 text-2xl font-bold text-asoudeh-navy">پروفایل و تنظیمات</h1>
-            <p className="app-muted mt-2" dir="ltr">{profile.phone}</p>
+            <p className="app-muted mt-2"><bdi dir="ltr">{profile.phone}</bdi></p>
           </div>
           <button
             className="rounded-lg border border-slate-300 px-4"

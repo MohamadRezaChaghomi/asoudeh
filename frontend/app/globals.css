@@ -5,7 +5,7 @@
 :root {
   color-scheme: light;
   --font-scale: 100%;
-  --font-sans: 'Vazirmatn', 'Segoe UI', Tahoma, Arial, sans-serif;
+  --font-sans: var(--font-vazirmatn), sans-serif;
   --brand-950: #1d2925;
   --brand-900: #1f5c4a;
   --brand-800: #245f4c;
@@ -291,6 +291,28 @@ html[data-high-contrast='true'] :focus-visible {
   width: 100%;
   height: auto;
   object-fit: contain;
+}
+
+.brand-logo-frame:not(.brand-logo-frame--symbol) {
+  gap: 0.4rem;
+  justify-content: space-evenly;
+  padding: 0.45rem;
+}
+
+.brand-logo-frame:not(.brand-logo-frame--symbol) .brand-logo-image {
+  width: 38%;
+}
+
+.brand-logo-wordmark {
+  flex: 1 1 auto;
+  color: var(--brand-950);
+  font-size: clamp(1.05rem, 3vw, 1.55rem);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.brand-logo-frame--white .brand-logo-wordmark {
+  color: #fff;
 }
 
 .brand-logo-frame--symbol .brand-logo-image {
@@ -1652,7 +1674,7 @@ select {
 .assistant-widget {
   position: fixed;
   z-index: 45;
-  left: 1.25rem;
+  inset-inline-start: 1.25rem;
   bottom: 1.25rem;
   direction: rtl;
 }
@@ -1852,7 +1874,7 @@ select {
 
 @media (max-width: 700px) {
   .assistant-widget {
-    left: 0.75rem;
+    inset-inline-start: 0.75rem;
     bottom: 0.75rem;
   }
 

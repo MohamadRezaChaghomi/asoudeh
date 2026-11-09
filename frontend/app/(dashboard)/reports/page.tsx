@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { TomanAmount } from '@/components/ui/TomanAmount';
 import { DeferredExpenseCategoryChart } from '@/components/reports/DeferredExpenseCategoryChart';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
@@ -14,7 +15,6 @@ import {
   isCurrentOrFutureJalaliMonth,
   shiftJalaliMonthKey,
 } from '@/lib/jalaliDate';
-import { formatTomanAmount } from '@/lib/tomanAmount';
 
 interface MonthlyReport {
   monthKey: string;
@@ -167,13 +167,13 @@ export default function ReportsPage() {
               <article className="app-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="app-muted text-sm">مجموع درآمد</h2>
                 <p className="mt-2 text-2xl font-bold text-emerald-700">
-                  {formatTomanAmount(report.totals.income)} <span className="text-base">تومان</span>
+                  <TomanAmount amount={report.totals.income} unitClassName="text-base" />
                 </p>
               </article>
               <article className="app-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="app-muted text-sm">مجموع هزینه</h2>
                 <p className="mt-2 text-2xl font-bold text-rose-700">
-                  {formatTomanAmount(report.totals.expenses)} <span className="text-base">تومان</span>
+                  <TomanAmount amount={report.totals.expenses} unitClassName="text-base" />
                 </p>
               </article>
               <article className="app-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -199,7 +199,7 @@ export default function ReportsPage() {
                     {report.expensesByCategory.map((item) => (
                       <li className="flex flex-wrap justify-between gap-2 py-3" key={item.categoryId}>
                         <span>{item.categoryName} · {new Intl.NumberFormat('fa-IR').format(item.sharePercentage)}٪</span>
-                        <span className="font-semibold">{formatTomanAmount(item.amount)} تومان</span>
+                        <span className="font-semibold"><TomanAmount amount={item.amount} /></span>
                       </li>
                     ))}
                   </ul>

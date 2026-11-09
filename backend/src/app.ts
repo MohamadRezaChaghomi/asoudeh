@@ -48,7 +48,7 @@ app.use((_req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/', (req, res) => {
-  res.json({ success: true, message: 'Asoudeh API is running' });
+  res.json({ success: true, message: 'خدمات آسوده فعال است.' });
 });
 
 app.use('/api/v1/health', healthRoutes);

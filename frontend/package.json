@@ -23,7 +23,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.0",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "vazirmatn": "^33.0.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

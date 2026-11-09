@@ -8,6 +8,7 @@ import {
 } from '../services/transactions.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HttpError } from '../utils/httpError.js';
+import { fa } from '../messages/fa.js';
 import type {
   CreateTransactionInput,
   TransactionQuery,
@@ -49,7 +50,7 @@ export const patchTransaction: RequestHandler = asyncHandler(async (req, res) =>
 
 export const removeTransaction: RequestHandler = asyncHandler(async (req, res) => {
   const deletion = await deleteTransaction(requireUserId(req), req.params.id);
-  res.json({ success: true, data: deletion, message: 'تراکنش حذف شد.' });
+  res.json({ success: true, data: deletion, message: fa.confirmations.transactionDeleted });
 });
 
 export const postRestoreTransaction: RequestHandler = asyncHandler(async (req, res) => {
