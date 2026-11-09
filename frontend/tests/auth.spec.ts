@@ -79,13 +79,13 @@ test('requires manual OTP entry and never returns or stores the development OTP'
   await page.route('**/api/v1/me', async (route) => {
     await route.fulfill({ json: { success: true, data: { profile } } });
   });
-
   await page.goto('/login');
   await expect(page.getByLabel('شماره همراه')).toHaveValue('');
   await page.getByLabel('شماره همراه').fill(profile.phone);
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
 
   await expect(page).toHaveURL(/\/verify-otp$/);
+  await expect(page.getByText('کد تا ۵ دقیقه معتبر است.')).toBeVisible();
   await expect(page.getByLabel('کد تأیید')).toBeVisible();
   await expect(page.getByText('کد شبیه‌ساز توسعه:')).toHaveCount(0);
   const storage = await page.evaluate(() => ({
@@ -274,7 +274,6 @@ test('navigates to the protected app only after the backend confirms OTP verific
   await page.route('**/api/v1/me', async (route) => {
     await route.fulfill({ json: { success: true, data: { profile } } });
   });
-
   await page.goto('/login');
   await page.getByLabel('شماره همراه').fill(profile.phone);
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
@@ -284,6 +283,7 @@ test('navigates to the protected app only after the backend confirms OTP verific
 
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole('heading', { name: 'پروفایل و تنظیمات' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toHaveCount(0);
   expect(verificationPayload).toEqual({ phone: profile.phone, code: '123456' });
 });
 
@@ -314,6 +314,28 @@ test('validates the mobile number and completes OTP registration without storing
   await page.route('**/api/v1/me', async (route) => {
     await route.fulfill({ json: { success: true, data: { profile } } });
   });
+  await page.route('**/api/v1/dashboard', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          period: {
+            calendar: 'jalali',
+            year: 1405,
+            month: 8,
+            startDate: '2026-10-23',
+            endDateExclusive: '2026-11-22',
+          },
+          balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+          recentTransactions: [],
+          upcomingReminders: [],
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    await route.fulfill({ json: { success: true, data: {} } });
+  });
 
   await page.goto('/login');
   await page.getByLabel('شماره همراه').fill('۰۸۱۲۱۲۳۴۵۶۷');
@@ -331,8 +353,13 @@ test('validates the mobile number and completes OTP registration without storing
 
   await page.getByLabel('نام نمایشی').fill('مریم آسوده');
   await page.getByRole('button', { name: 'ساخت حساب' }).click();
-  await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByRole('heading', { name: 'پروفایل و تنظیمات' })).toBeVisible();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'مدیریت مالی، ساده و روشن' })).toBeVisible();
+  await page.getByRole('button', { name: 'رد کردن راهنما' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto('/welcome');
+  await expect(page).toHaveURL(/\/dashboard$/);
   expect(await page.evaluate(() => Object.keys(localStorage))).not.toContain('accessToken');
   expect(await page.evaluate(() => Object.keys(localStorage))).not.toContain('refreshToken');
 });

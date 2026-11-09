@@ -335,9 +335,15 @@ export default function RemindersPage() {
           {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
           {!data?.reminders.length ? (
-            <p className="app-muted mt-6 rounded-lg bg-slate-50 p-5">
-              هنوز یادآوری ثبت نکرده‌اید. می‌توانید سررسید قبض یا پرداخت بعدی را اضافه کنید.
-            </p>
+            <div className="app-muted mt-6 rounded-lg bg-slate-50 p-5">
+              <p>برای قبض یا پرداخت بعدی یادآور بسازید تا سررسیدش را به‌خاطر بسپارید.</p>
+              <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#reminder-form">
+                ساخت نخستین یادآور
+              </a>
+              <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+                راهنمای یادآورها
+              </Link>
+            </div>
           ) : (
             <ul className="mt-6 space-y-4">
               {data.reminders.map((reminder) => {
@@ -413,7 +419,7 @@ export default function RemindersPage() {
           )}
         </section>
 
-        <section className="app-panel order-1 h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-2 sm:p-8">
+        <section className="app-panel order-1 h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-2 sm:p-8" id="reminder-form">
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editing ? 'ویرایش یادآور' : 'افزودن یادآور'}
           </h2>

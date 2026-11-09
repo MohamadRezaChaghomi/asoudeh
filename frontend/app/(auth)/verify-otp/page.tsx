@@ -138,7 +138,7 @@ export default function VerifyOtpPage() {
       await ensureCsrfToken();
       await api.post('/auth/register/complete', { displayName });
       clearPendingOtpFlow();
-      router.replace('/settings');
+      router.replace('/welcome');
     } catch (registrationError) {
       setError(getApiErrorMessage(registrationError));
     } finally {
@@ -178,6 +178,7 @@ export default function VerifyOtpPage() {
             <p className="app-muted">
               کد شش‌رقمی ارسال‌شده به <bdi dir="ltr">{maskPhone(flow.phone)}</bdi> را وارد کنید.
             </p>
+            <p className="app-muted text-sm">کد تا ۵ دقیقه معتبر است.</p>
             <label className="block font-medium" htmlFor="otp">
               کد تأیید
             </label>
@@ -213,7 +214,7 @@ export default function VerifyOtpPage() {
               type="button"
             >
               {remainingSeconds > 0
-                ? `ارسال دوباره کد (${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')})`
+                ? `ارسال دوباره کد (${new Intl.NumberFormat('fa-IR', { minimumIntegerDigits: 2 }).format(Math.floor(remainingSeconds / 60))}:${new Intl.NumberFormat('fa-IR', { minimumIntegerDigits: 2 }).format(remainingSeconds % 60)})`
                 : 'ارسال دوباره کد'}
             </button>
           </form>
@@ -248,7 +249,7 @@ export default function VerifyOtpPage() {
           onClick={returnToLogin}
           type="button"
         >
-          بازگشت به ورود و اصلاح شماره
+          تغییر شماره همراه
         </button>
 
         {error && (

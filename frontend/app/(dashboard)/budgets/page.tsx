@@ -261,9 +261,15 @@ export default function BudgetsPage() {
               بودجه‌های {formatJalaliMonth(monthKey)}
             </h2>
             {!monthData?.budgets.length ? (
-              <p className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-                برای این ماه هنوز بودجه‌ای ثبت نشده است.
-              </p>
+              <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+                <p>برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.</p>
+                <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#budget-form">
+                  ساخت نخستین بودجه
+                </a>
+                <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+                  راهنمای بودجه
+                </Link>
+              </div>
             ) : (
               <ul className="mt-4 space-y-4">
                 {monthData.budgets.map((budget) => {
@@ -355,7 +361,7 @@ export default function BudgetsPage() {
           </section>
         </section>
 
-        <section className="app-panel order-1 h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-2 sm:p-8">
+        <section className="app-panel order-1 h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-2 sm:p-8" id="budget-form">
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editingBudget ? 'ویرایش بودجه' : 'ثبت بودجهٔ ماهانه'}
           </h2>

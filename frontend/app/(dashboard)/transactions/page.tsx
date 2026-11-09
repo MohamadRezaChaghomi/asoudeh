@@ -840,11 +840,19 @@ export default function TransactionsPage() {
             </button>
           </form>
           {transactions.length === 0 ? (
-            <p className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+            <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
               {filters.search
-                ? 'تراکنشی با این عبارت پیدا نشد. عبارت را تغییر دهید یا فیلترها را پاک کنید.'
-                : 'هنوز تراکنشی ثبت نشده است. از فرم کنار صفحه اولین مورد را ثبت کنید.'}
-            </p>
+                ? <p>تراکنشی پیدا نشد؛ عبارت را تغییر دهید یا فیلترها را پاک کنید.</p>
+                : <p>برای دیدن روند مالی، نخستین درآمد یا هزینه را ثبت کنید.</p>}
+              {!filters.search && (
+                <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#transaction-form">
+                  ثبت نخستین تراکنش
+                </a>
+              )}
+              <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+                راهنمای ثبت
+              </Link>
+            </div>
           ) : (
             <ul className="mt-4 space-y-3">
               {transactions.map((transaction) => (
@@ -922,7 +930,7 @@ export default function TransactionsPage() {
           )}
         </section>
 
-        <section className="app-panel order-1 h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-2 sm:p-8">
+        <section className="app-panel order-1 h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-2 sm:p-8" id="transaction-form">
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editingId ? 'ویرایش تراکنش' : 'ثبت تراکنش'}
           </h2>

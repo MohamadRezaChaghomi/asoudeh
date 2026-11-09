@@ -191,9 +191,15 @@ export default function DashboardPage() {
                   </Link>
                 </div>
                 {dashboard.recentTransactions.length === 0 ? (
-                  <p className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-                    هنوز تراکنشی ثبت نشده است. برای شروع، درآمد یا هزینه‌ای ثبت کنید.
-                  </p>
+                  <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+                    <p>با ثبت نخستین درآمد یا هزینه، روند مالی ماه را ببینید.</p>
+                    <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="/transactions#transaction-form">
+                      ثبت نخستین تراکنش
+                    </Link>
+                    <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+                      راهنمای برنامه
+                    </Link>
+                  </div>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {dashboard.recentTransactions.map((transaction) => (
@@ -229,9 +235,12 @@ export default function DashboardPage() {
                   </Link>
                 </div>
                 {dashboard.upcomingReminders.length === 0 ? (
-                  <p className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-                    تا هفت روز آینده یادآوری فعالی ثبت نشده است.
-                  </p>
+                  <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+                    <p>برای قبض‌ها و پرداخت‌های آینده یادآور بسازید تا سررسیدشان را فراموش نکنید.</p>
+                    <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg border border-slate-300 px-4 font-medium" href="/reminders#reminder-form">
+                      افزودن یادآور
+                    </Link>
+                  </div>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {dashboard.upcomingReminders.map((reminder) => (
