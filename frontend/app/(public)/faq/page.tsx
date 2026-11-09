@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { FaqSearch } from '@/components/public/FaqSearch';
 
 export const metadata: Metadata = {
-  title: 'سؤالات متداول | آسوده',
+  title: 'سؤالات متداول',
   description: 'پاسخ پرسش‌های رایج درباره حساب، درآمد و هزینه، بودجه، گزارش و یادآورها در آسوده.',
 };
 

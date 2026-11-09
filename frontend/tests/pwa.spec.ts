@@ -148,7 +148,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     };
   });
   expect(workerState.controlled).toBe(true);
-  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v5']);
+  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v6']);
   expect(workerState.cachedUrls).toEqual(['/icons/app-icon.svg', '/offline.html']);
   expect(workerState.cachedUrls).not.toContain('/dashboard');
 
@@ -241,7 +241,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     }
     return { names, urls: urls.sort() };
   });
-  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v5']);
+  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v6']);
   expect(cachesAfterUpdate.urls).toEqual(['/icons/app-icon.svg', '/offline.html']);
 
   await page.evaluate(async () => {

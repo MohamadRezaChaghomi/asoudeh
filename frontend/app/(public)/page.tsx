@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'مدیریت مالی شخصی | آسوده',
+  title: 'مدیریت مالی شخصی',
   description: 'درآمدها، هزینه‌ها، بودجه‌ها و یادآورها را در محیطی فارسی و دسترس‌پذیر مدیریت کنید.',
 };
 

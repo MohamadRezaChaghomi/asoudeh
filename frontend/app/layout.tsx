@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   metadataBase,
   applicationName: 'آسوده | Asoudeh',
   title: {
-    default: 'آسوده | Asoudeh',
+    default: 'آسوده',
     template: '%s | آسوده',
   },
   description: 'مدیریت مالی شخصی، ساده و دسترس‌پذیر به زبان فارسی',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fa_IR',
     siteName: 'آسوده',
-    title: 'آسوده | Asoudeh',
+    title: 'مدیریت مالی شخصی',
     description: 'مدیریت مالی شخصی، ساده و دسترس‌پذیر به زبان فارسی',
     images: [
       {

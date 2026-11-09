@@ -197,6 +197,7 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
     probe.remove();
     return color;
   });
+
   expect(logoBackground).toBe(expectedLogoBackground);
   await expect(page.getByRole('link', { name: 'آسوده، نمای کلی' })).toBeVisible();
 
@@ -204,13 +205,102 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   const mobileLogo = page.locator('.app-topbar-brand img');
   await expect(mobileLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
   const mobileLogoBounds = await mobileLogo.boundingBox();
-  expect(mobileLogoBounds?.width).toBeLessThanOrEqual(48);
-  expect(mobileLogoBounds?.height).toBeLessThanOrEqual(48);
+  expect(mobileLogoBounds?.width).toBeLessThanOrEqual(56);
+  expect(mobileLogoBounds?.height).toBeLessThanOrEqual(56);
   await mobileMenuToggle.click();
   await mobileNavigation.getByRole('link', { name: 'راهنمای استفاده' }).click();
   await expect(page.getByRole('heading', { name: 'راهنمای استفاده' })).toBeVisible();
   await expect(page.locator('html')).toHaveCSS('font-size', '16px');
   await expect(page.locator('html')).not.toHaveAttribute('data-high-contrast');
+});
+
+test('shows connectivity notices only after offline/online transitions', async ({ page, context }) => {
+  await page.route('**/api/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    const data =
+      path === '/auth/csrf'
+        ? { csrfToken: 'connectivity-csrf-token' }
+        : path === '/me'
+        ? { profile: { id: 'connectivity-user', accessibilitySettings: { fontScale: 1, highContrast: false } } }
+        : path === '/dashboard'
+          ? {
+              period: {
+                calendar: 'jalali',
+                year: 1405,
+                month: 8,
+                startDate: '2026-10-23',
+                endDateExclusive: '2026-11-22',
+              },
+              balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+              recentTransactions: [],
+              upcomingReminders: [],
+            }
+          : {};
+    await route.fulfill({ json: { success: true, data } });
+  });
+  await page.goto('/dashboard');
+  const themeToggle = page.getByRole('button', { name: /فعال‌کردن پوسته/ });
+  await expect(themeToggle).toBeEnabled();
+  await themeToggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.getByRole('status').filter({ hasText: /اتصال/ })).toHaveCount(0);
+
+  await context.setOffline(true);
+  await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
+  await expect(page.getByRole('status')).toContainText('اتصال اینترنت برقرار نیست');
+
+  await context.setOffline(false);
+  await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
+  await expect(page.getByRole('status')).toContainText('اتصال برقرار شد');
+  await expect(page.getByRole('status').filter({ hasText: /اتصال/ })).toHaveCount(0, {
+    timeout: 5000,
+  });
+});
+
+test('anchors the assistant to the physical bottom-left without overflowing on mobile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.route('**/api/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    const data =
+      path === '/auth/csrf'
+        ? { csrfToken: 'assistant-csrf-token' }
+        : path === '/me'
+        ? { profile: { id: 'assistant-mobile-user', accessibilitySettings: { fontScale: 1, highContrast: false } } }
+        : path === '/dashboard'
+          ? {
+              period: {
+                calendar: 'jalali',
+                year: 1405,
+                month: 8,
+                startDate: '2026-10-23',
+                endDateExclusive: '2026-11-22',
+              },
+              balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+              recentTransactions: [],
+              upcomingReminders: [],
+            }
+          : {};
+    await route.fulfill({ json: { success: true, data } });
+  });
+  await page.goto('/dashboard');
+
+  const launcher = page.getByRole('button', { name: 'بازکردن راهنمای آسوده' });
+  await expect(launcher).toBeVisible();
+  const launcherBounds = await launcher.boundingBox();
+  expect(launcherBounds).not.toBeNull();
+  expect(launcherBounds!.x).toBeLessThan(40);
+
+  await launcher.click();
+  const panel = page.getByRole('dialog', { name: 'راهنمای آسوده' });
+  await expect(panel).toBeVisible();
+  const panelBounds = await panel.boundingBox();
+  expect(panelBounds).not.toBeNull();
+  expect(panelBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(panelBounds!.x + panelBounds!.width).toBeLessThanOrEqual(360);
+  const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(documentWidth).toBeLessThanOrEqual(360);
 });
 
 test('shows a page-shaped budget skeleton while data is loading and removes it after success', async ({

@@ -89,13 +89,15 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-5" id="main-content" tabIndex={-1}>
-      <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-        <LoginBackButton />
+      <section className="app-panel auth-card w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="auth-card-tools">
+          <LoginBackButton />
+        </div>
         <BrandLogo
-          className="mx-auto mb-5"
+          className="mx-auto mb-4"
           priority
-          size="auth"
-          variant="primary"
+          size="auth-symbol"
+          variant="symbol"
         />
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">ورود به حساب کاربری</h1>
@@ -176,7 +178,7 @@ function LoginBackButton() {
   }
 
   return (
-    <button className="auth-back-button" onClick={goBack} type="button">
+    <button aria-label="بازگشت" className="auth-back-button" onClick={goBack} type="button">
       <ArrowRight aria-hidden="true" size={18} />
       <span>بازگشت</span>
     </button>

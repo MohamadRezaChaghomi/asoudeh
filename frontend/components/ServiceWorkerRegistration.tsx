@@ -8,7 +8,7 @@ interface InstallPromptEvent extends Event {
 }
 
 export function ServiceWorkerRegistration() {
-  const [isOnline, setIsOnline] = useState(true);
+  const [connectivityNotice, setConnectivityNotice] = useState<'offline' | 'restored' | null>(null);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
@@ -20,7 +20,20 @@ export function ServiceWorkerRegistration() {
   const reloadAfterUpdate = useRef(false);
 
   useEffect(() => {
-    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    let wasOffline = false;
+    let restoredTimer: number | undefined;
+    const showOffline = () => {
+      wasOffline = true;
+      window.clearTimeout(restoredTimer);
+      setConnectivityNotice('offline');
+    };
+    const showRestored = () => {
+      if (!wasOffline) return;
+      wasOffline = false;
+      setConnectivityNotice('restored');
+      window.clearTimeout(restoredTimer);
+      restoredTimer = window.setTimeout(() => setConnectivityNotice(null), 3000);
+    };
     const updateStandaloneStatus = () => {
       const standalone =
         window.matchMedia('(display-mode: standalone)').matches ||
@@ -28,10 +41,9 @@ export function ServiceWorkerRegistration() {
       setIsStandalone(standalone);
     };
 
-    updateOnlineStatus();
     updateStandaloneStatus();
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
+    window.addEventListener('online', showRestored);
+    window.addEventListener('offline', showOffline);
     const displayMode = window.matchMedia('(display-mode: standalone)');
     displayMode.addEventListener('change', updateStandaloneStatus);
 
@@ -49,8 +61,9 @@ export function ServiceWorkerRegistration() {
 
     if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) {
       return () => {
-        window.removeEventListener('online', updateOnlineStatus);
-        window.removeEventListener('offline', updateOnlineStatus);
+        window.removeEventListener('online', showRestored);
+        window.removeEventListener('offline', showOffline);
+        window.clearTimeout(restoredTimer);
         displayMode.removeEventListener('change', updateStandaloneStatus);
         window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
       };
@@ -92,8 +105,9 @@ export function ServiceWorkerRegistration() {
 
     return () => {
       active = false;
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
+      window.removeEventListener('online', showRestored);
+      window.removeEventListener('offline', showOffline);
+      window.clearTimeout(restoredTimer);
       displayMode.removeEventListener('change', updateStandaloneStatus);
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
@@ -123,10 +137,16 @@ export function ServiceWorkerRegistration() {
 
   return (
     <aside className="pwa-notices" aria-label="وضعیت برنامه">
-      <p className={`pwa-connectivity ${isOnline ? 'is-online' : 'is-offline'}`} role="status" aria-live="polite">
-        <span aria-hidden="true" className="pwa-connectivity-dot" />
-        {isOnline ? 'اتصال برقرار است' : 'اتصال اینترنت برقرار نیست'}
-      </p>
+      {connectivityNotice && (
+        <p
+          className={`pwa-connectivity is-${connectivityNotice}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span aria-hidden="true" className="pwa-connectivity-dot" />
+          {connectivityNotice === 'offline' ? 'اتصال اینترنت برقرار نیست' : 'اتصال برقرار شد'}
+        </p>
+      )}
 
       {waitingWorker && (
         <section className="pwa-notice" role="status" aria-live="polite">

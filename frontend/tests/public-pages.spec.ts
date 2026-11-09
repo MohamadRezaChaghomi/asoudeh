@@ -25,8 +25,17 @@ test('public information pages share navigation and are available without signin
       'href',
       '/login',
     );
+    const title = await page.title();
+    expect(title.match(/آسوده/g)).toHaveLength(1);
   }
 
+  await page.goto('/contact');
+  await expect(page.getByText('support@example.com')).toBeVisible();
+  await expect(page.getByText('۰۰۰-۰۰۰-۰۰۰۰')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ارسال ایمیل به پشتیبانی' })).toHaveAttribute(
+    'href',
+    'mailto:support@example.com',
+  );
   await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -44,6 +53,61 @@ test('public information pages share navigation and are available without signin
     '/reports',
   );
   expect(errors).toEqual([]);
+});
+
+test('public and authenticated page titles include the brand exactly once', async ({ page }) => {
+  await page.route('**/api/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    let data: Record<string, unknown> = {};
+    if (path === '/me') {
+      data = {
+        profile: {
+          id: 'title-check-user',
+          accessibilitySettings: { fontScale: 1, highContrast: false },
+        },
+      };
+    } else if (path === '/dashboard') {
+      data = {
+        period: {
+          calendar: 'jalali',
+          year: 1405,
+          month: 8,
+          startDate: '2026-10-23',
+          endDateExclusive: '2026-11-22',
+        },
+        balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+        recentTransactions: [],
+        upcomingReminders: [],
+      };
+    }
+    await route.fulfill({ json: { success: true, data } });
+  });
+
+  for (const path of [
+    '/',
+    '/terms',
+    '/privacy',
+    '/faq',
+    '/about',
+    '/contact',
+    '/guide',
+    '/login',
+    '/verify-otp',
+    '/dashboard',
+    '/transactions',
+    '/budgets',
+    '/reminders',
+    '/reports',
+    '/settings',
+    '/categories',
+    '/caregiver',
+    '/welcome',
+  ]) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    const title = await page.title();
+    expect(title, `${path} title`).toContain('آسوده');
+    expect(title.match(/آسوده/g), `${path} title`).toHaveLength(1);
+  }
 });
 
 test('FAQ search filters answers and its accordion works with keyboard activation', async ({

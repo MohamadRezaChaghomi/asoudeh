@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
@@ -63,13 +63,13 @@ export default function DashboardLayout({
 
   return (
     <AppShell>
-      <SessionActivityMonitor />
+      <SessionActivityMonitor key="session-monitor" />
       {error && (
-        <p className="mx-auto max-w-6xl px-5 pt-4 text-red-800" role="alert">
+        <p className="mx-auto max-w-6xl px-5 pt-4 text-red-800" key="accessibility-error" role="alert">
           {error}
         </p>
       )}
-      {children}
+      <Fragment key="dashboard-page">{children}</Fragment>
     </AppShell>
   );
 }

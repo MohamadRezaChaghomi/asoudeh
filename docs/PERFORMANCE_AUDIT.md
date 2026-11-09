@@ -66,7 +66,7 @@ A single Edge run against the local production build of the public home page, at
 
 ## Caching, fonts, assets, and startup
 
-- The service worker cache is limited to `/offline.html` and `/icons/app-icon.svg` (cache `asoudeh-static-shell-v5`); it does not cache authenticated routes, API responses, financial records, session data, OTPs, or caregiver data.
+- The service worker cache is limited to `/offline.html` and `/icons/app-icon.svg` (cache `asoudeh-static-shell-v6`); it does not cache authenticated routes, API responses, financial records, session data, OTPs, or caregiver data.
 - The app self-hosts Estedad through `next/font/local`; the offline document deliberately uses the system-font stack.
 - Brand PNG/ICO outputs are locally generated and dimensions are checked by `frontend/tests/brand-assets.spec.ts`; the original SVG sources remain available alongside those exports.
 - Backend startup order and connection management were inspected, but startup duration was not measured. No backend startup refactor was justified.

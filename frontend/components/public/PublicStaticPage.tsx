@@ -4,7 +4,7 @@ import type { PublicPageContent } from '@/lib/publicPages/content';
 
 export function publicPageMetadata(page: PublicPageContent): Metadata {
   return {
-    title: `${page.title.replace(/ آسوده$/, '')} | آسوده`,
+    title: page.title.replace(/ آسوده$/, ''),
     description: page.description,
   };
 }

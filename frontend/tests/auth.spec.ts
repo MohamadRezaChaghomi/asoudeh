@@ -17,18 +17,35 @@ const profile = {
   accessibilitySettings: { fontScale: 1.25, highContrast: false },
 };
 
-test('shows the approved logo on login and OTP registration without duplicating the brand name', async ({
+test('shows the symbol mark on login and OTP registration without duplicating the brand name', async ({
   page,
 }) => {
   await page.goto('/login');
   const loginLogo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(loginLogo).toBeVisible();
-  await expect(loginLogo).toHaveAttribute('src', '/logo/asoudeh-primary.svg');
+  await expect(loginLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
   const loginLogoWidth = await loginLogo.evaluate(
     (image: HTMLImageElement) => image.naturalWidth,
   );
   expect(loginLogoWidth).toBeGreaterThan(0);
   await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
+  const [logoBounds, backBounds] = await Promise.all([
+    loginLogo.boundingBox(),
+    page.getByRole('button', { name: 'بازگشت' }).boundingBox(),
+  ]);
+  expect(logoBounds?.width).toBeGreaterThanOrEqual(56);
+  expect(logoBounds?.width).toBeLessThanOrEqual(64);
+  expect(backBounds?.height).toBeGreaterThanOrEqual(44);
+  expect(backBounds?.x ?? Infinity).toBeLessThan((logoBounds?.x ?? 0) + (logoBounds?.width ?? 0) / 2);
+  expect(
+    logoBounds &&
+      backBounds &&
+      logoBounds.x < backBounds.x + backBounds.width &&
+      logoBounds.x + logoBounds.width > backBounds.x &&
+      logoBounds.y < backBounds.y + backBounds.height &&
+      logoBounds.y + logoBounds.height > backBounds.y,
+  ).toBe(false);
+  await expect(loginLogo.locator('xpath=..')).toHaveCSS('border-width', '0px');
 
   await page.addInitScript(() => {
     window.sessionStorage.setItem(
@@ -43,11 +60,10 @@ test('shows the approved logo on login and OTP registration without duplicating 
   await page.goto('/verify-otp');
   const verificationLogo = page.getByRole('img', { name: 'نشان آسوده' });
   await expect(verificationLogo).toBeVisible();
-  await expect(verificationLogo).toHaveAttribute('src', '/logo/asoudeh-primary.svg');
-  const verificationLogoWidth = await verificationLogo.evaluate(
-    (image: HTMLImageElement) => image.naturalWidth,
-  );
-  expect(verificationLogoWidth).toBeGreaterThan(0);
+  await expect(verificationLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
+  await expect
+    .poll(() => verificationLogo.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
   await expect(page.getByRole('heading', { name: 'ساخت حساب کاربری' })).toBeVisible();
 });
 
@@ -79,6 +95,25 @@ test('requires manual OTP entry and never returns or stores the development OTP'
   await page.route('**/api/v1/me', async (route) => {
     await route.fulfill({ json: { success: true, data: { profile } } });
   });
+  await page.route('**/api/v1/dashboard', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          period: {
+            calendar: 'jalali',
+            year: 1405,
+            month: 8,
+            startDate: '2026-10-23',
+            endDateExclusive: '2026-11-22',
+          },
+          balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+          recentTransactions: [],
+          upcomingReminders: [],
+        },
+      },
+    });
+  });
   await page.goto('/login');
   await expect(page.getByLabel('شماره همراه')).toHaveValue('');
   await page.getByLabel('شماره همراه').fill(profile.phone);
@@ -108,7 +143,8 @@ test('requires manual OTP entry and never returns or stores the development OTP'
   expect(pendingFlow).not.toHaveProperty('developmentOtp');
   await page.getByLabel('کد تأیید').fill('123456');
   await page.getByRole('button', { name: 'تأیید و ادامه' }).click();
-  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
   expect(verificationPayload).toEqual({ phone: profile.phone, code: '123456' });
 });
 
@@ -257,6 +293,31 @@ test('navigates to the protected app only after the backend confirms OTP verific
   page,
 }) => {
   let verificationPayload: Record<string, string> | undefined;
+  let csrfRequests = 0;
+  let profileRequests = 0;
+  let dashboardRequests = 0;
+  const browserErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => browserErrors.push(error.message));
+  page.on('requestfailed', (request) => {
+    const requestUrl = new URL(request.url());
+    if (requestUrl.pathname.startsWith('/api/v1/')) {
+      browserErrors.push(`${request.method()} ${requestUrl.pathname} failed`);
+    }
+  });
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      browserErrors.push(`${response.status()} ${new URL(response.url()).pathname}`);
+    }
+  });
+  await page.route('**/api/v1/auth/csrf', async (route) => {
+    csrfRequests += 1;
+    await route.fulfill({
+      json: { success: true, data: { csrfToken: 'login-regression-csrf-token' } },
+    });
+  });
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     await route.fulfill({
       json: { success: true, data: { resendAfterSeconds: 60 } },
@@ -272,7 +333,31 @@ test('navigates to the protected app only after the backend confirms OTP verific
     });
   });
   await page.route('**/api/v1/me', async (route) => {
+    profileRequests += 1;
     await route.fulfill({ json: { success: true, data: { profile } } });
+  });
+  await page.route('**/api/v1/dashboard', async (route) => {
+    dashboardRequests += 1;
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          period: {
+            calendar: 'jalali',
+            year: 1405,
+            month: 8,
+            startDate: '2026-10-23',
+            endDateExclusive: '2026-11-22',
+          },
+          balance: { initialBalance: 0, income: '0', expenses: '0', remaining: '0' },
+          recentTransactions: [],
+          upcomingReminders: [],
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    await route.fulfill({ json: { success: true, data: { active: true } } });
   });
   await page.goto('/login');
   await page.getByLabel('شماره همراه').fill(profile.phone);
@@ -281,8 +366,12 @@ test('navigates to the protected app only after the backend confirms OTP verific
   await page.getByLabel('کد تأیید').fill('123456');
   await page.getByRole('button', { name: 'تأیید و ادامه' }).click();
 
-  await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByRole('heading', { name: 'پروفایل و تنظیمات' })).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+  await expect.poll(() => profileRequests).toBe(1);
+  await expect.poll(() => dashboardRequests).toBeGreaterThan(0);
+  expect(csrfRequests).toBe(1);
+  expect(browserErrors).toEqual([]);
   await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toHaveCount(0);
   expect(verificationPayload).toEqual({ phone: profile.phone, code: '123456' });
 });
@@ -353,13 +442,8 @@ test('validates the mobile number and completes OTP registration without storing
 
   await page.getByLabel('نام نمایشی').fill('مریم آسوده');
   await page.getByRole('button', { name: 'ساخت حساب' }).click();
-  await expect(page).toHaveURL(/\/welcome$/);
-  await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'مدیریت مالی، ساده و روشن' })).toBeVisible();
-  await page.getByRole('button', { name: 'رد کردن راهنما' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await page.goto('/welcome');
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
   expect(await page.evaluate(() => Object.keys(localStorage))).not.toContain('accessToken');
   expect(await page.evaluate(() => Object.keys(localStorage))).not.toContain('refreshToken');
 });

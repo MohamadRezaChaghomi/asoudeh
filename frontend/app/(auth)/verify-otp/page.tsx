@@ -120,7 +120,7 @@ export default function VerifyOtpPage() {
       }
 
       clearPendingOtpFlow();
-      router.replace('/settings');
+      router.replace('/dashboard');
     } catch (verifyError) {
       setError(getApiErrorMessage(verifyError));
     } finally {
@@ -138,7 +138,7 @@ export default function VerifyOtpPage() {
       await ensureCsrfToken();
       await api.post('/auth/register/complete', { displayName });
       clearPendingOtpFlow();
-      router.replace('/welcome');
+      router.replace('/dashboard');
     } catch (registrationError) {
       setError(getApiErrorMessage(registrationError));
     } finally {
@@ -163,10 +163,10 @@ export default function VerifyOtpPage() {
     <main className="flex min-h-screen items-center justify-center p-5" id="main-content" tabIndex={-1}>
       <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
         <BrandLogo
-          className="mx-auto mb-5"
+          className="mx-auto mb-4"
           priority
-          size="auth"
-          variant="primary"
+          size="auth-symbol"
+          variant="symbol"
         />
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">

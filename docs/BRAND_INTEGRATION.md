@@ -37,14 +37,14 @@ The horizontal and primary source SVGs, plus the OG source SVG, contain text wit
 
 `frontend/app/layout.tsx` declares favicon variants, Apple icon, and OG/Twitter metadata. `frontend/app/manifest.ts` references separate 192x192 and 512x512 general icons and the maskable 512x512 icon. Theme colors match the CSS tokens.
 
-`frontend/public/sw.js` uses cache `asoudeh-static-shell-v5`, pre-caching only `/offline.html` and `/icons/app-icon.svg`. It does not cache authenticated pages or API responses. The offline page has a system-font stack and a retry link.
+`frontend/public/sw.js` uses cache `asoudeh-static-shell-v6`, pre-caching only `/offline.html` and `/icons/app-icon.svg`. It does not cache authenticated pages or API responses. The offline page has a system-font stack and a retry link.
 
 Brand documentation and reference mockups are under `docs/brand/`; they are not shipped from `public/`.
 
 ## Verification
 
 - Frontend typecheck, lint, production build, and the four brand asset/contrast tests passed. The latest build's largest First Load JS bundle is 148 kB.
-- The final production PWA test verified the v5 cache contains only `/offline.html` and `/icons/app-icon.svg`; it reported no CSP, self-hosted-font, or hydration errors.
+- The final production PWA test verified the v6 cache contains only `/offline.html` and `/icons/app-icon.svg`; it reported no CSP, self-hosted-font, or hydration errors.
 - The broader app-shell/auth/public/responsive run was not fully green (20/31 passed). Focused reruns passed after fixing the brand logo locator and PWA notice interactions. Speech/auth failures from the broad run were not resolved or rerun as a suite.
 
 ## Remaining issues

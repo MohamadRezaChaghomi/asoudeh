@@ -21,6 +21,15 @@ export interface PublicPageContent {
   relatedLinks: readonly PublicPageLink[];
 }
 
+// TODO: Replace these demonstration values with contact details approved by the product owner.
+export const contactDetails = {
+  email: 'support@example.com',
+  phone: '۰۰۰-۰۰۰-۰۰۰۰',
+  phoneHref: 'tel:+980000000000',
+  workingHours: 'شنبه تا چهارشنبه، ساعت ۹ تا ۱۷ (زمان نمونه)',
+  cityAddress: 'تهران، نشانی نمونه، پلاک ۰۰',
+} as const;
+
 export const publicPages = {
   terms: {
     path: '/terms',
@@ -200,26 +209,23 @@ export const publicPages = {
   contact: {
     path: '/contact',
     title: 'تماس با ما',
-    description: 'راه ارتباطی رسمی آسوده هنوز در اطلاعات پروژه ثبت نشده است.',
-    notice:
-      'برای جلوگیری از انتشار اطلاعات نادرست، ایمیل، شماره تماس یا نشانی شبکه اجتماعی درج نشده است. مسئول محصول باید راه ارتباطی رسمی را پیش از انتشار این صفحه تأیید و اضافه کند.',
+    description: 'برای پرسش دربارهٔ آسوده می‌توانید از راه‌های ارتباطی زیر استفاده کنید.',
+    notice: 'اطلاعات تماس این صفحه نمونه است و باید پیش از انتشار با اطلاعات تأییدشده جایگزین شود.',
     sections: [
       {
-        id: 'contact-status',
-        title: 'اطلاعات تماس',
+        id: 'contact-details',
+        title: 'راه‌های ارتباطی',
         paragraphs: [
-          'در حال حاضر نشانی ایمیل پشتیبانی، شماره تلفن، نشانی پستی یا حساب شبکه اجتماعی تأییدشده‌ای در اطلاعات پروژه وجود ندارد. این صفحه فرم ارسال پیام ندارد و هیچ پیام ارسالی را شبیه‌سازی نمی‌کند.',
+          'این صفحه فرم ارسال پیام ندارد؛ برای تماس، ایمیل پشتیبانی را انتخاب کنید.',
         ],
-      },
-      {
-        id: 'contact-needed',
-        title: 'برای تکمیل این صفحه',
-        paragraphs: ['لطفاً پیش از انتشار عمومی، موارد زیر را از مالک محصول دریافت و تأیید کنید:'],
         items: [
-          'نشانی ایمیل یا راه ارتباطی رسمی؛',
-          'موضوع‌هایی که از این مسیر پاسخ داده می‌شوند؛',
-          'زمان پاسخ‌گویی مورد انتظار، در صورت تعریف‌شدن؛',
-          'روش امن برای درخواست‌های حساب یا حریم خصوصی.',
+          `ایمیل پشتیبانی: ${contactDetails.email}`,
+          `تلفن: ${contactDetails.phone}`,
+          `ساعت پاسخ‌گویی: ${contactDetails.workingHours}`,
+          `شهر و نشانی: ${contactDetails.cityAddress}`,
+        ],
+        links: [
+          { href: `mailto:${contactDetails.email}`, label: 'ارسال ایمیل به پشتیبانی' },
         ],
       },
     ],

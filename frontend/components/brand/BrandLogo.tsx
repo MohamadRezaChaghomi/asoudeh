@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 
 export type BrandLogoVariant = 'primary' | 'horizontal' | 'symbol' | 'white' | 'monochrome';
-type BrandLogoSize = 'sidebar' | 'mobile' | 'auth' | 'landing' | 'footer';
+type BrandLogoSize = 'sidebar' | 'mobile' | 'auth' | 'auth-symbol' | 'landing' | 'footer';
 
 const logoAssets: Record<BrandLogoVariant, { src: string; width: number; height: number }> = {
   primary: { src: '/logo/asoudeh-primary.svg', width: 600, height: 780 },
@@ -16,6 +16,7 @@ const logoSizes: Record<BrandLogoSize, string> = {
   sidebar: '160px',
   mobile: '48px',
   auth: '192px',
+  'auth-symbol': '64px',
   landing: '(max-width: 760px) 45vw, 160px',
   footer: '144px',
 };
