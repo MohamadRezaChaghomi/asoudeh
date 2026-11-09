@@ -18,7 +18,10 @@ import Reminder from '../models/Reminder.js';
 import ReminderCompletion from '../models/ReminderCompletion.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
-import { purgeScheduledAccountDeletion } from '../services/accountDeletion.service.js';
+import {
+  purgeExpiredAccountDeletions,
+  purgeScheduledAccountDeletion,
+} from '../services/accountDeletion.service.js';
 import { hashAuthValue } from '../utils/authCrypto.js';
 
 const testMongoUri = process.env.TEST_MONGODB_URI;
@@ -283,7 +286,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     expect(pendingLogin.body.error.code).toBe('ACCOUNT_DELETION_PENDING');
   });
 
-  it('purges all account-owned records and phone-bound invitations after the deadline', async () => {
+  it('purges all account-owned records after the deadline and remains idempotent', async () => {
     const identity = await createIdentity('Account deletion purge');
     const otherUser = await createIdentity('Unrelated account');
     const anotherSenior = await createIdentity('Another senior account');
@@ -447,6 +450,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
       ]),
     ).toEqual(Array(9).fill(null));
     expect(await purgeScheduledAccountDeletion(ownerId)).toBe(false);
+    expect(await purgeExpiredAccountDeletions()).toBe(0);
     expect(await User.exists({ _id: otherUserId })).not.toBeNull();
     expect(await User.exists({ _id: new mongoose.Types.ObjectId(anotherSenior.userId) })).not.toBeNull();
   });

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { connectDB } from '../config/db.js';
 import { env } from '../config/env.js';
 import { ensureIndexes, type IndexModel } from '../utils/indexIntegrity.js';
+import { requireLocalRestoreCheckUri } from '../utils/restoreCheckSafety.js';
 import Budget from '../models/Budget.js';
 import Category from '../models/Category.js';
 import Reminder from '../models/Reminder.js';
@@ -38,6 +39,12 @@ afterEach(async () => {
 });
 
 describe('MongoDB connection', () => {
+  it('refuses restore integrity checks against any non-local target before connecting', async () => {
+    expect(() =>
+      requireLocalRestoreCheckUri('mongodb://db.example.com:27017/asoudeh'),
+    ).toThrow('Restore integrity checks are restricted to local asoudeh_restore_check.');
+  });
+
   it('disables automatic index creation in production', async () => {
     const previousNodeEnv = env.nodeEnv;
     const connect = vi.spyOn(mongoose, 'connect').mockResolvedValue(mongoose);

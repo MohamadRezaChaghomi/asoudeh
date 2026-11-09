@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "db:ensure-indexes": "tsx scripts/ensure-indexes.ts",
     "db:report-orphans": "tsx scripts/report-orphans.ts",
+    "db:restore-integrity": "tsx src/scripts/restoreIntegrity.ts",
     "seed:system-categories": "tsx src/scripts/seedSystemCategories.ts",
     "lint": "eslint ."
   },
