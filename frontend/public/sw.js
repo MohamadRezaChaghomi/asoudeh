@@ -1,11 +1,10 @@
-const CACHE_NAME = 'asoudeh-static-shell-v2';
+const CACHE_NAME = 'asoudeh-static-shell-v3';
 const STATIC_ASSETS = ['/offline.html', '/icons/app-icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -21,6 +20,12 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -34,7 +39,8 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     fetch(request).catch(async () => {
-      const offlinePage = await caches.match('/offline.html');
+      const cache = await caches.open(CACHE_NAME);
+      const offlinePage = await cache.match('/offline.html');
       return offlinePage || Response.error();
     }),
   );

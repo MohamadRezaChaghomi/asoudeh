@@ -18,16 +18,25 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   const manifestResponse = await page.request.get('/manifest.webmanifest');
   expect(manifestResponse.ok()).toBe(true);
   const manifest = await manifestResponse.json() as {
+    id: string;
     name: string;
     short_name: string;
     start_url: string;
+    scope: string;
+    lang: string;
+    dir: string;
     background_color: string;
     theme_color: string;
     icons: Array<{ src: string; sizes: string; type: string; purpose: string }>;
+    shortcuts: Array<{ name: string; url: string }>;
   };
   expect(manifest.name).toBe('آسوده | Asoudeh');
   expect(manifest.short_name).toBe('آسوده');
+  expect(manifest.id).toBe('/');
   expect(manifest.start_url).toBe('/dashboard');
+  expect(manifest.scope).toBe('/');
+  expect(manifest.lang).toBe('fa');
+  expect(manifest.dir).toBe('rtl');
   expect(manifest.theme_color).toBe('#1F5C4A');
   expect(manifest.background_color).toBe('#F6F7F2');
   expect(manifest.icons).toEqual([
@@ -49,6 +58,10 @@ test('production PWA loads its manifest and keeps offline cache free of account 
       type: 'image/png',
       purpose: 'maskable',
     },
+  ]);
+  expect(manifest.shortcuts).toEqual([
+    expect.objectContaining({ name: 'ثبت تراکنش', url: '/transactions?type=expense' }),
+    expect.objectContaining({ name: 'دسته‌بندی‌ها', url: '/categories' }),
   ]);
   for (const icon of [
     '/icons/icon-192.png',
@@ -135,8 +148,99 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     };
   });
   expect(workerState.controlled).toBe(true);
-  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v2']);
+  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v3']);
   expect(workerState.cachedUrls).toEqual(['/icons/app-icon.svg', '/offline.html']);
+  expect(workerState.cachedUrls).not.toContain('/dashboard');
+
+  await expect(page.getByText('اتصال برقرار است')).toBeVisible();
+  await page.evaluate(() => {
+    let promptCalled = false;
+    const installEvent = new Event('beforeinstallprompt', { cancelable: true });
+    Object.assign(installEvent, {
+      prompt: async () => {
+        promptCalled = true;
+        (window as Window & { __installPromptCalled?: boolean }).__installPromptCalled = true;
+      },
+      userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+    });
+    window.dispatchEvent(installEvent);
+    (window as Window & { __installPromptInitiallyCalled?: boolean }).__installPromptInitiallyCalled =
+      promptCalled;
+  });
+  const installButton = page.getByRole('button', { name: 'نصب برنامه' });
+  await expect(installButton).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as Window & { __installPromptInitiallyCalled?: boolean }).__installPromptInitiallyCalled,
+    ),
+  ).toBe(false);
+  await installButton.click();
+  await expect.poll(() =>
+    page.evaluate(() => (window as Window & { __installPromptCalled?: boolean }).__installPromptCalled),
+  ).toBe(true);
+
+  const iosPage = await context.newPage();
+  await iosPage.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+    });
+  });
+  await iosPage.goto('/login');
+  await expect(
+    iosPage.getByText('برای نصب، در منوی اشتراک‌گذاری گزینهٔ «افزودن به صفحهٔ اصلی» را بزنید.'),
+  ).toBeVisible();
+  await iosPage.getByRole('button', { name: 'بستن' }).click();
+  await expect(iosPage.getByText(/منوی اشتراک‌گذاری/)).toHaveCount(0);
+  await iosPage.close();
+
+  const standalonePage = await context.newPage();
+  await standalonePage.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', { configurable: true, value: true });
+  });
+  await standalonePage.goto('/login');
+  await standalonePage.evaluate(() => {
+    const installEvent = new Event('beforeinstallprompt', { cancelable: true });
+    Object.assign(installEvent, {
+      prompt: async () => undefined,
+      userChoice: Promise.resolve({ outcome: 'dismissed', platform: 'web' }),
+    });
+    window.dispatchEvent(installEvent);
+  });
+  await expect(standalonePage.getByRole('button', { name: 'نصب برنامه' })).toHaveCount(0);
+  await standalonePage.close();
+
+  await page.evaluate(async () => {
+    const oldCache = await caches.open('asoudeh-static-shell-v2');
+    await oldCache.put('/dashboard', new Response('private old cached page'));
+    const registration = await navigator.serviceWorker.getRegistration('/');
+    if (!registration) throw new Error('Service worker registration is missing.');
+    await navigator.serviceWorker.register('/sw.js?test-update=1', { scope: '/' });
+  });
+  await expect(page.getByText('نسخهٔ جدید آسوده آماده است.')).toBeVisible({ timeout: 15_000 });
+  const activeScriptBeforeAction = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration('/');
+    return registration?.active?.scriptURL ?? '';
+  });
+  expect(activeScriptBeforeAction).not.toContain('test-update=1');
+  await page.getByRole('button', { name: 'به‌روزرسانی' }).click();
+  await expect.poll(async () =>
+    page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration('/');
+      return registration?.active?.scriptURL.includes('test-update=1') ?? false;
+    }),
+  ).toBe(true);
+  const cachesAfterUpdate = await page.evaluate(async () => {
+    const names = await caches.keys();
+    const urls: string[] = [];
+    for (const name of names) {
+      const cache = await caches.open(name);
+      urls.push(...(await cache.keys()).map((request) => new URL(request.url).pathname));
+    }
+    return { names, urls: urls.sort() };
+  });
+  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v3']);
+  expect(cachesAfterUpdate.urls).toEqual(['/icons/app-icon.svg', '/offline.html']);
 
   await page.evaluate(async () => {
     await fetch('/api/v1/reports/monthly?month=01-1405').catch(() => undefined);
@@ -152,12 +256,14 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   expect(cachedApiUrls).toEqual([]);
 
   await context.setOffline(true);
+  await expect(page.getByText('اتصال اینترنت برقرار نیست')).toBeVisible();
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'اتصال اینترنت در دسترس نیست' }))
     .toBeVisible();
   await expect(page.getByRole('img', { name: 'نشان آسوده' })).toBeVisible();
   await expect(page.getByText('اطلاعات مالی شما در حالت آفلاین بارگذاری نمی‌شود.'))
     .toBeVisible();
+  await expect(page.getByRole('link', { name: 'بررسی دوبارهٔ اتصال' })).toHaveAttribute('href', '/');
 
   await context.setOffline(false);
   await page.goto('/login');
