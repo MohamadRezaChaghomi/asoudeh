@@ -2,39 +2,22 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
   clearPendingOtpFlow,
   readPendingOtpFlow,
   savePendingOtpFlow,
   type PendingOtpFlow,
 } from '@/lib/auth/otpFlow';
-
-interface ApiErrorBody {
-  error?: { message?: string };
-}
+import { normalizeDigits } from '@/lib/normalizeDigits';
 
 interface OtpResponseData {
   data: {
     resendAfterSeconds?: number;
     registrationRequired?: boolean;
   };
-}
-
-function toAsciiDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  if (error instanceof Error) return error.message;
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 function maskPhone(phone: string): string {
@@ -97,7 +80,7 @@ export default function VerifyOtpPage() {
       setFlow(updatedFlow);
       setCode('');
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError));
     } finally {
       setLoading(false);
     }
@@ -108,7 +91,7 @@ export default function VerifyOtpPage() {
     if (!flow || loading) return;
 
     setError('');
-    const normalizedCode = toAsciiDigits(code).replace(/\s/g, '');
+    const normalizedCode = normalizeDigits(code).replace(/\s/g, '');
     if (!/^\d{6}$/.test(normalizedCode)) {
       setError('کد تأیید باید شامل ۶ رقم باشد.');
       return;
@@ -135,7 +118,7 @@ export default function VerifyOtpPage() {
       clearPendingOtpFlow();
       router.replace('/settings');
     } catch (verifyError) {
-      setError(errorMessage(verifyError));
+      setError(getApiErrorMessage(verifyError));
     } finally {
       setLoading(false);
     }
@@ -153,7 +136,7 @@ export default function VerifyOtpPage() {
       clearPendingOtpFlow();
       router.replace('/settings');
     } catch (registrationError) {
-      setError(errorMessage(registrationError));
+      setError(getApiErrorMessage(registrationError));
     } finally {
       setLoading(false);
     }
@@ -203,7 +186,7 @@ export default function VerifyOtpPage() {
               inputMode="numeric"
               maxLength={6}
               onChange={(event) =>
-                setCode(toAsciiDigits(event.target.value).replace(/\D/g, '').slice(0, 6))
+                setCode(normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 6))
               }
               pattern="[0-9]{6}"
               required

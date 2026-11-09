@@ -2,9 +2,9 @@
 
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import axios from 'axios';
 import { Bot, MessageCircle, Send, X } from 'lucide-react';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 
 interface AssistantStatusResponse {
   data: { available: boolean };
@@ -22,10 +22,6 @@ interface ChatMessage {
   role: 'user' | 'assistant' | 'error';
   text: string;
   source?: { label: string; href: string };
-}
-
-interface ApiErrorBody {
-  error?: { message?: string };
 }
 
 export function AssistantWidget() {
@@ -101,13 +97,10 @@ export function AssistantWidget() {
         source: response.data.data.source,
       });
     } catch (error) {
-      const publicMessage = axios.isAxiosError<ApiErrorBody>(error)
-        ? error.response?.data.error?.message
-        : undefined;
       setMessage(submittedMessage);
       appendMessage({
         role: 'error',
-        text: publicMessage ?? 'پاسخی دریافت نشد. کمی بعد دوباره تلاش کنید.',
+        text: getApiErrorMessage(error),
       });
     } finally {
       setSending(false);

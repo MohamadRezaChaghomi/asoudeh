@@ -6,12 +6,17 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
   getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
 } from '@/lib/jalaliDate';
-import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
+import {
+  formatTomanAmount,
+  formatTomanAmountInput,
+  parseTomanAmount,
+} from '@/lib/tomanAmount';
 
 type TransactionType = 'income' | 'expense';
 type CategoryType = TransactionType | 'both';
@@ -101,22 +106,11 @@ function isTransactionDraft(value: unknown): value is TransactionDraft {
   }
 }
 
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
-}
-
 function todayDate(): string {
   return getTehranTodayIso();
 }
 
-function formatAmount(amount: number): string {
+function formatInteger(amount: number): string {
   return new Intl.NumberFormat('fa-IR').format(amount);
 }
 
@@ -394,7 +388,7 @@ export default function TransactionsPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -494,7 +488,7 @@ export default function TransactionsPage() {
     setSaveDraftLocally(false);
     setEditingId(transaction.id);
     setType(transaction.type);
-    setAmount(formatAmount(transaction.amount));
+    setAmount(formatTomanAmount(transaction.amount));
     setCategoryId(transaction.categoryId);
     setDate(transaction.date);
     setNote(transaction.note);
@@ -586,7 +580,7 @@ export default function TransactionsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(saveError));
+      setError(getApiErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
@@ -614,7 +608,7 @@ export default function TransactionsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(filterError));
+      setError(getApiErrorMessage(filterError));
     } finally {
       setFiltering(false);
     }
@@ -660,7 +654,7 @@ export default function TransactionsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(deleteError));
+      setError(getApiErrorMessage(deleteError));
     } finally {
       setSaving(false);
     }
@@ -691,7 +685,7 @@ export default function TransactionsPage() {
       if (axios.isAxiosError(restoreError) && restoreError.response?.status === 410) {
         replacePendingUndoItems(pendingUndoItems.filter(({ id }) => id !== item.id));
       }
-      setError(errorMessage(restoreError));
+      setError(getApiErrorMessage(restoreError));
     } finally {
       setRestoringId(undefined);
       setSaving(false);
@@ -709,7 +703,7 @@ export default function TransactionsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(loadError));
+      setError(getApiErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
@@ -753,7 +747,7 @@ export default function TransactionsPage() {
                     key={item.id}
                     role="status"
                   >
-                    <span>برای بازگردانی {formatAmount(secondsRemaining)} ثانیه فرصت دارید.</span>
+                    <span>برای بازگردانی {formatInteger(secondsRemaining)} ثانیه فرصت دارید.</span>
                     <button
                       className="rounded-lg border border-amber-700 px-3 py-2 font-medium disabled:opacity-50"
                       disabled={saving || restoringId === item.id || secondsRemaining === 0}
@@ -856,7 +850,7 @@ export default function TransactionsPage() {
                       }`}
                     >
                       {transaction.type === 'income' ? '+' : '−'}
-                      {formatAmount(transaction.amount)} تومان
+                      {formatTomanAmount(transaction.amount)} تومان
                     </p>
                   </div>
                   <div className="mt-3 flex gap-2">
@@ -896,9 +890,9 @@ export default function TransactionsPage() {
                 قبلی
               </button>
               <span aria-live="polite">
-                صفحهٔ {formatAmount(page)} از {formatAmount(pagination.totalPages)}
+                صفحهٔ {formatInteger(page)} از {formatInteger(pagination.totalPages)}
                 {' · '}
-                {formatAmount(pagination.totalItems)} تراکنش
+                {formatInteger(pagination.totalItems)} تراکنش
               </span>
               <button
                 className="rounded-lg border border-slate-300 px-4 py-2 disabled:opacity-50"
@@ -925,7 +919,7 @@ export default function TransactionsPage() {
                 }`}
                 key={label}
               >
-                {formatAmount(index + 1)}. {label}
+                {formatInteger(index + 1)}. {label}
               </li>
             ))}
           </ol>
@@ -1048,7 +1042,7 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">مبلغ</dt>
-                    <dd className="font-semibold">{formatAmount(parseTomanAmount(amount) ?? 0)} تومان</dd>
+                    <dd className="font-semibold">{formatTomanAmount(parseTomanAmount(amount) ?? 0)} تومان</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">دسته</dt>

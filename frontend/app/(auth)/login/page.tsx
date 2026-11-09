@@ -2,15 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 import { ArrowRight } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { api } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { savePendingOtpFlow } from '@/lib/auth/otpFlow';
-
-interface ApiErrorBody {
-  error?: { message?: string };
-}
+import { normalizeDigits } from '@/lib/normalizeDigits';
 
 interface OtpRequestResponse {
   data: {
@@ -19,14 +16,8 @@ interface OtpRequestResponse {
   };
 }
 
-function toAsciiDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
-}
-
 function normalizePhone(value: string): string | null {
-  const compact = toAsciiDigits(value).replace(/[\s()-]/g, '');
+  const compact = normalizeDigits(value).replace(/[\s()-]/g, '');
   let canonical = compact;
 
   if (/^\+989\d{9}$/.test(compact)) canonical = `0${compact.slice(3)}`;
@@ -35,14 +26,6 @@ function normalizePhone(value: string): string | null {
   else if (/^9\d{9}$/.test(compact)) canonical = `0${compact}`;
 
   return /^09\d{9}$/.test(canonical) ? canonical : null;
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  if (error instanceof Error) return error.message;
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 export default function LoginPage() {
@@ -93,7 +76,7 @@ export default function LoginPage() {
       });
       router.push('/verify-otp');
     } catch (requestError) {
-      setError(errorMessage(requestError));
+      setError(getApiErrorMessage(requestError));
     } finally {
       requestInFlight.current = false;
       setLoading(false);

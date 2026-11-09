@@ -6,8 +6,17 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
-import { getJalaliParts, getTehranTodayIso, jalaliToGregorianIso } from '@/lib/jalaliDate';
-import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import {
+  formatJalaliMonth,
+  getCurrentJalaliMonthKey,
+  shiftJalaliMonthKey,
+} from '@/lib/jalaliDate';
+import {
+  formatTomanAmount,
+  formatTomanAmountInput,
+  parseTomanAmount,
+} from '@/lib/tomanAmount';
 
 type CategoryType = 'income' | 'expense' | 'both';
 
@@ -39,53 +48,7 @@ interface BudgetMonth {
   budgets: Budget[];
 }
 
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
 const MAX_BUDGET_AMOUNT = 1_000_000_000_000;
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
-}
-
-function formatAmount(amount: number | string): string {
-  return new Intl.NumberFormat('fa-IR').format(BigInt(amount));
-}
-
-function currentMonthKey(): string {
-  const { year, month } = getJalaliParts(getTehranTodayIso());
-  return `${String(month).padStart(2, '0')}-${year}`;
-}
-
-function shiftMonth(monthKey: string, amount: -1 | 1): string {
-  const [monthText, yearText] = monthKey.split('-');
-  let month = Number(monthText) + amount;
-  let year = Number(yearText);
-  if (month < 1) {
-    month = 12;
-    year -= 1;
-  } else if (month > 12) {
-    month = 1;
-    year += 1;
-  }
-  return year < 1200 || year > 1600
-    ? monthKey
-    : `${String(month).padStart(2, '0')}-${year}`;
-}
-
-function monthLabel(monthKey: string): string {
-  const [month, year] = monthKey.split('-').map(Number);
-  const firstDay = jalaliToGregorianIso({ year, month, day: 1 });
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${firstDay}T00:00:00.000Z`));
-}
 
 function percentageLabel(value: number): string {
   return `${new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 1 }).format(value)}٪`;
@@ -93,7 +56,7 @@ function percentageLabel(value: number): string {
 
 export default function BudgetsPage() {
   const router = useRouter();
-  const [monthKey, setMonthKey] = useState(currentMonthKey);
+  const [monthKey, setMonthKey] = useState(getCurrentJalaliMonthKey);
   const [monthData, setMonthData] = useState<BudgetMonth>();
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState('');
@@ -138,7 +101,7 @@ export default function BudgetsPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -168,7 +131,7 @@ export default function BudgetsPage() {
   function startEditing(budget: Budget) {
     setEditingBudget(budget);
     setCategoryId(budget.categoryId);
-    setLimitAmount(formatAmount(budget.limitAmount));
+    setLimitAmount(formatTomanAmount(budget.limitAmount));
     setError('');
     setNotice('');
   }
@@ -212,7 +175,7 @@ export default function BudgetsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(saveError));
+      setError(getApiErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
@@ -235,7 +198,7 @@ export default function BudgetsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(deleteError));
+      setError(getApiErrorMessage(deleteError));
     } finally {
       setDeletingId(undefined);
     }
@@ -269,17 +232,17 @@ export default function BudgetsPage() {
           <nav className="mt-6 flex items-center justify-between gap-3" aria-label="انتخاب ماه بودجه">
             <button
               className="rounded-lg border border-slate-300 px-4 py-2 font-medium"
-              disabled={shiftMonth(monthKey, -1) === monthKey}
-              onClick={() => setMonthKey((current) => shiftMonth(current, -1))}
+              disabled={shiftJalaliMonthKey(monthKey, -1) === monthKey}
+              onClick={() => setMonthKey((current) => shiftJalaliMonthKey(current, -1))}
               type="button"
             >
               ماه قبل
             </button>
-            <h2 className="text-lg font-bold" aria-live="polite">{monthLabel(monthKey)}</h2>
+            <h2 className="text-lg font-bold" aria-live="polite">{formatJalaliMonth(monthKey)}</h2>
             <button
               className="rounded-lg border border-slate-300 px-4 py-2 font-medium"
-              disabled={shiftMonth(monthKey, 1) === monthKey}
-              onClick={() => setMonthKey((current) => shiftMonth(current, 1))}
+              disabled={shiftJalaliMonthKey(monthKey, 1) === monthKey}
+              onClick={() => setMonthKey((current) => shiftJalaliMonthKey(current, 1))}
               type="button"
             >
               ماه بعد
@@ -288,7 +251,7 @@ export default function BudgetsPage() {
 
           <section className="mt-6" aria-labelledby="budget-list-heading">
             <h2 className="text-xl font-bold text-asoudeh-navy" id="budget-list-heading">
-              بودجه‌های {monthLabel(monthKey)}
+              بودجه‌های {formatJalaliMonth(monthKey)}
             </h2>
             {!monthData?.budgets.length ? (
               <p className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
@@ -343,16 +306,16 @@ export default function BudgetsPage() {
                       <dl className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div>
                           <dt className="app-muted text-sm">سقف بودجه</dt>
-                          <dd className="mt-1 font-semibold">{formatAmount(budget.limitAmount)} تومان</dd>
+                          <dd className="mt-1 font-semibold">{formatTomanAmount(budget.limitAmount)} تومان</dd>
                         </div>
                         <div>
                           <dt className="app-muted text-sm">هزینهٔ واقعی</dt>
-                          <dd className="mt-1 font-semibold">{formatAmount(budget.spentAmount)} تومان</dd>
+                          <dd className="mt-1 font-semibold">{formatTomanAmount(budget.spentAmount)} تومان</dd>
                         </div>
                         <div>
                           <dt className="app-muted text-sm">باقی‌مانده</dt>
                           <dd className={`mt-1 font-semibold ${budget.remainingAmount.startsWith('-') ? 'text-rose-700' : ''}`}>
-                            {formatAmount(budget.remainingAmount)} تومان
+                            {formatTomanAmount(budget.remainingAmount)} تومان
                           </dd>
                         </div>
                       </dl>
@@ -389,7 +352,7 @@ export default function BudgetsPage() {
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editingBudget ? 'ویرایش بودجه' : 'ثبت بودجهٔ ماهانه'}
           </h2>
-          <p className="app-muted mt-2">{monthLabel(monthKey)}</p>
+          <p className="app-muted mt-2">{formatJalaliMonth(monthKey)}</p>
           <form className="mt-5 space-y-4" onSubmit={saveBudget}>
             <div>
               <label className="mb-2 block font-medium" htmlFor="budgetCategory">دستهٔ هزینه</label>

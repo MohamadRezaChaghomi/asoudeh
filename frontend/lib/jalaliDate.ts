@@ -4,6 +4,16 @@ export interface JalaliDate {
   day: number;
 }
 
+function parseJalaliMonthKey(monthKey: string): { month: number; year: number } {
+  const match = /^(0[1-9]|1[0-2])-(\d{4})$/.exec(monthKey);
+  const month = Number(match?.[1]);
+  const year = Number(match?.[2]);
+  if (!match || year < 1200 || year > 1600) {
+    throw new RangeError('Invalid Jalali month.');
+  }
+  return { month, year };
+}
+
 export function formatJalaliYear(year: number): string {
   if (!Number.isInteger(year) || year < 0) {
     throw new RangeError('Invalid Jalali year.');
@@ -107,4 +117,34 @@ export function getTehranTodayIso(): string {
   const value = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? '';
   return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
+export function getCurrentJalaliMonthKey(): string {
+  const { year, month } = getJalaliParts(getTehranTodayIso());
+  return `${String(month).padStart(2, '0')}-${year}`;
+}
+
+export function shiftJalaliMonthKey(monthKey: string, delta: -1 | 1): string {
+  const { month: currentMonth, year: currentYear } = parseJalaliMonthKey(monthKey);
+  const timestamp = Date.UTC(currentYear, currentMonth - 1 + delta, 1);
+  const date = new Date(timestamp);
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  return year < 1200 || year > 1600 ? monthKey : `${month}-${year}`;
+}
+
+export function isCurrentOrFutureJalaliMonth(monthKey: string): boolean {
+  const month = parseJalaliMonthKey(monthKey);
+  const current = parseJalaliMonthKey(getCurrentJalaliMonthKey());
+  return month.year > current.year || (month.year === current.year && month.month >= current.month);
+}
+
+export function formatJalaliMonth(monthKey: string): string {
+  const { month, year } = parseJalaliMonthKey(monthKey);
+  const firstDay = jalaliToGregorianIso({ year, month, day: 1 });
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${firstDay}T00:00:00.000Z`));
 }

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
-import { getJalaliParts, getTehranTodayIso } from '@/lib/jalaliDate';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import { getCurrentJalaliMonthKey } from '@/lib/jalaliDate';
+import { formatTomanAmount } from '@/lib/tomanAmount';
 
 type Permission = 'VIEW_SUMMARY' | 'VIEW_TRANSACTIONS' | 'VIEW_REPORTS';
 
@@ -43,26 +45,6 @@ interface SeniorReport {
     amount: string;
     sharePercentage: number;
   }>;
-}
-
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
-function currentMonthKey(): string {
-  const { year, month } = getJalaliParts(getTehranTodayIso());
-  return `${String(month).padStart(2, '0')}-${year}`;
-}
-
-function formatAmount(amount: number | string): string {
-  return new Intl.NumberFormat('fa-IR').format(BigInt(amount));
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 export default function CaregiverSeniorPage() {
@@ -116,7 +98,7 @@ export default function CaregiverSeniorPage() {
           requests.push(
             api.get<{ success: true; data: { report: SeniorReport } }>(
               `/caregiver/seniors/${seniorId}/reports/monthly`,
-              { params: { month: currentMonthKey() } },
+              { params: { month: getCurrentJalaliMonthKey() } },
             ).then((response) => {
               if (active) setReport(response.data.data.report);
             }),
@@ -129,7 +111,7 @@ export default function CaregiverSeniorPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -164,10 +146,10 @@ export default function CaregiverSeniorPage() {
               <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-bold">خلاصهٔ مالی ماه {summary.period.monthKey}</h2>
                 <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div><dt className="app-muted">موجودی اولیه</dt><dd className="mt-1 font-bold">{formatAmount(summary.balance.initialBalance)} تومان</dd></div>
-                  <div><dt className="app-muted">درآمد این ماه</dt><dd className="mt-1 font-bold text-emerald-700">{formatAmount(summary.balance.income)} تومان</dd></div>
-                  <div><dt className="app-muted">هزینه این ماه</dt><dd className="mt-1 font-bold text-rose-700">{formatAmount(summary.balance.expenses)} تومان</dd></div>
-                  <div><dt className="app-muted">باقی‌مانده</dt><dd className="mt-1 font-bold">{formatAmount(summary.balance.remaining)} تومان</dd></div>
+                  <div><dt className="app-muted">موجودی اولیه</dt><dd className="mt-1 font-bold">{formatTomanAmount(summary.balance.initialBalance)} تومان</dd></div>
+                  <div><dt className="app-muted">درآمد این ماه</dt><dd className="mt-1 font-bold text-emerald-700">{formatTomanAmount(summary.balance.income)} تومان</dd></div>
+                  <div><dt className="app-muted">هزینه این ماه</dt><dd className="mt-1 font-bold text-rose-700">{formatTomanAmount(summary.balance.expenses)} تومان</dd></div>
+                  <div><dt className="app-muted">باقی‌مانده</dt><dd className="mt-1 font-bold">{formatTomanAmount(summary.balance.remaining)} تومان</dd></div>
                 </dl>
               </section>
             )}
@@ -175,15 +157,15 @@ export default function CaregiverSeniorPage() {
             {report && (
               <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-bold">گزارش ماه {report.monthKey}</h2>
-                <p className="mt-3">درآمد: {formatAmount(report.totals.income)} تومان</p>
-                <p className="mt-1">هزینه: {formatAmount(report.totals.expenses)} تومان</p>
+                <p className="mt-3">درآمد: {formatTomanAmount(report.totals.income)} تومان</p>
+                <p className="mt-1">هزینه: {formatTomanAmount(report.totals.expenses)} تومان</p>
                 <h3 className="mt-5 font-semibold">هزینه بر اساس دسته</h3>
                 {report.expensesByCategory.length ? (
                   <ul className="mt-2 divide-y divide-slate-200">
                     {report.expensesByCategory.map((item) => (
                       <li className="flex justify-between gap-3 py-3" key={item.categoryId}>
                         <span>{item.categoryName} · {new Intl.NumberFormat('fa-IR').format(item.sharePercentage)}٪</span>
-                        <span className="font-semibold">{formatAmount(item.amount)} تومان</span>
+                        <span className="font-semibold">{formatTomanAmount(item.amount)} تومان</span>
                       </li>
                     ))}
                   </ul>
@@ -205,7 +187,7 @@ export default function CaregiverSeniorPage() {
                           <p className="app-muted text-sm">{transaction.date} {transaction.note && `· ${transaction.note}`}</p>
                         </div>
                         <p className={transaction.type === 'income' ? 'font-semibold text-emerald-700' : 'font-semibold text-rose-700'}>
-                          {transaction.type === 'income' ? 'درآمد' : 'هزینه'} · {formatAmount(transaction.amount)} تومان
+                          {transaction.type === 'income' ? 'درآمد' : 'هزینه'} · {formatTomanAmount(transaction.amount)} تومان
                         </p>
                       </li>
                     ))}

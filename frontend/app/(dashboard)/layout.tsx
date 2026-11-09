@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { AppShell } from '@/components/layout/AppShell';
 import { SessionActivityMonitor } from '@/components/layout/SessionActivityMonitor';
 
@@ -12,13 +13,6 @@ interface AccessibilityProfile {
     fontScale: number;
     highContrast: boolean;
   };
-}
-
-function profileErrorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ error?: { message?: string } }>(error)) {
-    return error.response?.data.error?.message ?? 'تنظیمات دسترس‌پذیری بارگذاری نشد.';
-  }
-  return 'تنظیمات دسترس‌پذیری بارگذاری نشد.';
 }
 
 export default function DashboardLayout({
@@ -52,7 +46,7 @@ export default function DashboardLayout({
           router.replace('/login');
           return;
         }
-        setError(profileErrorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       }
     }
 

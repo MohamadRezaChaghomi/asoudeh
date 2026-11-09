@@ -3,6 +3,7 @@ import Budget from '../models/Budget.js';
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
 import { HttpError } from '../utils/httpError.js';
+import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import { decimalIntegerToBigInt } from '../utils/financialAmount.js';
 import {
   formatUtcDateOnly,
@@ -113,15 +114,6 @@ async function requireEligibleCategory(
   ) {
     throw new HttpError(400, 'BUDGET_CATEGORY_UNAVAILABLE', UNAVAILABLE_CATEGORY);
   }
-}
-
-function isDuplicateKey(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 11000
-  );
 }
 
 async function requireBudget(
@@ -238,7 +230,7 @@ export async function createBudget(
       userId: new mongoose.Types.ObjectId(userId),
     });
   } catch (error) {
-    if (isDuplicateKey(error)) {
+    if (isDuplicateKeyError(error)) {
       throw new HttpError(
         409,
         'BUDGET_ALREADY_EXISTS',
@@ -280,7 +272,7 @@ export async function updateBudget(
     }
   } catch (error) {
     if (error instanceof HttpError) throw error;
-    if (isDuplicateKey(error)) {
+    if (isDuplicateKeyError(error)) {
       throw new HttpError(
         409,
         'BUDGET_ALREADY_EXISTS',

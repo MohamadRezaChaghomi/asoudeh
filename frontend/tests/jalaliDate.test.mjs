@@ -4,7 +4,9 @@ import {
   getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
+  formatJalaliMonth,
   formatJalaliYear,
+  shiftJalaliMonthKey,
   jalaliToGregorianIso,
 } from '../lib/jalaliDate.ts';
 
@@ -43,4 +45,17 @@ test('formats Jalali years without grouping and pads years below four digits', (
   assert.equal(formatJalaliYear(1405), '۱۴۰۵');
   assert.equal(formatJalaliYear(999), '۰۹۹۹');
   assert.throws(() => formatJalaliYear(-1), RangeError);
+});
+
+test('shifts Jalali month keys across year boundaries and clamps supported years', () => {
+  assert.equal(shiftJalaliMonthKey('01-1405', -1), '12-1404');
+  assert.equal(shiftJalaliMonthKey('12-1405', 1), '01-1406');
+  assert.equal(shiftJalaliMonthKey('01-1200', -1), '01-1200');
+  assert.equal(shiftJalaliMonthKey('12-1600', 1), '12-1600');
+  assert.throws(() => shiftJalaliMonthKey('13-1405', 1), RangeError);
+});
+
+test('formats a Jalali month key using its Persian month and year', () => {
+  assert.equal(formatJalaliMonth('01-1405'), '۱۴۰۵ فروردین');
+  assert.throws(() => formatJalaliMonth('00-1405'), RangeError);
 });

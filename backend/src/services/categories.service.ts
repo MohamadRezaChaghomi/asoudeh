@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Category from '../models/Category.js';
 import { HttpError } from '../utils/httpError.js';
+import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import type {
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -51,17 +52,8 @@ function toCategoryResponse(category: CategoryRecord): CategoryResponse {
   };
 }
 
-function isDuplicateKey(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 11000
-  );
-}
-
 function throwCategoryConflict(error: unknown): never {
-  if (isDuplicateKey(error)) {
+  if (isDuplicateKeyError(error)) {
     throw new HttpError(409, 'CATEGORY_ALREADY_EXISTS', 'این دسته‌بندی از قبل وجود دارد.');
   }
 

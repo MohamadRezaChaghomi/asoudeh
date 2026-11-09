@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import AssistantRateLimit from '../models/AssistantRateLimit.js';
 import { HttpError } from '../utils/httpError.js';
+import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import { findRelevantKnowledge } from './assistantKnowledge.js';
 import { isAssistantConfigured, OpenAiCompatibleAssistantProvider } from './assistantProvider.js';
 
@@ -27,12 +28,7 @@ async function consumeAssistantRequest(userId: string, now: Date): Promise<void>
       .select('requestCount')
       .lean();
   } catch (error) {
-    if (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 11000
-    ) {
+    if (isDuplicateKeyError(error)) {
       result = await AssistantRateLimit.findOneAndUpdate(
         { _id: id },
         { $inc: { requestCount: 1 } },

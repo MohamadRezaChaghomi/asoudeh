@@ -7,7 +7,14 @@ import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { DeferredExpenseCategoryChart } from '@/components/reports/DeferredExpenseCategoryChart';
 import { api } from '@/lib/api/client';
-import { getJalaliParts, getTehranTodayIso, jalaliToGregorianIso } from '@/lib/jalaliDate';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import {
+  formatJalaliMonth,
+  getCurrentJalaliMonthKey,
+  isCurrentOrFutureJalaliMonth,
+  shiftJalaliMonthKey,
+} from '@/lib/jalaliDate';
+import { formatTomanAmount } from '@/lib/tomanAmount';
 
 interface MonthlyReport {
   monthKey: string;
@@ -31,60 +38,9 @@ interface MonthlyReport {
   }>;
 }
 
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
-function currentMonthKey(): string {
-  const { year, month } = getJalaliParts(getTehranTodayIso());
-  return `${String(month).padStart(2, '0')}-${year}`;
-}
-
-function shiftMonth(monthKey: string, delta: -1 | 1): string {
-  const [monthText, yearText] = monthKey.split('-');
-  let month = Number(monthText) + delta;
-  let year = Number(yearText);
-  if (month < 1) {
-    month = 12;
-    year -= 1;
-  } else if (month > 12) {
-    month = 1;
-    year += 1;
-  }
-  if (year < 1200 || year > 1600) return monthKey;
-  return `${String(month).padStart(2, '0')}-${year}`;
-}
-
-function isCurrentOrFutureMonth(monthKey: string): boolean {
-  const [month, year] = monthKey.split('-').map(Number);
-  const [currentMonth, currentYear] = currentMonthKey().split('-').map(Number);
-  return year > currentYear || (year === currentYear && month >= currentMonth);
-}
-
-function monthLabel(monthKey: string): string {
-  const [month, year] = monthKey.split('-').map(Number);
-  const startDate = jalaliToGregorianIso({ year, month, day: 1 });
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${startDate}T00:00:00.000Z`));
-}
-
-function formatAmount(amount: number | string): string {
-  return new Intl.NumberFormat('fa-IR').format(BigInt(amount));
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
-}
-
 export default function ReportsPage() {
   const router = useRouter();
-  const [monthKey, setMonthKey] = useState(currentMonthKey);
+  const [monthKey, setMonthKey] = useState(getCurrentJalaliMonthKey);
   const [report, setReport] = useState<MonthlyReport>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -107,7 +63,7 @@ export default function ReportsPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(loadError));
+      setError(getApiErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
@@ -130,7 +86,7 @@ export default function ReportsPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -173,17 +129,17 @@ export default function ReportsPage() {
           <button
             aria-label="ماه قبل"
             className="min-h-11 min-w-11 rounded-lg border border-slate-300 px-4 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            onClick={() => setMonthKey((value) => shiftMonth(value, -1))}
+            onClick={() => setMonthKey((value) => shiftJalaliMonthKey(value, -1))}
             type="button"
           >
             ماه قبل
           </button>
-          <p aria-live="polite" className="font-bold text-asoudeh-navy">{monthLabel(monthKey)}</p>
+          <p aria-live="polite" className="font-bold text-asoudeh-navy">{formatJalaliMonth(monthKey)}</p>
           <button
             aria-label="ماه بعد"
             className="min-h-11 min-w-11 rounded-lg border border-slate-300 px-4 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            disabled={isCurrentOrFutureMonth(monthKey)}
-            onClick={() => setMonthKey((value) => shiftMonth(value, 1))}
+            disabled={isCurrentOrFutureJalaliMonth(monthKey)}
+            onClick={() => setMonthKey((value) => shiftJalaliMonthKey(value, 1))}
             type="button"
           >
             ماه بعد
@@ -211,13 +167,13 @@ export default function ReportsPage() {
               <article className="app-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="app-muted text-sm">مجموع درآمد</h2>
                 <p className="mt-2 text-2xl font-bold text-emerald-700">
-                  {formatAmount(report.totals.income)} <span className="text-base">تومان</span>
+                  {formatTomanAmount(report.totals.income)} <span className="text-base">تومان</span>
                 </p>
               </article>
               <article className="app-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="app-muted text-sm">مجموع هزینه</h2>
                 <p className="mt-2 text-2xl font-bold text-rose-700">
-                  {formatAmount(report.totals.expenses)} <span className="text-base">تومان</span>
+                  {formatTomanAmount(report.totals.expenses)} <span className="text-base">تومان</span>
                 </p>
               </article>
               <article className="app-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -243,7 +199,7 @@ export default function ReportsPage() {
                     {report.expensesByCategory.map((item) => (
                       <li className="flex flex-wrap justify-between gap-2 py-3" key={item.categoryId}>
                         <span>{item.categoryName} · {new Intl.NumberFormat('fa-IR').format(item.sharePercentage)}٪</span>
-                        <span className="font-semibold">{formatAmount(item.amount)} تومان</span>
+                        <span className="font-semibold">{formatTomanAmount(item.amount)} تومان</span>
                       </li>
                     ))}
                   </ul>

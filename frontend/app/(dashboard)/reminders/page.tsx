@@ -6,14 +6,20 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
   getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
   formatJalaliYear,
+  getCurrentJalaliMonthKey,
   jalaliToGregorianIso,
 } from '@/lib/jalaliDate';
-import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
+import {
+  formatTomanAmount,
+  formatTomanAmountInput,
+  parseTomanAmount,
+} from '@/lib/tomanAmount';
 
 type Recurrence = 'none' | 'monthly' | 'yearly';
 
@@ -34,10 +40,6 @@ interface ReminderData {
   reminders: Reminder[];
 }
 
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
 const MAX_AMOUNT = 1_000_000_000_000;
 const MONTHS = [
   'فروردین',
@@ -54,27 +56,11 @@ const MONTHS = [
   'اسفند',
 ];
 
-function formatAmount(value: number | string): string {
-  return new Intl.NumberFormat('fa-IR').format(BigInt(value));
-}
-
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
     dateStyle: 'long',
     timeZone: 'UTC',
   }).format(new Date(`${value}T00:00:00.000Z`));
-}
-
-function currentMonthKey(): string {
-  const parts = getJalaliParts(getTehranTodayIso());
-  return `${String(parts.month).padStart(2, '0')}-${parts.year}`;
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 function JalaliDateInput({
@@ -178,7 +164,7 @@ export default function RemindersPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -191,8 +177,8 @@ export default function RemindersPage() {
 
   useEffect(() => {
     const refreshOnMonthChange = () => {
-      if (data?.monthKey && data.monthKey !== currentMonthKey()) {
-        void loadReminders().catch((loadError: unknown) => setError(errorMessage(loadError)));
+      if (data?.monthKey && data.monthKey !== getCurrentJalaliMonthKey()) {
+        void loadReminders().catch((loadError: unknown) => setError(getApiErrorMessage(loadError)));
       }
     };
     const interval = window.setInterval(refreshOnMonthChange, 60_000);
@@ -217,7 +203,7 @@ export default function RemindersPage() {
     setEditing(reminder);
     setTitle(reminder.title);
     setDate(reminder.date);
-    setAmount(reminder.amount === undefined ? '' : formatAmount(reminder.amount));
+    setAmount(reminder.amount === undefined ? '' : formatTomanAmount(reminder.amount));
     setRecurrence(reminder.recurrence);
     setError('');
     setNotice('');
@@ -261,7 +247,7 @@ export default function RemindersPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(saveError));
+      setError(getApiErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
@@ -285,7 +271,7 @@ export default function RemindersPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(completeError));
+      setError(getApiErrorMessage(completeError));
     } finally {
       setActionId(undefined);
     }
@@ -309,7 +295,7 @@ export default function RemindersPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(deleteError));
+      setError(getApiErrorMessage(deleteError));
     } finally {
       setActionId(undefined);
     }
@@ -370,7 +356,7 @@ export default function RemindersPage() {
                               : ' · بدون تکرار'}
                         </p>
                         {reminder.amount !== undefined && (
-                          <p className="mt-2 font-medium">{formatAmount(reminder.amount)} تومان</p>
+                          <p className="mt-2 font-medium">{formatTomanAmount(reminder.amount)} تومان</p>
                         )}
                         <p className={`mt-2 text-sm font-semibold ${completed ? 'text-emerald-700' : reminder.isActive ? 'text-asoudeh-teal' : 'app-muted'}`}>
                           وضعیت: {status}

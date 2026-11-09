@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Reminder from '../models/Reminder.js';
 import ReminderCompletion from '../models/ReminderCompletion.js';
 import { HttpError } from '../utils/httpError.js';
+import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import {
   formatJalaliMonthKey,
   formatUtcDateOnly,
@@ -314,12 +315,7 @@ export async function completeReminder(
       { upsert: true, new: true, setDefaultsOnInsert: true },
     ).lean()) as CompletionDocument;
   } catch (error) {
-    if (
-      !error ||
-      typeof error !== 'object' ||
-      !('code' in error) ||
-      error.code !== 11000
-    ) {
+    if (!isDuplicateKeyError(error)) {
       throw error;
     }
     const racedCompletion = (await ReminderCompletion.findOne({

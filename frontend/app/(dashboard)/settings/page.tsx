@@ -6,6 +6,8 @@ import Link from 'next/link';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import { normalizeDigits } from '@/lib/normalizeDigits';
 import { parseTomanAmount } from '@/lib/tomanAmount';
 
 interface Profile {
@@ -18,23 +20,6 @@ interface Profile {
     fontScale: number;
     highContrast: boolean;
   };
-}
-
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
-function toAsciiDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 export default function SettingsPage() {
@@ -77,7 +62,7 @@ export default function SettingsPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -104,7 +89,7 @@ export default function SettingsPage() {
       setError('موجودی اولیه را به‌صورت عدد صحیح و غیرمنفی وارد کنید.');
       return;
     }
-    const normalizedBirthYear = toAsciiDigits(birthYear).trim();
+    const normalizedBirthYear = normalizeDigits(birthYear).trim();
     if (normalizedBirthYear && !/^\d{4}$/.test(normalizedBirthYear)) {
       setError('سال تولد باید به‌صورت سال چهاررقمی شمسی وارد شود.');
       return;
@@ -123,7 +108,7 @@ export default function SettingsPage() {
       setProfile(updated);
       setNotice('تغییرات با موفقیت ذخیره شد.');
     } catch (saveError) {
-      setError(errorMessage(saveError));
+      setError(getApiErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
@@ -137,7 +122,7 @@ export default function SettingsPage() {
       await api.post('/auth/logout');
       router.replace('/login');
     } catch (logoutError) {
-      setError(errorMessage(logoutError));
+      setError(getApiErrorMessage(logoutError));
     } finally {
       setSaving(false);
     }
@@ -153,7 +138,7 @@ export default function SettingsPage() {
       setDeletionCode('');
       setDeletionNotice('اگر سرویس در دسترس باشد، کد تأیید به شماره همراه حساب ارسال می‌شود.');
     } catch (requestError) {
-      setDeletionError(errorMessage(requestError));
+      setDeletionError(getApiErrorMessage(requestError));
     } finally {
       setDeletionOtpSending(false);
     }
@@ -167,12 +152,12 @@ export default function SettingsPage() {
     try {
       await ensureCsrfToken();
       const response = await api.post('/auth/account-deletion', {
-        code: toAsciiDigits(deletionCode).trim(),
+        code: normalizeDigits(deletionCode).trim(),
       });
       setDeletionNotice(response.data.message ?? 'درخواست حذف حساب ثبت شد.');
       router.replace('/login');
     } catch (deletionErrorValue) {
-      setDeletionError(errorMessage(deletionErrorValue));
+      setDeletionError(getApiErrorMessage(deletionErrorValue));
     } finally {
       setDeletionSaving(false);
     }

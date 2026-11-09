@@ -15,6 +15,7 @@ import {
   secureStringEqual,
 } from '../utils/authCrypto.js';
 import { HttpError } from '../utils/httpError.js';
+import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import { logger } from '../utils/logger.js';
 import { sendSmsIrOtp, SmsIrProviderError } from './smsIrProvider.js';
 import type {
@@ -67,15 +68,6 @@ export interface PublicProfile {
 
 function retryAfterSeconds(until: Date, now: Date): number {
   return Math.max(1, Math.ceil((until.getTime() - now.getTime()) / 1000));
-}
-
-function isDuplicateKey(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 11000
-  );
 }
 
 async function consumeRateLimit(
@@ -140,7 +132,7 @@ async function consumeRateLimit(
       }
       return;
     } catch (error) {
-      if (error instanceof HttpError || !isDuplicateKey(error)) {
+      if (error instanceof HttpError || !isDuplicateKeyError(error)) {
         throw error;
       }
     }
@@ -316,7 +308,7 @@ export async function requestOtp(
     }
     challengeId = String(challenge._id);
   } catch (error) {
-    if (!isDuplicateKey(error)) throw error;
+    if (!isDuplicateKeyError(error)) throw error;
     return {
       message: OTP_MESSAGE,
       deliveryMode: 'sms',
@@ -568,7 +560,7 @@ export async function completeRegistration(
       initialBalance: 0,
     });
   } catch (error) {
-    if (isDuplicateKey(error)) {
+    if (isDuplicateKeyError(error)) {
       throw new HttpError(409, 'ACCOUNT_ALREADY_EXISTS', 'این شماره همراه قبلاً ثبت شده است.');
     }
     throw error;

@@ -10,6 +10,7 @@ import {
   getCurrentJalaliMonthRange,
 } from '../utils/jalaliMonth.js';
 import { HttpError } from '../utils/httpError.js';
+import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import { getMonthlyReport } from './reports.service.js';
 import { listTransactions } from './transactions.service.js';
 import type { TransactionQuery } from '../validators/transaction.validator.js';
@@ -129,15 +130,6 @@ function permissionsDocument(permissions: CaregiverPermission[]) {
   };
 }
 
-function isDuplicateKey(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 11000
-  );
-}
-
 async function writeAudit(
   actorId: string,
   targetUserId: string,
@@ -204,7 +196,7 @@ export async function inviteCaregiver(
       });
     }
   } catch (error) {
-    if (isDuplicateKey(error)) {
+    if (isDuplicateKeyError(error)) {
       throw new HttpError(409, 'CAREGIVER_LINK_EXISTS', 'برای این شماره دعوت فعال وجود دارد.');
     }
     throw error;

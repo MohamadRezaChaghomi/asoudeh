@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/errorMessage';
 
 type CategoryType = 'income' | 'expense' | 'both';
 
@@ -16,17 +17,6 @@ interface Category {
   icon: string;
   isActive: boolean;
   isDefault: boolean;
-}
-
-interface ApiErrorBody {
-  error?: { message?: string };
-}
-
-function errorMessage(error: unknown): string {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data.error?.message ?? 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
-  }
-  return 'خطای پیش‌بینی‌نشده‌ای رخ داد. دوباره تلاش کنید.';
 }
 
 function categoryTypeLabel(type: CategoryType): string {
@@ -62,7 +52,7 @@ export default function CategoriesPage() {
           router.replace('/login');
           return;
         }
-        setError(errorMessage(loadError));
+        setError(getApiErrorMessage(loadError));
       } finally {
         if (active) setLoading(false);
       }
@@ -100,7 +90,7 @@ export default function CategoriesPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(saveError));
+      setError(getApiErrorMessage(saveError));
     } finally {
       setSaving(false);
     }
@@ -127,7 +117,7 @@ export default function CategoriesPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(updateError));
+      setError(getApiErrorMessage(updateError));
     } finally {
       setSaving(false);
     }
@@ -162,7 +152,7 @@ export default function CategoriesPage() {
         router.replace('/login');
         return;
       }
-      setError(errorMessage(updateError));
+      setError(getApiErrorMessage(updateError));
     } finally {
       setSaving(false);
     }
