@@ -12,6 +12,7 @@ import {
   verifyOtp,
 } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/auth.js';
+import { requireCsrf } from '../middleware/csrf.js';
 import { requireOrigin } from '../middleware/requireOrigin.js';
 import { validateBody } from '../validators/validateBody.js';
 import {
@@ -25,8 +26,8 @@ import {
 const router = Router();
 export const profileRouter = Router();
 
-router.post('/otp/request', requireOrigin, validateBody(requestOtpSchema), requestOtp);
-router.post('/otp/verify', requireOrigin, validateBody(verifyOtpSchema), verifyOtp);
+router.post('/otp/request', requireOrigin, requireCsrf, validateBody(requestOtpSchema), requestOtp);
+router.post('/otp/verify', requireOrigin, requireCsrf, validateBody(verifyOtpSchema), verifyOtp);
 router.post(
   '/register/complete',
   requireOrigin,

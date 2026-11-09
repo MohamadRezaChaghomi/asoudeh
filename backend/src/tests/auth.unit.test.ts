@@ -1,5 +1,7 @@
+import express from 'express';
+import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { env } from '../config/env.js';
+import { env, parseEnvironment } from '../config/env.js';
 import {
   generateOtp,
   hashOtp,
@@ -12,6 +14,8 @@ import {
   updateProfileSchema,
   verifyOtpSchema,
 } from '../validators/auth.validator.js';
+import { validateBody } from '../validators/validateBody.js';
+import { errorHandler } from '../middleware/errorHandler.js';
 
 const originalHashSecret = env.authHashSecret;
 
@@ -41,6 +45,34 @@ describe('Iranian mobile normalization', () => {
 });
 
 describe('Authentication validation and hashing', () => {
+  it('fails fast on weak or conflicting production secrets and non-HTTPS origins', () => {
+    const productionConfig = {
+      NODE_ENV: 'production',
+      MONGODB_URI: 'mongodb://127.0.0.1:27017/asoudeh',
+      JWT_SECRET: 'j'.repeat(32),
+      AUTH_HASH_SECRET: 'h'.repeat(32),
+      CLIENT_URL: 'https://app.example.test',
+      OTP_DEV_SIMULATOR_ENABLED: 'false',
+    };
+
+    expect(parseEnvironment(productionConfig).NODE_ENV).toBe('production');
+    expect(() =>
+      parseEnvironment({ ...productionConfig, JWT_SECRET: 'short' }),
+    ).toThrow(/JWT_SECRET/);
+    expect(() =>
+      parseEnvironment({ ...productionConfig, AUTH_HASH_SECRET: 'j'.repeat(32) }),
+    ).toThrow(/distinct/);
+    expect(() =>
+      parseEnvironment({ ...productionConfig, CLIENT_URL: 'http://app.example.test' }),
+    ).toThrow(/HTTPS/);
+    expect(() =>
+      parseEnvironment({ ...productionConfig, OTP_DEV_SIMULATOR_ENABLED: 'true' }),
+    ).toThrow(/disabled/);
+    expect(() =>
+      parseEnvironment({ ...productionConfig, NODE_ENV: 'staging' }),
+    ).toThrow(/NODE_ENV/);
+  });
+
   it('generates only six-digit OTP values including leading zeroes', () => {
     for (let index = 0; index < 100; index += 1) {
       expect(generateOtp()).toMatch(/^\d{6}$/);
@@ -72,6 +104,40 @@ describe('Authentication validation and hashing', () => {
       'مریم',
     );
     expect(completeRegistrationSchema.safeParse({ displayName: ' ' }).success).toBe(false);
+    expect(requestOtpSchema.safeParse({ phone: '09123456789', extra: true }).success).toBe(
+      false,
+    );
+    expect(
+      updateProfileSchema.safeParse({
+        accessibilitySettings: { fontScale: 1, highContrast: false, extra: true },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects dotted and dollar-prefixed keys recursively before body validation', async () => {
+    const app = express();
+    app.use(express.json());
+    app.post('/otp', validateBody(requestOtpSchema), (_req, res) => res.sendStatus(204));
+    app.post('/profile', validateBody(updateProfileSchema), (_req, res) => res.sendStatus(204));
+    app.use(errorHandler);
+
+    const operatorKey = await request(app)
+      .post('/otp')
+      .send({ phone: '09123456789', $gt: '' });
+    const dottedNestedKey = await request(app)
+      .post('/profile')
+      .send({
+        accessibilitySettings: {
+          fontScale: 1,
+          highContrast: false,
+          'preferences.fontScale': 2,
+        },
+      });
+
+    expect(operatorKey.status).toBe(400);
+    expect(operatorKey.body.error.code).toBe('INVALID_BODY_KEY');
+    expect(dottedNestedKey.status).toBe(400);
+    expect(dottedNestedKey.body.error.code).toBe('INVALID_BODY_KEY');
   });
 
   it('accepts non-negative toman balances and supported accessibility preferences', () => {

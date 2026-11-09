@@ -32,16 +32,21 @@ const accessibilitySchema = z
     fontScale: z.union([z.literal(1), z.literal(1.25), z.literal(1.5), z.literal(2)]),
     highContrast: z.boolean(),
   })
-  .partial();
+  .partial()
+  .strict();
 
-export const requestOtpSchema = z.object({
-  phone: mobileSchema,
-});
+export const requestOtpSchema = z
+  .object({
+    phone: mobileSchema,
+  })
+  .strict();
 
-export const verifyOtpSchema = z.object({
-  phone: mobileSchema,
-  code: z.string().regex(/^\d{6}$/, 'کد تأیید باید ۶ رقم باشد.'),
-});
+export const verifyOtpSchema = z
+  .object({
+    phone: mobileSchema,
+    code: z.string().regex(/^\d{6}$/, 'کد تأیید باید ۶ رقم باشد.'),
+  })
+  .strict();
 
 export const accountDeletionSchema = z
   .object({
@@ -49,9 +54,11 @@ export const accountDeletionSchema = z
   })
   .strict();
 
-export const completeRegistrationSchema = z.object({
-  displayName: displayNameSchema,
-});
+export const completeRegistrationSchema = z
+  .object({
+    displayName: displayNameSchema,
+  })
+  .strict();
 
 export const updateProfileSchema = z
   .object({
@@ -65,6 +72,7 @@ export const updateProfileSchema = z
       .optional(),
     accessibilitySettings: accessibilitySchema.optional(),
   })
+  .strict()
   .refine((value) => Object.keys(value).length > 0, {
     message: 'حداقل یک مورد برای ویرایش انتخاب کنید.',
   });

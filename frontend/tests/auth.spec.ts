@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/auth/csrf', async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { csrfToken: 'test-csrf-token' } },
+    });
+  });
+});
+
 const profile = {
   id: 'test-user',
   displayName: 'مریم آسوده',
@@ -55,12 +63,14 @@ test('requires manual OTP entry and never returns or stores the development OTP'
 }) => {
   let verificationPayload: Record<string, string> | undefined;
   await page.route('**/api/v1/auth/otp/request', async (route) => {
+    expect(route.request().headers()['x-csrf-token']).toBe('test-csrf-token');
     expect(route.request().postDataJSON()).toEqual({ phone: profile.phone });
     await route.fulfill({
       json: { success: true, data: { resendAfterSeconds: 60 } },
     });
   });
   await page.route('**/api/v1/auth/otp/verify', async (route) => {
+    expect(route.request().headers()['x-csrf-token']).toBe('test-csrf-token');
     verificationPayload = route.request().postDataJSON() as Record<string, string>;
     await route.fulfill({
       json: { success: true, data: { registrationRequired: false } },
@@ -93,6 +103,7 @@ test('navigates to the OTP verification route after the request is accepted', as
   let requestCount = 0;
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     requestCount += 1;
+    expect(route.request().headers()['x-csrf-token']).toBe('test-csrf-token');
     await new Promise((resolve) => setTimeout(resolve, 250));
     await route.fulfill({
       json: {

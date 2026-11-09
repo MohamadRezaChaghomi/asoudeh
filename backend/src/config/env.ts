@@ -1,44 +1,114 @@
 import 'dotenv/config';
+import { z } from 'zod';
 
-const otpDevFallbackCode = process.env.OTP_DEV_FALLBACK_CODE ?? '123456';
-if (!/^\d{6}$/.test(otpDevFallbackCode)) {
-  throw new Error('OTP_DEV_FALLBACK_CODE must be exactly six digits.');
-}
+const environmentSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']),
+    MONGODB_URI: z.string().min(1),
+    JWT_SECRET: z.string().min(1),
+    AUTH_HASH_SECRET: z.string().optional(),
+    CLIENT_URL: z.string().url().default('http://localhost:3000'),
+    PORT: z.coerce.number().int().positive().default(5000),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(1),
+    OTP_DEV_SIMULATOR_ENABLED: z.enum(['true', 'false']).default('false'),
+    OTP_DEV_FALLBACK_CODE: z.string().regex(/^\d{6}$/).default('123456'),
+    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
+    SMSIR_MODE: z.enum(['sandbox', 'production']).default('sandbox'),
+    SMSIR_API_KEY: z.string().optional(),
+    SMSIR_VERIFY_TEMPLATE_ID: z.string().optional(),
+    AI_API_KEY: z.string().optional(),
+    AI_MODEL: z.string().optional(),
+    AI_BASE_URL: z.string().optional(),
+  })
+  .superRefine((config, context) => {
+    const clientUrl = new URL(config.CLIENT_URL);
+    if (
+      clientUrl.username ||
+      clientUrl.password ||
+      clientUrl.pathname !== '/' ||
+      clientUrl.search ||
+      clientUrl.hash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['CLIENT_URL'],
+        message: 'must be an origin without credentials, path, query, or fragment.',
+      });
+    }
 
-const otpResendCooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS ?? 60);
-if (!Number.isInteger(otpResendCooldownSeconds) || otpResendCooldownSeconds < 1) {
-  throw new Error('OTP_RESEND_COOLDOWN_SECONDS must be a positive integer.');
-}
+    if (config.NODE_ENV !== 'production') {
+      return;
+    }
 
-const smsIrMode = process.env.SMSIR_MODE ?? 'sandbox';
-if (smsIrMode !== 'sandbox' && smsIrMode !== 'production') {
-  throw new Error('SMSIR_MODE must be either sandbox or production.');
-}
+    if (Buffer.byteLength(config.JWT_SECRET, 'utf8') < 32) {
+      context.addIssue({
+        code: 'custom',
+        path: ['JWT_SECRET'],
+        message: 'must be at least 32 bytes in production.',
+      });
+    }
 
-function requireEnvironmentVariable(key: 'MONGODB_URI' | 'JWT_SECRET'): string {
-  const value = process.env[key];
+    if (!config.AUTH_HASH_SECRET || Buffer.byteLength(config.AUTH_HASH_SECRET, 'utf8') < 32) {
+      context.addIssue({
+        code: 'custom',
+        path: ['AUTH_HASH_SECRET'],
+        message: 'must be set to at least 32 bytes in production.',
+      });
+    } else if (config.AUTH_HASH_SECRET === config.JWT_SECRET) {
+      context.addIssue({
+        code: 'custom',
+        path: ['AUTH_HASH_SECRET'],
+        message: 'must be distinct from JWT_SECRET in production.',
+      });
+    }
 
-  if (!value) {
-    throw new Error(`Missing environment variable: ${key}`);
+    if (clientUrl.protocol !== 'https:') {
+      context.addIssue({
+        code: 'custom',
+        path: ['CLIENT_URL'],
+        message: 'must use HTTPS in production.',
+      });
+    }
+
+    if (config.OTP_DEV_SIMULATOR_ENABLED === 'true') {
+      context.addIssue({
+        code: 'custom',
+        path: ['OTP_DEV_SIMULATOR_ENABLED'],
+        message: 'must be disabled in production.',
+      });
+    }
+  });
+
+export function parseEnvironment(input: NodeJS.ProcessEnv) {
+  const parsed = environmentSchema.safeParse(input);
+
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map(({ path, message }) => `${path.join('.') || 'environment'} ${message}`)
+      .join('; ');
+    throw new Error(`Invalid environment configuration: ${issues}`);
   }
 
-  return value;
+  return parsed.data;
 }
 
+const config = parseEnvironment(process.env);
+
 export const env = {
-  port: Number(process.env.PORT || 5000),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  mongoUri: requireEnvironmentVariable('MONGODB_URI'),
-  jwtSecret: requireEnvironmentVariable('JWT_SECRET'),
-  authHashSecret: process.env.AUTH_HASH_SECRET,
-  otpDevSimulatorEnabled: process.env.OTP_DEV_SIMULATOR_ENABLED === 'true',
-  otpDevFallbackCode,
-  otpResendCooldownSeconds,
-  smsIrApiKey: process.env.SMSIR_API_KEY?.trim() || undefined,
-  smsIrVerifyTemplateId: process.env.SMSIR_VERIFY_TEMPLATE_ID?.trim() || '123456',
-  smsIrMode,
-  aiApiKey: process.env.AI_API_KEY?.trim() || undefined,
-  aiModel: process.env.AI_MODEL?.trim() || undefined,
-  aiBaseUrl: process.env.AI_BASE_URL?.trim() || undefined,
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
+  port: config.PORT,
+  nodeEnv: config.NODE_ENV,
+  mongoUri: config.MONGODB_URI,
+  jwtSecret: config.JWT_SECRET,
+  authHashSecret: config.AUTH_HASH_SECRET,
+  otpDevSimulatorEnabled: config.OTP_DEV_SIMULATOR_ENABLED === 'true',
+  otpDevFallbackCode: config.OTP_DEV_FALLBACK_CODE,
+  otpResendCooldownSeconds: config.OTP_RESEND_COOLDOWN_SECONDS,
+  trustProxyHops: config.TRUST_PROXY_HOPS,
+  smsIrApiKey: config.SMSIR_API_KEY?.trim() || undefined,
+  smsIrVerifyTemplateId: config.SMSIR_VERIFY_TEMPLATE_ID?.trim() || '123456',
+  smsIrMode: config.SMSIR_MODE,
+  aiApiKey: config.AI_API_KEY?.trim() || undefined,
+  aiModel: config.AI_MODEL?.trim() || undefined,
+  aiBaseUrl: config.AI_BASE_URL?.trim() || undefined,
+  clientUrl: new URL(config.CLIENT_URL).origin,
 };

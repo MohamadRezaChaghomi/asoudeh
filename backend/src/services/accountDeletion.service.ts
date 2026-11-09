@@ -20,9 +20,12 @@ async function purgeAccount(
 ): Promise<boolean> {
   const userId = user._id;
   const phoneHash = user.phone ? hashAuthValue('phone', user.phone) : null;
-  const phoneRateLimitId = user.phone
-    ? hashAuthValue('otp-rate-limit', `phone\0${user.phone}`)
-    : null;
+  const phoneRateLimitIds = user.phone
+    ? [
+        hashAuthValue('otp-rate-limit', `phone\0${user.phone}`),
+        hashAuthValue('otp-rate-limit', `verify-phone\0${user.phone}`),
+      ]
+    : [];
 
   await Promise.all([
     AuditLog.deleteMany({ $or: [{ actorId: userId }, { targetUserId: userId }] }),
@@ -37,7 +40,9 @@ async function purgeAccount(
     }),
     Category.deleteMany({ userId }),
     ...(phoneHash ? [OtpChallenge.deleteMany({ phoneHash })] : []),
-    ...(phoneRateLimitId ? [OtpRateLimit.deleteOne({ _id: phoneRateLimitId })] : []),
+    ...(phoneRateLimitIds.length
+      ? [OtpRateLimit.deleteMany({ _id: { $in: phoneRateLimitIds } })]
+      : []),
     Reminder.deleteMany({ userId }),
     ReminderCompletion.deleteMany({ userId }),
     Transaction.deleteMany({ userId }),

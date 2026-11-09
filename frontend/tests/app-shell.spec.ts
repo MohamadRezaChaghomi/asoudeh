@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
 
+test('serves the configured security response headers', async ({ page }) => {
+  const response = await page.goto('/');
+
+  expect(response?.headers()['content-security-policy']).toContain("default-src 'self'");
+  expect(response?.headers()['x-content-type-options']).toBe('nosniff');
+  expect(response?.headers()['x-frame-options']).toBe('DENY');
+  expect(response?.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin');
+});
+
 test('keeps all app routes reachable and preserves the selected theme', async ({ page }) => {
   const clientErrors: string[] = [];
   let activityRequests = 0;

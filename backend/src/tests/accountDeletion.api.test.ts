@@ -94,14 +94,35 @@ async function createIdentity(name: string): Promise<TestIdentity> {
 }
 
 async function issueOtp(phone: string): Promise<string> {
+  const csrf = await csrfForOtp();
   const response = await request(app)
     .post('/api/v1/auth/otp/request')
     .set('Origin', env.clientUrl)
+    .set('Cookie', `asoudeh_csrf=${csrf}`)
+    .set('X-CSRF-Token', csrf)
     .set('X-Forwarded-For', nextIp())
     .send({ phone });
   expect(response.status).toBe(200);
   expect(response.body.data.developmentOtp).toBeUndefined();
   return env.otpDevFallbackCode;
+}
+
+async function csrfForOtp(): Promise<string> {
+  const response = await request(app)
+    .get('/api/v1/auth/csrf')
+    .set('Origin', env.clientUrl);
+  return response.body.data.csrfToken as string;
+}
+
+async function verifyOtp(phone: string, code: string) {
+  const csrf = await csrfForOtp();
+  return request(app)
+    .post('/api/v1/auth/otp/verify')
+    .set('Origin', env.clientUrl)
+    .set('Cookie', `asoudeh_csrf=${csrf}`)
+    .set('X-CSRF-Token', csrf)
+    .set('X-Forwarded-For', nextIp())
+    .send({ phone, code });
 }
 
 function authenticatedDeletion(identity: TestIdentity, code: string) {
@@ -127,7 +148,6 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
       throw new Error('Account deletion tests require AUTH_HASH_SECRET.');
     }
 
-    app.set('trust proxy', true);
     await connectDB(testMongoUri);
     await Promise.all([
       AuditLog.init(),
@@ -162,9 +182,16 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     if (mongoose.connection.readyState === 1) {
       const userFilter = { $in: userIds };
       const phoneHashes = phones.map((phone) => hashAuthValue('phone', phone));
-      const phoneRateLimitIds = phones.map((phone) =>
-        hashAuthValue('otp-rate-limit', `phone\0${phone}`),
-      );
+      const rateLimitIds = [
+        ...phones.flatMap((phone) => [
+          hashAuthValue('otp-rate-limit', `phone\0${phone}`),
+          hashAuthValue('otp-rate-limit', `verify-phone\0${phone}`),
+        ]),
+        ...testIps.flatMap((ip) => [
+          hashAuthValue('otp-rate-limit', `ip\0${ip}`),
+          hashAuthValue('otp-rate-limit', `verify-ip\0${ip}`),
+        ]),
+      ];
       await Promise.all([
         AuditLog.deleteMany({
           $or: [{ actorId: userFilter }, { targetUserId: userFilter }],
@@ -179,7 +206,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
         }),
         Category.deleteMany({ _id: { $in: categoryIds } }),
         OtpChallenge.deleteMany({ phoneHash: { $in: phoneHashes } }),
-        OtpRateLimit.deleteMany({ _id: { $in: phoneRateLimitIds } }),
+        OtpRateLimit.deleteMany({ _id: { $in: rateLimitIds } }),
         Reminder.deleteMany({ _id: { $in: reminderIds } }),
         ReminderCompletion.deleteMany({ _id: { $in: completionIds } }),
         Transaction.deleteMany({ _id: { $in: transactionIds } }),
@@ -244,10 +271,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     expect(accessibleSeniors.body.data.seniors).toEqual([]);
 
     const nextCode = await issueOtp(identity.phone);
-    const pendingLogin = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', env.clientUrl)
-      .send({ phone: identity.phone, code: nextCode });
+    const pendingLogin = await verifyOtp(identity.phone, nextCode);
     expect(pendingLogin.status).toBe(409);
     expect(pendingLogin.body.error.code).toBe('ACCOUNT_DELETION_PENDING');
   });
@@ -315,6 +339,10 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     sessionIds.push(session._id);
     const phoneHash = hashAuthValue('phone', identity.phone);
     const rateLimitId = hashAuthValue('otp-rate-limit', `phone\0${identity.phone}`);
+    const verifyRateLimitId = hashAuthValue(
+      'otp-rate-limit',
+      `verify-phone\0${identity.phone}`,
+    );
     await Promise.all([
       OtpChallenge.create({
         phoneHash,
@@ -323,6 +351,11 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
       }),
       OtpRateLimit.create({
         _id: rateLimitId,
+        requestTimes: [new Date()],
+        expiresAt: new Date(Date.now() + 60_000),
+      }),
+      OtpRateLimit.create({
+        _id: verifyRateLimitId,
         requestTimes: [new Date()],
         expiresAt: new Date(Date.now() + 60_000),
       }),
@@ -349,6 +382,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     expect(await AuditLog.exists({ _id: auditLog._id })).toBeNull();
     expect(await OtpChallenge.exists({ phoneHash })).toBeNull();
     expect(await OtpRateLimit.exists({ _id: rateLimitId })).toBeNull();
+    expect(await OtpRateLimit.exists({ _id: verifyRateLimitId })).toBeNull();
     expect(await User.exists({ _id: otherUserId })).not.toBeNull();
   });
 });

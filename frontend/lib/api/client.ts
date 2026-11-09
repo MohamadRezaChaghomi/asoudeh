@@ -15,12 +15,13 @@ export const api = axios.create({
 });
 
 let csrfToken: string | undefined;
+let csrfPromise: Promise<string> | undefined;
 let refreshPromise: Promise<void> | undefined;
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   const method = config.method?.toLowerCase();
-  if (csrfToken && method && !['get', 'head', 'options'].includes(method)) {
-    config.headers.set('X-CSRF-Token', csrfToken);
+  if (method && !['get', 'head', 'options'].includes(method)) {
+    config.headers.set('X-CSRF-Token', await ensureCsrfToken());
   }
   return config;
 });
@@ -30,6 +31,10 @@ api.interceptors.response.use(
     const token = response.data?.data?.csrfToken;
     if (typeof token === 'string') {
       csrfToken = token;
+    }
+    if (response.config.url?.startsWith('/auth/logout')) {
+      csrfToken = undefined;
+      csrfPromise = undefined;
     }
     return response;
   },
@@ -74,14 +79,21 @@ api.interceptors.response.use(
 );
 
 export async function ensureCsrfToken(): Promise<string> {
-  if (!csrfToken) {
-    const response = await api.get('/auth/csrf');
-    const token = response.data?.data?.csrfToken;
-    if (typeof token !== 'string') {
-      throw new Error('سرور اعتبار درخواست را تأیید نکرد.');
-    }
-    csrfToken = token;
+  if (csrfToken) return csrfToken;
+  if (!csrfPromise) {
+    csrfPromise = api
+      .get('/auth/csrf')
+      .then((response) => {
+        const token = response.data?.data?.csrfToken;
+        if (typeof token !== 'string') {
+          throw new Error('سرور اعتبار درخواست را تأیید نکرد.');
+        }
+        csrfToken = token;
+        return token;
+      })
+      .finally(() => {
+        csrfPromise = undefined;
+      });
   }
-
-  return csrfToken;
+  return csrfPromise;
 }

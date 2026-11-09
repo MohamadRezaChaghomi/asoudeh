@@ -26,7 +26,7 @@ When the development simulator is disabled, the backend sends the OTP using the 
 
 For local development, OTP delivery is available through the simulator only when both `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true`. The simulator uses `OTP_DEV_FALLBACK_CODE`, but the OTP is never returned by the API or stored by the browser; the developer enters it manually. There is no quick-login bypass. With both delivery modes unavailable, requests return `503 OTP_DELIVERY_UNAVAILABLE` and never include a code. The generic response message does not disclose whether an account exists.
 
-Successful requests include `resendAfterSeconds` (default 60, configured by `OTP_RESEND_COOLDOWN_SECONDS`). A resend attempted during this interval returns `429 OTP_RATE_LIMITED` with a `Retry-After` header. Phone and IP rolling-window request limits also apply.
+Successful requests include `resendAfterSeconds` (default 60, configured by `OTP_RESEND_COOLDOWN_SECONDS`). A resend attempted during this interval returns the same generic success response without sending another OTP. Phone and IP rolling-window request limits also apply; phone-specific throttling uses the same generic response to avoid exposing per-phone state. IP-wide limits return `429` with `Retry-After`.
 
 ### `POST /api/v1/auth/otp/verify`
 Request body: `{ "phone": "09121234567", "code": "012345" }`.
@@ -86,7 +86,7 @@ Requires the access cookie, configured Origin, and CSRF cookie/header pair. Requ
 
 Success: `{ success: true, data: { answer, source? } }`. The answer is rendered as plain text by the frontend.
 
-All state-changing authentication and profile requests require the exact configured `CLIENT_URL` Origin. Cookie-authenticated requests also require the CSRF cookie echoed in `X-CSRF-Token`. Common failures include `400 VALIDATION_ERROR` or `OTP_INVALID`, `401 AUTHENTICATION_REQUIRED`/`SESSION_INVALID`/`SESSION_EXPIRED`/`REFRESH_TOKEN_REUSED`, `403 ORIGIN_REQUIRED`/`ORIGIN_NOT_ALLOWED`/`CSRF_VALIDATION_FAILED`, `409 ACCOUNT_ALREADY_EXISTS`/`ACCOUNT_DELETION_PENDING`, `429 OTP_RATE_LIMITED`/`OTP_TEMPORARILY_BLOCKED`, and `503 AUTH_NOT_CONFIGURED`/`OTP_DELIVERY_UNAVAILABLE`. Rate-limit responses include `Retry-After` when available. Errors use `{ success: false, error: { code, message, details? } }`.
+All state-changing authentication and profile requests, including OTP request and verification, require the exact configured `CLIENT_URL` Origin and the CSRF cookie echoed in `X-CSRF-Token`. Common failures include `400 VALIDATION_ERROR` or `OTP_INVALID`, `401 AUTHENTICATION_REQUIRED`/`SESSION_INVALID`/`SESSION_EXPIRED`/`REFRESH_TOKEN_REUSED`, `403 ORIGIN_REQUIRED`/`ORIGIN_NOT_ALLOWED`/`CSRF_VALIDATION_FAILED`, `409 ACCOUNT_ALREADY_EXISTS`/`ACCOUNT_DELETION_PENDING`, `429 OTP_RATE_LIMITED`/`OTP_TEMPORARILY_BLOCKED`, and `503 AUTH_NOT_CONFIGURED`/`OTP_DELIVERY_UNAVAILABLE`. Rate-limit responses include `Retry-After` when available. Errors use `{ success: false, error: { code, message, details? } }`.
 
 ### `GET /api/v1/categories`
 Requires the access cookie. Returns the authenticated user’s personal categories and system categories (`userId: null`) as `{ success: true, data: { categories } }`. Each item contains `id`, `name`, `type`, `icon`, `isActive`, and `isDefault`. No system categories are seeded by this API.

@@ -157,6 +157,12 @@ export default function DashboardPage() {
               <p className="app-muted mt-2 text-sm">
                 موجودی اولیه + درآمدهای ماه − هزینه‌های ماه
               </p>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-sm">
+                <span className="app-muted">موجودی آغاز ماه</span>
+                <span className="font-semibold">
+                  {formatAmount(dashboard.balance.initialBalance)} تومان
+                </span>
+              </div>
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2">

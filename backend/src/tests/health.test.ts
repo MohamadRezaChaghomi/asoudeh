@@ -2,6 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import app from '../app.js';
+import { env } from '../config/env.js';
 import * as database from '../config/db.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 
@@ -63,6 +64,35 @@ describe('HTTP application baseline', () => {
     });
   });
 
+  it('sets API security headers and trusts the configured proxy hop count', async () => {
+    const response = await request(app).get('/api/v1/health');
+
+    expect(app.get('trust proxy')).toBe(env.trustProxyHops);
+    expect(response.headers['content-security-policy']).toContain("default-src 'self'");
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBeDefined();
+  });
+
+  it('caps JSON bodies and responds with 413', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/otp/request')
+      .set('Content-Type', 'application/json')
+      .send({ payload: 'x'.repeat(1024 * 1024 + 1) });
+
+    expect(response.status).toBe(413);
+    expect(response.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+  });
+
+  it('does not log request query values', async () => {
+    const output = vi.spyOn(process.stdout, 'write');
+
+    await request(app).get('/api/v1/health?phone=log-sentinel');
+
+    expect(output.mock.calls.map(([chunk]) => String(chunk)).join('')).not.toContain(
+      'log-sentinel',
+    );
+  });
+
   it('returns the standard not-found response for unknown routes', async () => {
     const response = await request(app).get('/unknown-route');
 
@@ -75,13 +105,15 @@ describe('HTTP application baseline', () => {
 
   it('returns a generic server error without exposing internal details', async () => {
     const errorApp = express();
-    errorApp.get('/error', (_req, _res, next) => {
+    errorApp.post('/error', (_req, _res, next) => {
       next(new Error('internal database details'));
     });
     errorApp.use(errorHandler);
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const response = await request(errorApp).get('/error');
+    const response = await request(errorApp)
+      .post('/error')
+      .send({ phone: '09121234567', code: '123456', token: 'secret-token' });
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
@@ -94,6 +126,9 @@ describe('HTTP application baseline', () => {
     expect(JSON.stringify(response.body)).not.toContain('internal database details');
     expect(errorLog).toHaveBeenCalledOnce();
     expect(String(errorLog.mock.calls[0][0])).not.toContain('internal database details');
+    expect(String(errorLog.mock.calls[0][0])).not.toContain('09121234567');
+    expect(String(errorLog.mock.calls[0][0])).not.toContain('123456');
+    expect(String(errorLog.mock.calls[0][0])).not.toContain('secret-token');
     expect(JSON.parse(String(errorLog.mock.calls[0][0]))).toMatchObject({
       level: 'error',
       event: 'http_error',

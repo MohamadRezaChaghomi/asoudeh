@@ -27,6 +27,8 @@ const OTP_BLOCK_MS = 10 * 60 * 1000;
 const OTP_REQUEST_WINDOW_MS = 15 * 60 * 1000;
 const OTP_PHONE_REQUEST_LIMIT = 3;
 const OTP_IP_REQUEST_LIMIT = 10;
+const OTP_PHONE_VERIFY_LIMIT = 5;
+const OTP_IP_VERIFY_LIMIT = 20;
 const REGISTRATION_LIFETIME_SECONDS = 5 * 60;
 const ACCESS_TOKEN_LIFETIME_SECONDS = 15 * 60;
 const REFRESH_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
@@ -76,7 +78,7 @@ function isDuplicateKey(error: unknown): boolean {
 }
 
 async function consumeRateLimit(
-  scope: 'phone' | 'ip',
+  scope: 'phone' | 'ip' | 'verify-phone' | 'verify-ip',
   subject: string,
   maximum: number,
   now: Date,
@@ -229,25 +231,24 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
     throw new HttpError(400, 'INVALID_PHONE', 'شماره همراه معتبر ایرانی وارد کنید.');
   }
   const phoneHash = hashAuthValue('phone', normalizedPhone);
+  await consumeRateLimit('ip', ipAddress, OTP_IP_REQUEST_LIMIT, now);
   const current = await OtpChallenge.findOne({ phoneHash });
 
   if (current?.blockedUntil && current.blockedUntil > now) {
-    throw new HttpError(
-      429,
-      'OTP_TEMPORARILY_BLOCKED',
-      'تلاش‌های کد تأیید موقتاً مسدود شده‌اند. کمی بعد دوباره تلاش کنید.',
-      retryAfterSeconds(current.blockedUntil, now),
-    );
+    return {
+      message: OTP_MESSAGE,
+      deliveryMode: 'sms',
+      resendAfterSeconds: env.otpResendCooldownSeconds,
+    };
   }
 
   const resendCooldownMs = env.otpResendCooldownSeconds * 1000;
   if (current?.lastSentAt && now.getTime() - current.lastSentAt.getTime() < resendCooldownMs) {
-    throw new HttpError(
-      429,
-      'OTP_RATE_LIMITED',
-      'برای ارسال دوباره کد کمی صبر کنید.',
-      retryAfterSeconds(new Date(current.lastSentAt.getTime() + resendCooldownMs), now),
-    );
+    return {
+      message: OTP_MESSAGE,
+      deliveryMode: 'sms',
+      resendAfterSeconds: env.otpResendCooldownSeconds,
+    };
   }
 
   const useDevelopmentSimulator =
@@ -255,9 +256,21 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
 
   const code = useDevelopmentSimulator ? env.otpDevFallbackCode : generateOtp();
   const codeHash = hashOtp(normalizedPhone, code);
-  await consumeRateLimit('phone', normalizedPhone, OTP_PHONE_REQUEST_LIMIT, now);
-  await consumeRateLimit('ip', ipAddress, OTP_IP_REQUEST_LIMIT, now);
-
+  try {
+    await consumeRateLimit('phone', normalizedPhone, OTP_PHONE_REQUEST_LIMIT, now);
+  } catch (error) {
+    if (
+      error instanceof HttpError &&
+      error.code === 'OTP_RATE_LIMITED'
+    ) {
+      return {
+        message: OTP_MESSAGE,
+        deliveryMode: 'sms',
+        resendAfterSeconds: env.otpResendCooldownSeconds,
+      };
+    }
+    throw error;
+  }
   const requestId = generateId();
   const lockExpiresAt = new Date(now.getTime() + OTP_SEND_LOCK_MS);
   let challengeId = '';
@@ -291,22 +304,20 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
     if (!challenge) {
-      throw new HttpError(
-        429,
-        'OTP_RATE_LIMITED',
-        'درخواست کد در حال پردازش است؛ کمی بعد دوباره تلاش کنید.',
-        Math.ceil(OTP_SEND_LOCK_MS / 1000),
-      );
+      return {
+        message: OTP_MESSAGE,
+        deliveryMode: 'sms',
+        resendAfterSeconds: env.otpResendCooldownSeconds,
+      };
     }
     challengeId = String(challenge._id);
   } catch (error) {
     if (!isDuplicateKey(error)) throw error;
-    throw new HttpError(
-      429,
-      'OTP_RATE_LIMITED',
-      'درخواست کد در حال پردازش است؛ کمی بعد دوباره تلاش کنید.',
-      Math.ceil(OTP_SEND_LOCK_MS / 1000),
-    );
+    return {
+      message: OTP_MESSAGE,
+      deliveryMode: 'sms',
+      resendAfterSeconds: env.otpResendCooldownSeconds,
+    };
   }
 
   const resetAttempts =
@@ -398,7 +409,7 @@ async function recordFailedAttempt(
     $cond: [attemptWindowActive, previousAttempts, 0],
   };
   const attemptsAfter = { $add: [attemptsBefore, 1] };
-  const result = await OtpChallenge.findOneAndUpdate(
+  await OtpChallenge.findOneAndUpdate(
     {
       phoneHash,
       otpHash: codeHash,
@@ -426,33 +437,22 @@ async function recordFailedAttempt(
     { new: true },
   ).lean();
 
-  if (result?.failedAttempts === 5) {
-    throw new HttpError(
-      429,
-      'OTP_TEMPORARILY_BLOCKED',
-      'پس از پنج تلاش ناموفق، ورود برای ۱۰ دقیقه مسدود شد.',
-      Math.ceil(OTP_BLOCK_MS / 1000),
-    );
-  }
-
   throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
 }
 
 export async function verifyOtp(
   phone: string,
   code: string,
+  ipAddress: string,
 ): Promise<OtpVerificationResult> {
   const now = new Date();
   const phoneHash = hashAuthValue('phone', phone);
+  await consumeRateLimit('verify-phone', phone, OTP_PHONE_VERIFY_LIMIT, now);
+  await consumeRateLimit('verify-ip', ipAddress, OTP_IP_VERIFY_LIMIT, now);
   const challenge = await OtpChallenge.findOne({ phoneHash });
 
   if (challenge?.blockedUntil && challenge.blockedUntil > now) {
-    throw new HttpError(
-      429,
-      'OTP_TEMPORARILY_BLOCKED',
-      'تلاش‌های کد تأیید موقتاً مسدود شده‌اند. کمی بعد دوباره تلاش کنید.',
-      retryAfterSeconds(challenge.blockedUntil, now),
-    );
+    throw new HttpError(400, 'OTP_INVALID', 'کد تأیید معتبر نیست یا منقضی شده است.');
   }
 
   if (!challenge?.otpHash || !challenge.codeExpiresAt || challenge.codeExpiresAt <= now) {

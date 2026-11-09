@@ -10,7 +10,7 @@ import OtpChallenge from '../models/OtpChallenge.js';
 import OtpRateLimit from '../models/OtpRateLimit.js';
 import User from '../models/User.js';
 import { hashAuthValue } from '../utils/authCrypto.js';
-import { revokeRefreshSession } from '../services/auth.service.js';
+import { rotateRefreshToken, revokeRefreshSession } from '../services/auth.service.js';
 import { connectDB } from '../config/db.js';
 
 const testMongoUri = process.env.TEST_MONGODB_URI;
@@ -62,12 +62,69 @@ async function createUniquePhone(): Promise<string> {
   throw new Error('Unable to allocate a unique isolated test phone number.');
 }
 
-function otpRequest(phone: string, ip = nextTestIp()) {
+async function csrfForRequest(): Promise<string> {
+  const response = await request(app)
+    .get('/api/v1/auth/csrf')
+    .set('Origin', origin);
+  return cookieHeader(response, 'asoudeh_csrf');
+}
+
+async function csrfForAgent(agent: ReturnType<typeof request.agent>): Promise<string> {
+  const response = await agent
+    .get('/api/v1/auth/csrf')
+    .set('Origin', origin);
+  return cookieHeader(response, 'asoudeh_csrf');
+}
+
+async function otpRequest(phone: string, ip = nextTestIp()) {
+  const csrf = await csrfForRequest();
   return request(app)
     .post('/api/v1/auth/otp/request')
     .set('Origin', origin)
+    .set('Cookie', `asoudeh_csrf=${csrf}`)
+    .set('X-CSRF-Token', csrf)
     .set('X-Forwarded-For', ip)
     .send({ phone });
+}
+
+async function otpVerify(phone: string, code: string, ip = nextTestIp()) {
+  const csrf = await csrfForRequest();
+  return request(app)
+    .post('/api/v1/auth/otp/verify')
+    .set('Origin', origin)
+    .set('Cookie', `asoudeh_csrf=${csrf}`)
+    .set('X-CSRF-Token', csrf)
+    .set('X-Forwarded-For', ip)
+    .send({ phone, code });
+}
+
+async function agentOtpRequest(
+  agent: ReturnType<typeof request.agent>,
+  phone: string,
+  ip = nextTestIp(),
+) {
+  const csrf = await csrfForAgent(agent);
+  return agent
+    .post('/api/v1/auth/otp/request')
+    .set('Origin', origin)
+    .set('X-CSRF-Token', csrf)
+    .set('X-Forwarded-For', ip)
+    .send({ phone });
+}
+
+async function agentOtpVerify(
+  agent: ReturnType<typeof request.agent>,
+  phone: string,
+  code: string,
+  ip = nextTestIp(),
+) {
+  const csrf = await csrfForAgent(agent);
+  return agent
+    .post('/api/v1/auth/otp/verify')
+    .set('Origin', origin)
+    .set('X-CSRF-Token', csrf)
+    .set('X-Forwarded-For', ip)
+    .send({ phone, code });
 }
 
 function cookieValue(response: request.Response, name: string): string | undefined {
@@ -102,7 +159,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       throw new Error('Authentication API tests require AUTH_HASH_SECRET.');
     }
 
-    app.set('trust proxy', true);
+    expect(app.get('trust proxy')).toBe(env.trustProxyHops);
     await connectDB(testMongoUri);
     await Promise.all([
       AuthSession.init(),
@@ -129,7 +186,13 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phoneHashes = testPhones.map((phone) => hashAuthValue('phone', phone));
     const rateIds = [
       ...testPhones.map((phone) => hashAuthValue('otp-rate-limit', `phone\0${phone}`)),
+      ...testPhones.map((phone) =>
+        hashAuthValue('otp-rate-limit', `verify-phone\0${phone}`),
+      ),
       ...Array.from(testIps, (ip) => hashAuthValue('otp-rate-limit', `ip\0${ip}`)),
+      ...Array.from(testIps, (ip) =>
+        hashAuthValue('otp-rate-limit', `verify-ip\0${ip}`),
+      ),
     ];
     const users = await User.find({ phone: { $in: testPhones } }).select('_id').lean();
 
@@ -171,6 +234,21 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(invalidBodyFromBadOrigin.status).toBe(403);
   });
 
+  it('requires Origin and CSRF on OTP state-changing routes', async () => {
+    const phone = await createUniquePhone();
+    const requestWithoutCsrf = await request(app)
+      .post('/api/v1/auth/otp/request')
+      .set('Origin', origin)
+      .send({ phone });
+    const verificationWithoutCsrf = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .send({ phone, code: env.otpDevFallbackCode });
+
+    expect(requestWithoutCsrf.status).toBe(403);
+    expect(verificationWithoutCsrf.status).toBe(403);
+  });
+
   it('issues a readable CSRF cookie only to the configured Origin', async () => {
     const response = await request(app)
       .get('/api/v1/auth/csrf')
@@ -201,10 +279,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       4 * 60 * 1000,
     );
 
-    const verified = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    const verified = await otpVerify(phone, env.otpDevFallbackCode);
     expect(verified.status).toBe(200);
     expect(verified.body.data.registrationRequired).toBe(true);
 
@@ -219,10 +294,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     env.nodeEnv = 'production';
     env.otpDevSimulatorEnabled = true;
     const productionResponse = await otpRequest(await createUniquePhone());
-    const replayedInProduction = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone: fallbackOnlyPhone, code: env.otpDevFallbackCode });
+    const replayedInProduction = await otpVerify(fallbackOnlyPhone, env.otpDevFallbackCode);
 
     expect(disabledResponse.status).toBe(503);
     expect(JSON.stringify(disabledResponse.body)).not.toContain(env.otpDevFallbackCode);
@@ -239,10 +311,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(response.status).toBe(200);
     expect(response.body.data.developmentQuickLogin).toBeUndefined();
     expect(JSON.stringify(response.body)).not.toContain(env.otpDevFallbackCode);
-    const verified = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    const verified = await otpVerify(phone, env.otpDevFallbackCode);
     expect(verified.status).toBe(200);
   });
 
@@ -284,10 +353,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(challenge?.deliveryMode).toBe('sms');
     expect(challenge?.otpHash).toBe(hashAuthValue('otp', `${phone}\0${sentCode}`));
 
-    const verified = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: sentCode });
+    const verified = await otpVerify(phone, sentCode);
     expect(verified.status).toBe(200);
     expect(verified.body.data.registrationRequired).toBe(true);
   });
@@ -315,10 +381,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     }).lean();
     expect(challenge?.otpHash).toBeNull();
 
-    const verified = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    const verified = await otpVerify(phone, env.otpDevFallbackCode);
     expect(verified.status).toBe(400);
   });
 
@@ -332,9 +395,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
 
       expect(initialRequest.status).toBe(200);
       expect(initialRequest.body.data.resendAfterSeconds).toBe(60);
-      expect(earlyResend.status).toBe(429);
-      expect(earlyResend.body.error.code).toBe('OTP_RATE_LIMITED');
-      expect(earlyResend.headers['retry-after']).toBe('60');
+      expect(earlyResend.status).toBe(200);
+      expect(earlyResend.body).toEqual(initialRequest.body);
     } finally {
       env.otpResendCooldownSeconds = 0;
     }
@@ -342,14 +404,18 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
 
   it('limits OTP requests to three per phone in a rolling 15-minute window', async () => {
     const phone = await createUniquePhone();
+    const phoneRateLimitId = hashAuthValue('otp-rate-limit', `phone\0${phone}`);
 
-    expect((await otpRequest(phone)).status).toBe(200);
+    const initialRequest = await otpRequest(phone);
+    expect(initialRequest.status).toBe(200);
     expect((await otpRequest(phone)).status).toBe(200);
     expect((await otpRequest(phone)).status).toBe(200);
     const limited = await otpRequest(phone);
 
-    expect(limited.status).toBe(429);
-    expect(limited.headers['retry-after']).toBeTruthy();
+    expect(limited.status).toBe(200);
+    expect(limited.body).toEqual(initialRequest.body);
+    expect(limited.body.error).toBeUndefined();
+    expect((await OtpRateLimit.findById(phoneRateLimitId).lean())?.requestTimes).toHaveLength(3);
   });
 
   it('limits OTP requests to ten per IP in a rolling 15-minute window', async () => {
@@ -369,6 +435,22 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const ipRateLimitId = hashAuthValue('otp-rate-limit', `ip\0${ip}`);
     const retained = await OtpRateLimit.findById(ipRateLimitId).lean();
     expect(retained?.requestTimes).toHaveLength(10);
+  });
+
+  it('limits OTP verification attempts by hashed phone and trusted client IP', async () => {
+    const ip = nextTestIp();
+
+    for (let index = 0; index < 20; index += 1) {
+      expect((await otpVerify(await createUniquePhone(), '000000', ip)).status).toBe(400);
+    }
+
+    const limited = await otpVerify(await createUniquePhone(), '000000', ip);
+    const ipRateLimitId = hashAuthValue('otp-rate-limit', `verify-ip\0${ip}`);
+    const storedLimit = await OtpRateLimit.findById(ipRateLimitId).lean();
+    expect(limited.status).toBe(429);
+    expect(storedLimit?.requestTimes).toHaveLength(20);
+    expect(ipRateLimitId).not.toContain(ip);
+    expect(JSON.stringify(storedLimit)).not.toContain(ip);
   });
 
   it('prunes timestamps outside the rolling request window', async () => {
@@ -402,10 +484,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       expect(
         (
-          await request(app)
-            .post('/api/v1/auth/otp/verify')
-            .set('Origin', origin)
-            .send({ phone, code: '000000' === firstCode ? '000001' : '000000' })
+          await otpVerify(phone, '000000' === firstCode ? '000001' : '000000')
         ).status,
       ).toBe(400);
     }
@@ -414,22 +493,28 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     await otpRequest(phone);
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const response = await request(app)
-        .post('/api/v1/auth/otp/verify')
-        .set('Origin', origin)
-        .send({ phone, code: '999999' === secondCode ? '999998' : '999999' });
+      const response = await otpVerify(
+        phone,
+        '999999' === secondCode ? '999998' : '999999',
+      );
       expect(response.status).toBe(400);
     }
 
-    const fifthFailure = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: secondCode === '123456' ? '123457' : '123456' });
-    expect(fifthFailure.status).toBe(429);
+    const fifthFailure = await otpVerify(
+      phone,
+      secondCode === '123456' ? '123457' : '123456',
+    );
+    expect(fifthFailure.status).toBe(400);
+    expect(fifthFailure.body.error.code).toBe('OTP_INVALID');
+    const blockedChallenge = await OtpChallenge.findOne({
+      phoneHash: hashAuthValue('phone', phone),
+    }).lean();
+    expect(blockedChallenge?.blockedUntil?.getTime()).toBeGreaterThan(Date.now());
+    const unknownPhoneFailure = await otpVerify(await createUniquePhone(), '000000');
+    expect(fifthFailure.body).toEqual(unknownPhoneFailure.body);
 
     const resendDuringBlock = await otpRequest(phone);
-    expect(resendDuringBlock.status).toBe(429);
-    expect(resendDuringBlock.headers['retry-after']).toBeTruthy();
+    expect(resendDuringBlock.status).toBe(200);
   });
 
   it('rejects expired OTPs', async () => {
@@ -442,10 +527,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       { $set: { codeExpiresAt: new Date(Date.now() - 1) } },
     );
 
-    const response = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code });
+    const response = await otpVerify(phone, code);
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('OTP_INVALID');
@@ -454,15 +536,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
   it('registers a verified phone, stores the profile, and sets secure session cookies', async () => {
     const phone = await createUniquePhone();
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
 
     expect(verified.body.data.registrationRequired).toBe(true);
     expect(cookieValue(verified, 'asoudeh_access')).toBeUndefined();
@@ -523,23 +598,13 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       initialBalance: 1000,
     });
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
 
     expect(verified.body.data.registrationRequired).toBe(false);
     expect(setCookie(verified, 'asoudeh_access')).not.toContain('Secure');
     const originalAccess = cookieHeader(verified, 'asoudeh_access');
-    const replayedOtp = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    const replayedOtp = await otpVerify(phone, env.otpDevFallbackCode);
     expect(replayedOtp.status).toBe(400);
     expect(cookieValue(verified, 'asoudeh_registration')).toBeUndefined();
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
@@ -598,15 +663,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر نشست', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
     const oldRefresh = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const absoluteExpiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
@@ -645,19 +703,36 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(family.every((session) => session.revokedAt)).toBe(true);
   });
 
+  it('revokes a refresh family when concurrent rotations reuse the same token', async () => {
+    const phone = await createUniquePhone();
+    await User.create({ name: 'کاربر رقابت نشست', phone, initialBalance: 0 });
+    const sent = await otpRequest(phone);
+    expect(sent.status).toBe(200);
+    const verified = await otpVerify(phone, env.otpDevFallbackCode);
+    const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
+    const original = await AuthSession.findOne({
+      tokenHash: hashAuthValue('refresh-token', refreshToken),
+    });
+    if (!original) throw new Error('Expected a session to be created.');
+
+    const results = await Promise.allSettled([
+      rotateRefreshToken(refreshToken),
+      rotateRefreshToken(refreshToken),
+    ]);
+    const family = await AuthSession.find({ familyId: original.familyId });
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(family.length).toBeGreaterThanOrEqual(2);
+    expect(family.every((session) => session.revokedAt)).toBe(true);
+  });
+
   it('extends idle expiry only after an authenticated, CSRF-protected activity signal', async () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر فعالیت', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
     const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const tokenHash = hashAuthValue('refresh-token', refreshToken);
@@ -691,15 +766,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر منقضی', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
     const refreshToken = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const tokenHash = hashAuthValue('refresh-token', refreshToken);
@@ -725,15 +793,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر رقابت', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
     const oldRefresh = cookieHeader(verified, 'asoudeh_refresh');
     const csrf = cookieHeader(verified, 'asoudeh_csrf');
     const createSession = AuthSession.create.bind(AuthSession);
@@ -768,15 +829,8 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const phone = await createUniquePhone();
     await User.create({ name: 'کاربر csrf', phone, initialBalance: 0 });
     const agent = request.agent(app);
-    await agent
-      .post('/api/v1/auth/otp/request')
-      .set('Origin', origin)
-      .set('X-Forwarded-For', nextTestIp())
-      .send({ phone });
-    const verified = await agent
-      .post('/api/v1/auth/otp/verify')
-      .set('Origin', origin)
-      .send({ phone, code: env.otpDevFallbackCode });
+    await agentOtpRequest(agent, phone);
+    const verified = await agentOtpVerify(agent, phone, env.otpDevFallbackCode);
 
     const badCsrf = await agent
       .patch('/api/v1/me/profile')

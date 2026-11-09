@@ -90,7 +90,11 @@ export const requestOtp = [
 export const verifyOtp = [
   asyncHandler(async (req, res) => {
     const input = req.body as VerifyOtpInput;
-    const result = await verifyOtpService(input.phone, input.code);
+    const result = await verifyOtpService(
+      input.phone,
+      input.code,
+      req.ip || req.socket.remoteAddress || 'unknown',
+    );
 
     if (result.registrationRequired) {
       res.cookie(

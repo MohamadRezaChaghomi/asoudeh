@@ -22,8 +22,13 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
   }
 
   const isKnownError = error instanceof HttpError;
-  const statusCode = isKnownError ? error.statusCode : 500;
-  const code = isKnownError ? error.code : 'INTERNAL_ERROR';
+  const isPayloadTooLarge =
+    typeof error === 'object' &&
+    error !== null &&
+    'type' in error &&
+    error.type === 'entity.too.large';
+  const statusCode = isKnownError ? error.statusCode : isPayloadTooLarge ? 413 : 500;
+  const code = isKnownError ? error.code : isPayloadTooLarge ? 'PAYLOAD_TOO_LARGE' : 'INTERNAL_ERROR';
   const stack =
     env.nodeEnv === 'development' && error instanceof Error
       ? error.stack?.split('\n').slice(1).join('\n')
@@ -48,7 +53,11 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
     success: false,
     error: {
       code,
-      message: isKnownError ? error.publicMessage : 'خطایی در سرور رخ داد.',
+      message: isKnownError
+        ? error.publicMessage
+        : isPayloadTooLarge
+          ? 'اندازهٔ درخواست بیش از حد مجاز است.'
+          : 'خطایی در سرور رخ داد.',
     },
   });
 };

@@ -17,10 +17,11 @@ import transactionRoutes from './routes/transactions.routes.js';
 
 const app = express();
 
+app.set('trust proxy', env.trustProxyHops);
 app.use(helmet());
 app.use(cors({ origin: env.clientUrl, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
-app.use(morgan('dev'));
+app.use(morgan(':method :status :response-time ms'));
 
 app.get('/', (req, res) => {
   res.json({ success: true, message: 'Asoudeh API is running' });

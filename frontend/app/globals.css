@@ -276,7 +276,7 @@ html[data-high-contrast='true'] :focus-visible {
   margin: 1.4rem 0 0.7rem;
   padding-inline: 0.8rem;
   color: var(--text-subtle);
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.04em;
 }
@@ -370,7 +370,7 @@ html[data-high-contrast='true'] :focus-visible {
 .sidebar-note p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   line-height: 1.8;
 }
 
@@ -439,7 +439,7 @@ html[data-high-contrast='true'] :focus-visible {
 
 .theme-toggle {
   display: inline-flex;
-  min-height: 2.65rem;
+  min-height: 3rem;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
@@ -734,8 +734,9 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
 
   .mobile-menu-toggle {
     display: inline-flex;
-    width: 2.8rem;
-    flex: 0 0 2.8rem;
+    width: 3rem;
+    min-height: 3rem;
+    flex: 0 0 3rem;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -757,7 +758,8 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   }
 
   .theme-toggle {
-    width: 2.8rem;
+    width: 3rem;
+    min-height: 3rem;
     padding: 0;
   }
 
@@ -773,7 +775,7 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   .mobile-nav {
     position: fixed;
     z-index: 41;
-    top: calc(var(--topbar-height) + 0.5rem);
+    top: 4.5rem;
     inset-inline: 0.65rem;
     max-height: calc(100dvh - 5.5rem);
     grid-template-columns: repeat(2, minmax(0, 1fr));
