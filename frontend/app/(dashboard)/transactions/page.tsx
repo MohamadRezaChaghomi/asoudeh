@@ -765,7 +765,7 @@ export default function TransactionsPage() {
                   ثبت نخستین تراکنش
                 </a>
               )}
-              <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+              <Link className="ms-3 inline-flex min-h-12 items-center" href="/guide">
                 راهنمای ثبت
               </Link>
             </div>
@@ -975,7 +975,7 @@ export default function TransactionsPage() {
                     value={categoryId}
                   />
                   {!activeCategories.length && (
-                    <Link className="mt-2 inline-block text-sm text-asoudeh-teal underline" href="/categories">
+                    <Link className="mt-2 inline-block text-sm text-asoudeh-teal" href="/categories">
                       ابتدا یک دسته‌بندی فعال ایجاد کنید
                     </Link>
                   )}

@@ -137,6 +137,11 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/budgets');
+  expect(
+    await page.locator('a').evaluateAll((links) =>
+      links.every((link) => getComputedStyle(link).textDecorationLine === 'none'),
+    ),
+  ).toBe(true);
 
   const mobileNavigation = page.locator('.mobile-nav');
   const mobileMenuToggle = page.getByRole('button', { name: 'بازکردن ناوبری' });
@@ -181,32 +186,23 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(page.locator('.app-sidebar')).toBeVisible();
   await expect(mobileNavigation).toBeHidden();
   await expect(page.getByRole('link', { name: 'گزارش‌ها' })).toBeVisible();
-  const logo = page.locator('.app-sidebar .brand-logo-image');
+  const logo = page.locator('.app-sidebar .brand-logo-image--white');
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute('src', '/logo/asoudeh-white.svg');
   const logoWidth = await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth);
   expect(logoWidth).toBeGreaterThan(0);
-  const logoBackground = await logo.evaluate(
-    (image) => getComputedStyle(image.parentElement!).backgroundColor,
-  );
-  const expectedLogoBackground = await page.evaluate(() => {
-    const probe = document.createElement('span');
-    probe.style.backgroundColor = 'var(--brand-action)';
-    document.body.append(probe);
-    const color = getComputedStyle(probe).backgroundColor;
-    probe.remove();
-    return color;
-  });
-
-  expect(logoBackground).toBe(expectedLogoBackground);
+  await expect(page.locator('.app-sidebar .brand-logo-image--symbol')).toBeHidden();
+  await expect(page.locator('.app-sidebar .brand-logo-wordmark')).toHaveText('آسوده');
   await expect(page.getByRole('link', { name: 'آسوده، نمای کلی' })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  const mobileLogo = page.locator('.app-topbar-brand img');
-  await expect(mobileLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
+  const mobileLogo = page.locator('.app-topbar-brand .brand-logo-image--white');
+  await expect(mobileLogo).toHaveAttribute('src', '/logo/asoudeh-white.svg');
+  await expect(mobileLogo).toBeVisible();
   const mobileLogoBounds = await mobileLogo.boundingBox();
   expect(mobileLogoBounds?.width).toBeLessThanOrEqual(56);
   expect(mobileLogoBounds?.height).toBeLessThanOrEqual(56);
+  await expect(page.locator('.app-topbar-brand .brand-logo-wordmark')).toHaveText('آسوده');
   await mobileMenuToggle.click();
   await mobileNavigation.getByRole('link', { name: 'راهنمای استفاده' }).click();
   await expect(page.getByRole('heading', { name: 'راهنمای استفاده' })).toBeVisible();

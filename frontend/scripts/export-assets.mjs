@@ -93,8 +93,6 @@ async function renderOpenGraph(svgPath, outputPath) {
 
 async function generateAssets() {
   const symbolSvg = path.join(publicRoot, 'logo', 'asoudeh-symbol.svg');
-  const appIconSvg = path.join(iconDir, 'app-icon.svg');
-  const maskableSvg = path.join(iconDir, 'icon-maskable.svg');
   const ogSvg = path.join(previewDir, 'og-image.svg');
 
   const faviconFrames = [];
@@ -108,11 +106,11 @@ async function generateAssets() {
   writeNewFile(path.join(iconDir, 'favicon.ico'), makeIco(faviconFrames));
 
   const rasterExports = [
-    { source: appIconSvg, size: 180, output: 'apple-touch-icon.png' },
-    { source: appIconSvg, size: 192, output: 'icon-192.png' },
-    { source: appIconSvg, size: 512, output: 'icon-512.png' },
-    { source: maskableSvg, size: 512, output: 'icon-maskable-512.png' },
-    { source: appIconSvg, size: 1024, output: 'icon-1024.png' },
+    { source: symbolSvg, size: 180, output: 'apple-touch-icon.png' },
+    { source: symbolSvg, size: 192, output: 'icon-192.png' },
+    { source: symbolSvg, size: 512, output: 'icon-512.png' },
+    { source: symbolSvg, size: 512, output: 'icon-maskable-512.png' },
+    { source: symbolSvg, size: 1024, output: 'icon-1024.png' },
   ];
 
   for (const { source, size, output } of rasterExports) {

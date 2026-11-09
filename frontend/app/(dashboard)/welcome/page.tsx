@@ -135,7 +135,7 @@ export default function WelcomePage() {
             <p className="app-muted mt-3">
               هزینه‌ها، درآمدها، بودجه‌ها و سررسیدها را در یک جا ببینید.
             </p>
-            <Link className="mt-4 inline-flex min-h-12 items-center rounded-lg underline" href="/guide">
+            <Link className="mt-4 inline-flex min-h-12 items-center rounded-lg" href="/guide">
               دیدن راهنمای برنامه
             </Link>
             <button
@@ -190,7 +190,7 @@ export default function WelcomePage() {
             <p className="app-muted mt-3">
               یک درآمد یا هزینه اضافه کنید تا نمای مالی شما کامل شود.
             </p>
-            <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg underline" href="/guide">
+            <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg" href="/guide">
               راهنمای ثبت تراکنش
             </Link>
             <button

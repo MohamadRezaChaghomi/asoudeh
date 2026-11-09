@@ -1,10 +1,10 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { PiggyBank } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { Select } from '@/components/ui/Select';
 import { TomanAmount } from '@/components/ui/TomanAmount';
@@ -264,19 +264,18 @@ export default function BudgetsPage() {
             </h2>
             {!monthData?.budgets.length ? (
               <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
-                <Image
-                  alt=""
+                <div
                   aria-hidden="true"
-                  className="mb-3 h-auto w-32"
-                  height={96}
-                  src="/illustrations/empty-budgets.svg"
-                  width={128}
-                />
+                  className="mb-3 flex size-24 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--info)]"
+                  data-testid="empty-budgets-illustration"
+                >
+                  <PiggyBank size={44} strokeWidth={1.5} />
+                </div>
                 <p>برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.</p>
                 <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#budget-form">
                   ساخت نخستین بودجه
                 </a>
-                <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+                <Link className="ms-3 inline-flex min-h-12 items-center" href="/guide">
                   راهنمای بودجه
                 </Link>
               </div>
@@ -409,7 +408,7 @@ export default function BudgetsPage() {
                 value={categoryId}
               />
               {!activeExpenseCategories.length && !editingBudget && (
-                <Link className="mt-2 inline-block text-sm text-asoudeh-teal underline" href="/categories">
+                <Link className="mt-2 inline-block text-sm text-asoudeh-teal" href="/categories">
                   ابتدا یک دستهٔ هزینهٔ شخصی و فعال بسازید
                 </Link>
               )}

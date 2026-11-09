@@ -1,13 +1,8 @@
 import { expect, test } from './diagnostics-test';
 
 const brandAssets = [
-  '/logo/asoudeh-primary.svg',
-  '/logo/asoudeh-horizontal.svg',
   '/logo/asoudeh-symbol.svg',
   '/logo/asoudeh-white.svg',
-  '/logo/asoudeh-monochrome.svg',
-  '/icons/app-icon.svg',
-  '/icons/icon-maskable.svg',
   '/illustrations/empty-budgets.svg',
   '/illustrations/empty-reminders.svg',
   '/illustrations/empty-transactions.svg',
@@ -79,11 +74,8 @@ test('all referenced brand assets exist and manifest dimensions match their file
 
 test('logo component dimensions match the supplied SVG viewBoxes', async ({ page }) => {
   const logos = [
-    { path: '/logo/asoudeh-primary.svg', width: 600, height: 780 },
-    { path: '/logo/asoudeh-horizontal.svg', width: 440, height: 110 },
     { path: '/logo/asoudeh-symbol.svg', width: 512, height: 512 },
     { path: '/logo/asoudeh-white.svg', width: 512, height: 512 },
-    { path: '/logo/asoudeh-monochrome.svg', width: 512, height: 512 },
   ];
 
   for (const logo of logos) {
@@ -96,26 +88,27 @@ test('logo component dimensions match the supplied SVG viewBoxes', async ({ page
   }
 
   await page.goto('/login');
-  await expect(page.locator('img[src="/logo/asoudeh-primary.svg"]')).toHaveAttribute(
-    'width',
-    '600',
-  );
-  await expect(page.locator('img[src="/logo/asoudeh-primary.svg"]')).toHaveAttribute(
-    'height',
-    '780',
-  );
+  const loginMarks = page.locator('.auth-card .brand-logo-image');
+  await expect(loginMarks).toHaveCount(2);
+  await expect(page.locator('.auth-card .brand-logo-wordmark')).toHaveCount(0);
+  await expect(page.locator('.auth-card .brand-logo-image--symbol')).toBeVisible();
+  await expect(page.locator('.auth-card .brand-logo-image--white')).toBeHidden();
+  expect(
+    await loginMarks.evaluateAll((images) =>
+      images.map((image) => (image as HTMLImageElement).getAttribute('src')),
+    ),
+  ).toEqual(['/logo/asoudeh-symbol.svg', '/logo/asoudeh-white.svg']);
+
   await page.goto('/');
-  const horizontalLogo = page
-    .getByRole('banner')
-    .locator('img[src="/logo/asoudeh-horizontal.svg"]');
-  await expect(horizontalLogo).toHaveAttribute(
-    'width',
-    '440',
-  );
-  await expect(horizontalLogo).toHaveAttribute(
-    'height',
-    '110',
-  );
+  const publicMarks = page.locator('.public-brand .brand-logo-image');
+  await expect(publicMarks).toHaveCount(2);
+  await expect(page.locator('.public-brand .brand-logo-wordmark')).toHaveText('آسوده');
+  const themeToggle = page.getByRole('button', { name: 'فعال‌کردن پوسته تیره' });
+  await expect(themeToggle).toBeEnabled();
+  await themeToggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('.public-brand .brand-logo-image--white')).toBeVisible();
+  await expect(page.locator('.public-brand .brand-logo-image--symbol')).toBeHidden();
 });
 
 test('ICO contains all required square frames', async ({ page }) => {

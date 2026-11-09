@@ -1,5 +1,5 @@
-const CACHE_NAME = 'asoudeh-static-shell-v7';
-const STATIC_ASSETS = ['/offline.html', '/icons/app-icon.svg'];
+const CACHE_NAME = 'asoudeh-static-shell-v8';
+const STATIC_ASSETS = ['/offline.html', '/logo/asoudeh-symbol.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)));

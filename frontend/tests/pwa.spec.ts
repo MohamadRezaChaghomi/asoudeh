@@ -76,7 +76,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   expect(metadataIcons.ok()).toBe(true);
   const appleIcon = await page.request.get('/icons/apple-touch-icon.png');
   expect(appleIcon.ok()).toBe(true);
-  const appIcon = await page.request.get('/icons/app-icon.svg');
+  const appIcon = await page.request.get('/logo/asoudeh-symbol.svg');
   expect(appIcon.ok()).toBe(true);
 
   const fontIssues: string[] = [];
@@ -148,8 +148,8 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     };
   });
   expect(workerState.controlled).toBe(true);
-  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v7']);
-  expect(workerState.cachedUrls).toEqual(['/icons/app-icon.svg', '/offline.html']);
+  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v8']);
+  expect(workerState.cachedUrls).toEqual(['/logo/asoudeh-symbol.svg', '/offline.html']);
   expect(workerState.cachedUrls).not.toContain('/dashboard');
 
   await expect(page.getByText('اتصال برقرار است')).toHaveCount(0);
@@ -241,8 +241,8 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     }
     return { names, urls: urls.sort() };
   });
-  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v7']);
-  expect(cachesAfterUpdate.urls).toEqual(['/icons/app-icon.svg', '/offline.html']);
+  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v8']);
+  expect(cachesAfterUpdate.urls).toEqual(['/logo/asoudeh-symbol.svg', '/offline.html']);
 
   await page.evaluate(async () => {
     await fetch('/api/v1/reports/monthly?month=01-1405').catch(() => undefined);
@@ -268,7 +268,8 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'اتصال اینترنت در دسترس نیست' }))
     .toBeVisible();
-  await expect(page.getByRole('img', { name: 'نشان آسوده' })).toBeVisible();
+  await expect(page.locator('.brand-mark svg.mark:visible')).toHaveCount(1);
+  await expect(page.locator('.brand-name')).toHaveText('آسوده');
   await expect(page.getByText('اطلاعات مالی شما در حالت آفلاین بارگذاری نمی‌شود.'))
     .toBeVisible();
   await expect(page.getByRole('button', { name: 'تلاش دوباره' })).toBeVisible();

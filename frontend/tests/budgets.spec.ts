@@ -1,4 +1,5 @@
 import { expect, test } from './diagnostics-test';
+import { expectThemeAwareIllustration } from './assert-theme-aware-illustration';
 
 const csrfToken = 'budget-e2e-csrf-token';
 const expenseCategory = {
@@ -115,6 +116,7 @@ test('creates, edits, and deletes a monthly budget using live API responses', as
 
   await page.goto('/budgets');
   await expect(page.getByText('برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.')).toBeVisible();
+  await expectThemeAwareIllustration(page, 'empty-budgets-illustration');
   await expect(page.getByLabel('دستهٔ هزینه')).toHaveAttribute('data-value', expenseCategory.id);
   await page.getByLabel('سقف بودجه (تومان)').fill('۱۰۰۰۰۰');
   await page.getByRole('button', { name: 'ثبت بودجه' }).click();

@@ -11,7 +11,6 @@ export default function NotFound() {
             alt="نشان آسوده"
             className="mx-auto mb-6"
             size="auth-symbol"
-            variant="symbol"
           />
           <p className="app-muted text-sm font-semibold">خطای ۴۰۴</p>
           <h1 className="mt-2 text-3xl font-bold text-asoudeh-navy">این صفحه پیدا نشد</h1>

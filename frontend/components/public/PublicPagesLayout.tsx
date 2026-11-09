@@ -37,8 +37,8 @@ function PublicHeader() {
             alt=""
             className="public-brand-logo"
             priority
+            showWordmark
             size="landing"
-            variant="horizontal"
           />
         </Link>
         <nav aria-label="ناوبری صفحات عمومی" className="public-desktop-nav">
@@ -86,8 +86,8 @@ function PublicFooter() {
             <BrandLogo
               alt=""
               className="public-footer-logo"
+              showWordmark
               size="footer"
-              variant="horizontal"
             />
           </Link>
           <p>مدیریت مالی شخصی، ساده و فارسی.</p>

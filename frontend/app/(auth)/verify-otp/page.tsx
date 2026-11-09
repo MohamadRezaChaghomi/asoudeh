@@ -172,7 +172,6 @@ export default function VerifyOtpPage() {
           className="mx-auto mb-4"
           priority
           size="auth-symbol"
-          variant="symbol"
         />
         <p className="app-muted text-sm">مدیریت مالی شخصی سالمندان</p>
         <h1 className="mt-2 text-2xl font-bold text-asoudeh-navy">

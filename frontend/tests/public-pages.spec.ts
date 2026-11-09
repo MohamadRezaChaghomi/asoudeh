@@ -17,10 +17,17 @@ test('public information pages share navigation and are available without signin
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
-    const headerLogo = page.locator('.public-brand img');
-    await expect(headerLogo).toHaveAttribute('src', '/logo/asoudeh-horizontal.svg');
+    const headerLogo = page.locator('.public-brand .brand-logo-image--symbol');
+    await expect(headerLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
     await expect(headerLogo).toBeVisible();
+    await expect(page.locator('.public-brand .brand-logo-wordmark')).toHaveText('آسوده');
+    await expect(page.locator('.public-footer-brand .brand-logo-wordmark')).toHaveText('آسوده');
     await expect(page.getByRole('navigation', { name: 'پیوندهای صفحات عمومی' })).toBeVisible();
+    expect(
+      await page.locator('a').evaluateAll((links) =>
+        links.every((link) => getComputedStyle(link).textDecorationLine === 'none'),
+      ),
+    ).toBe(true);
     await expect(page.getByRole('link', { name: 'ورود به آسوده' }).first()).toHaveAttribute(
       'href',
       '/login',
@@ -44,7 +51,7 @@ test('public information pages share navigation and are available without signin
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  const mobileBrand = await page.locator('.public-brand img').boundingBox();
+  const mobileBrand = await page.locator('.public-brand .brand-logo-image--symbol').boundingBox();
   expect(mobileBrand?.width).toBeLessThan(160);
   expect(mobileBrand?.x ?? -1).toBeGreaterThanOrEqual(0);
   await page.goto('/guide');
@@ -62,7 +69,10 @@ test('public information pages share navigation and are available without signin
 test('not-found page uses the brand symbol and provides overview and home actions', async ({ page }) => {
   await page.goto('/this-route-does-not-exist');
   await expect(page.getByRole('heading', { name: 'این صفحه پیدا نشد' })).toBeVisible();
-  await expect(page.locator('img[src="/logo/asoudeh-symbol.svg"]')).toBeVisible();
+  await expect(
+    page.locator('main .brand-logo-image--symbol[src="/logo/asoudeh-symbol.svg"]'),
+  ).toBeVisible();
+  await expect(page.locator('main .brand-logo-wordmark')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'بازگشت به نمای کلی' })).toHaveAttribute(
     'href',
     '/dashboard',

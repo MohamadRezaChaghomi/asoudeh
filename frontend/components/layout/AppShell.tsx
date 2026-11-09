@@ -36,7 +36,6 @@ const navigation = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const [speechMessage, setSpeechMessage] = useState('');
@@ -90,15 +89,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     setSpeechMessage('');
     return () => window.speechSynthesis.cancel();
   }, [pathname]);
-
-  useEffect(() => {
-    const syncTheme = () => {
-      setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
-    };
-    syncTheme();
-    window.addEventListener('asoudeh-theme-change', syncTheme);
-    return () => window.removeEventListener('asoudeh-theme-change', syncTheme);
-  }, []);
 
   function togglePageSpeech() {
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
@@ -156,8 +146,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link className="app-brand brand-link" href="/dashboard" aria-label="آسوده، نمای کلی">
           <BrandLogo
             alt=""
+            showWordmark
             size="sidebar"
-            variant={theme === 'dark' ? 'white' : 'horizontal'}
           />
         </Link>
 
@@ -206,7 +196,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="app-topbar-brand brand-link"
               href="/dashboard"
             >
-              <BrandLogo alt="" size="mobile" variant="symbol" />
+              <BrandLogo alt="" showWordmark size="mobile" />
             </Link>
           </div>
           <ThemeToggle />

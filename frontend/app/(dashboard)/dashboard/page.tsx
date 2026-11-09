@@ -187,7 +187,7 @@ export default function DashboardPage() {
               <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-xl font-bold text-asoudeh-navy">پنج تراکنش اخیر</h2>
-                  <Link className="text-sm font-medium text-asoudeh-teal underline" href="/transactions">
+                  <Link className="text-sm font-medium text-asoudeh-teal" href="/transactions">
                     مشاهدهٔ همه
                   </Link>
                 </div>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                     <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="/transactions#transaction-form">
                       ثبت نخستین تراکنش
                     </Link>
-                    <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+                    <Link className="ms-3 inline-flex min-h-12 items-center" href="/guide">
                       راهنمای برنامه
                     </Link>
                   </div>
@@ -237,7 +237,7 @@ export default function DashboardPage() {
               <section className="app-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-xl font-bold text-asoudeh-navy">سررسیدهای نزدیک</h2>
-                  <Link className="text-sm font-medium text-asoudeh-teal underline" href="/reminders">
+                  <Link className="text-sm font-medium text-asoudeh-teal" href="/reminders">
                     یادآورها
                   </Link>
                 </div>

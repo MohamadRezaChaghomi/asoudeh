@@ -1,0 +1,11 @@
+{
+  "/(dashboard)/budgets/page": "app/(dashboard)/budgets/page.js",
+  "/(public)/page": "app/(public)/page.js",
+  "/(dashboard)/categories/page": "app/(dashboard)/categories/page.js",
+  "/(public)/guide/page": "app/(public)/guide/page.js",
+  "/(public)/terms/page": "app/(public)/terms/page.js",
+  "/(public)/faq/page": "app/(public)/faq/page.js",
+  "/(public)/about/page": "app/(public)/about/page.js",
+  "/(public)/privacy/page": "app/(public)/privacy/page.js",
+  "/(public)/contact/page": "app/(public)/contact/page.js"
+}

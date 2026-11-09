@@ -264,7 +264,7 @@ export default function RemindersPage() {
               <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#reminder-form">
                 ساخت نخستین یادآور
               </a>
-              <Link className="ms-3 inline-flex min-h-12 items-center underline" href="/guide">
+              <Link className="ms-3 inline-flex min-h-12 items-center" href="/guide">
                 راهنمای یادآورها
               </Link>
             </div>

@@ -199,8 +199,10 @@ a {
 
 a {
   color: inherit;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
+}
+
+a:any-link {
+  text-decoration: none;
 }
 
 button {
@@ -302,84 +304,91 @@ html[data-high-contrast='true'] :focus-visible {
   min-width: 0;
   align-items: center;
   justify-content: center;
+  gap: 0.6rem;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
-.brand-logo-frame--white {
-  background: var(--brand-action);
-  padding: 0.45rem;
-}
-
-.brand-logo-frame--symbol {
-  aspect-ratio: 1;
-}
-
 .brand-logo-frame--sidebar {
   width: min(100%, 10rem);
 }
 
-.brand-logo-frame--auth {
-  width: 12rem;
-}
-
 .brand-logo-frame--auth-symbol {
-  width: 3.5rem;
+  display: flex;
+  width: fit-content;
+  margin-inline: auto;
 }
 
-.brand-logo-frame--landing {
-  width: 10rem;
-}
-
-.brand-logo-frame--footer {
-  width: 9rem;
+.brand-logo-mark {
+  position: relative;
+  display: block;
+  width: 3.25rem;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
 }
 
 .brand-logo-image {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: contain;
 }
 
-.brand-logo-frame--white,
-.brand-logo-frame--monochrome {
-  gap: 0.4rem;
-  justify-content: space-evenly;
-  padding: 0;
-}
-
-.brand-logo-frame--white .brand-logo-image,
-.brand-logo-frame--monochrome .brand-logo-image {
-  width: 38%;
-}
-
-.brand-logo-frame--primary,
-.brand-logo-frame--horizontal {
-  padding: 0;
-}
-
-.brand-logo-frame--primary .brand-logo-wordmark,
-.brand-logo-frame--horizontal .brand-logo-wordmark {
+.brand-logo-image--white {
   display: none;
 }
 
+html[data-theme='dark'] .brand-logo-image--symbol {
+  display: none;
+}
+
+html[data-theme='dark'] .brand-logo-image--white {
+  display: block;
+}
+
 .brand-logo-wordmark {
-  flex: 1 1 auto;
-  color: var(--brand-950);
-  font-size: clamp(1.05rem, 3vw, 1.55rem);
+  color: var(--text);
+  font-size: 1.2rem;
   font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
-.brand-logo-frame--white .brand-logo-wordmark {
-  color: var(--text-on-action);
+.brand-logo-frame--mobile .brand-logo-mark {
+  width: 2.75rem;
 }
 
-.brand-logo-frame--symbol .brand-logo-image {
-  height: 100%;
+.brand-logo-frame--mobile .brand-logo-wordmark {
+  font-size: 1rem;
+}
+
+.brand-logo-frame--auth .brand-logo-mark,
+.brand-logo-frame--auth-symbol .brand-logo-mark {
+  width: 3.5rem;
+}
+
+.brand-logo-frame--auth-symbol .brand-logo-wordmark {
+  font-size: 1.05rem;
+}
+
+.brand-logo-frame--landing .brand-logo-mark {
+  width: 3rem;
+}
+
+.brand-logo-frame--landing .brand-logo-wordmark {
+  font-size: 1.35rem;
+}
+
+.brand-logo-frame--footer .brand-logo-mark {
+  width: 2.75rem;
+}
+
+.brand-logo-frame--footer .brand-logo-wordmark {
+  font-size: 1.1rem;
 }
 
 .sidebar-eyebrow {
@@ -927,10 +936,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
     display: inline-flex;
   }
 
-  .brand-logo-frame--mobile {
-    width: 2.75rem;
-  }
-
   .mobile-menu-toggle {
     display: inline-flex;
     width: 3rem;
@@ -1029,9 +1034,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
     gap: 0.35rem;
   }
 
-  .brand-logo-frame--mobile {
-    width: 2.65rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1097,11 +1099,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   flex: 0 0 auto;
   align-items: center;
   text-decoration: none;
-}
-
-.public-brand-logo.brand-logo-frame--landing {
-  width: 10rem;
-  aspect-ratio: auto;
 }
 
 .public-desktop-nav {
@@ -1179,15 +1176,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
 .public-related-links a {
   color: var(--brand-800);
   font-weight: 700;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--brand-700) 40%, transparent);
-  text-underline-offset: 0.22em;
-}
-
-.public-breadcrumbs a:hover,
-.public-content a:hover,
-.public-related-links a:hover {
-  text-decoration-color: currentColor;
 }
 
 .public-page-heading {
@@ -1270,8 +1258,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   min-height: 2.5rem;
   align-items: center;
   color: var(--brand-800);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 .public-content {
@@ -1377,11 +1363,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   text-decoration: none;
 }
 
-.public-footer-logo.brand-logo-frame--footer {
-  width: 9rem;
-  aspect-ratio: auto;
-}
-
 .public-footer-links {
   display: flex;
   flex-wrap: wrap;
@@ -1445,8 +1426,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   align-items: center;
   color: var(--brand-800);
   font-weight: 750;
-  text-decoration: underline;
-  text-underline-offset: 0.22em;
 }
 
 .public-home-links {
@@ -1468,8 +1447,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
 
 .public-home-links a:hover {
   color: var(--brand-800);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 .public-faq {
@@ -1629,10 +1606,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
 
   .public-header-actions {
     gap: 0.25rem;
-  }
-
-  .public-brand-logo.brand-logo-frame--landing {
-    width: 100%;
   }
 
   .public-desktop-nav {
@@ -2059,8 +2032,6 @@ select {
   color: var(--brand-800);
   font-size: 0.78rem;
   font-weight: 750;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 .assistant-form {
