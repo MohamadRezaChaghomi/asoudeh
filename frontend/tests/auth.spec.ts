@@ -401,7 +401,9 @@ test('loads and updates profile accessibility preferences in Persian RTL', async
   await page.getByLabel('کنتراست بالا').check();
   await page.getByRole('button', { name: 'ذخیره تغییرات' }).click();
 
-  await expect(page.getByRole('status')).toContainText('تغییرات با موفقیت ذخیره شد.');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'تغییرات با موفقیت ذخیره شد.' }),
+  ).toContainText('تغییرات با موفقیت ذخیره شد.');
   expect(updatePayload).toMatchObject({
     displayName: 'نام تازه',
     birthYear: 1340,
@@ -542,8 +544,11 @@ test('requires OTP and explicit confirmation before scheduling account deletion'
 
   await page.goto('/settings');
   await page.getByRole('button', { name: 'ارسال کد تأیید به شماره حساب' }).click();
-  await expect(page.getByRole('status')).toContainText('کد تأیید به شماره همراه حساب ارسال می‌شود');
-  await expect(page.getByRole('status')).not.toContainText('123456');
+  const deletionStatus = page
+    .getByRole('status')
+    .filter({ hasText: 'کد تأیید به شماره همراه حساب ارسال می‌شود' });
+  await expect(deletionStatus).toContainText('کد تأیید به شماره همراه حساب ارسال می‌شود');
+  await expect(deletionStatus).not.toContainText('123456');
   const confirmButton = page.getByRole('button', { name: 'تأیید حذف حساب' });
   await expect(confirmButton).toBeDisabled();
   await page.getByLabel('کد تأیید شش‌رقمی').fill('۱۲۳۴۵۶');

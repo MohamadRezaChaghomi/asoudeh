@@ -66,7 +66,9 @@ test('FAQ search filters answers and its accordion works with keyboard activatio
   await expect(page.getByRole('button', { name: /چطور درآمد یا هزینه ثبت کنم/ })).toBeVisible();
 
   await search.fill('پرسشی که وجود ندارد');
-  await expect(page.getByRole('status')).toContainText('پرسشی پیدا نشد');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'پرسشی پیدا نشد' }),
+  ).toContainText('پرسشی پیدا نشد');
 });
 
 test('content pages provide a navigable table of contents and mobile menu', async ({ page }) => {

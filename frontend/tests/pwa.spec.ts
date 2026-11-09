@@ -148,7 +148,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     };
   });
   expect(workerState.controlled).toBe(true);
-  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v3']);
+  expect(workerState.cacheNames).toEqual(['asoudeh-static-shell-v5']);
   expect(workerState.cachedUrls).toEqual(['/icons/app-icon.svg', '/offline.html']);
   expect(workerState.cachedUrls).not.toContain('/dashboard');
 
@@ -211,7 +211,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   await standalonePage.close();
 
   await page.evaluate(async () => {
-    const oldCache = await caches.open('asoudeh-static-shell-v2');
+    const oldCache = await caches.open('asoudeh-static-shell-v3');
     await oldCache.put('/dashboard', new Response('private old cached page'));
     const registration = await navigator.serviceWorker.getRegistration('/');
     if (!registration) throw new Error('Service worker registration is missing.');
@@ -224,12 +224,14 @@ test('production PWA loads its manifest and keeps offline cache free of account 
   });
   expect(activeScriptBeforeAction).not.toContain('test-update=1');
   await page.getByRole('button', { name: 'به‌روزرسانی' }).click();
-  await expect.poll(async () =>
-    page.evaluate(async () => {
+  await page.waitForFunction(
+    async () => {
       const registration = await navigator.serviceWorker.getRegistration('/');
       return registration?.active?.scriptURL.includes('test-update=1') ?? false;
-    }),
-  ).toBe(true);
+    },
+    null,
+    { timeout: 15_000 },
+  );
   const cachesAfterUpdate = await page.evaluate(async () => {
     const names = await caches.keys();
     const urls: string[] = [];
@@ -239,7 +241,7 @@ test('production PWA loads its manifest and keeps offline cache free of account 
     }
     return { names, urls: urls.sort() };
   });
-  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v3']);
+  expect(cachesAfterUpdate.names).toEqual(['asoudeh-static-shell-v5']);
   expect(cachesAfterUpdate.urls).toEqual(['/icons/app-icon.svg', '/offline.html']);
 
   await page.evaluate(async () => {

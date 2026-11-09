@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command: isProductionPwaTest
-      ? 'npm run start -- --hostname 127.0.0.1'
+      ? 'npm run start'
       : 'npm run dev -- --hostname 127.0.0.1',
     url: baseURL,
     reuseExistingServer: !process.env.CI && !isProductionPwaTest,

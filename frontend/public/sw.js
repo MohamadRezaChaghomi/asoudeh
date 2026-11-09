@@ -1,23 +1,23 @@
-const CACHE_NAME = 'asoudeh-static-shell-v3';
+const CACHE_NAME = 'asoudeh-static-shell-v5';
 const STATIC_ASSETS = ['/offline.html', '/icons/app-icon.svg'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key.startsWith('asoudeh-static-shell-') && key !== CACHE_NAME)
-          .map((key) => caches.delete(key)),
-      ),
-    ),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith('asoudeh-static-shell-') && key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
+        ),
+      )
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
 self.addEventListener('message', (event) => {
@@ -40,8 +40,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request).catch(async () => {
       const cache = await caches.open(CACHE_NAME);
-      const offlinePage = await cache.match('/offline.html');
-      return offlinePage || Response.error();
+      return (await cache.match('/offline.html')) || Response.error();
     }),
   );
 });

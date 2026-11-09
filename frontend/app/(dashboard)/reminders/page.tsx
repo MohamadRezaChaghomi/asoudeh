@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -336,6 +337,14 @@ export default function RemindersPage() {
 
           {!data?.reminders.length ? (
             <div className="app-muted mt-6 rounded-lg bg-slate-50 p-5">
+              <Image
+                alt=""
+                aria-hidden="true"
+                className="mb-3 h-auto w-32"
+                height={96}
+                src="/illustrations/empty-reminders.svg"
+                width={128}
+              />
               <p>برای قبض یا پرداخت بعدی یادآور بسازید تا سررسیدش را به‌خاطر بسپارید.</p>
               <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#reminder-form">
                 ساخت نخستین یادآور

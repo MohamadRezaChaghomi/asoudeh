@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -841,6 +842,17 @@ export default function TransactionsPage() {
           </form>
           {transactions.length === 0 ? (
             <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+              {!filters.search && (
+                <Image
+                  alt=""
+                  aria-hidden="true"
+                  className="mb-3 h-auto w-32"
+                  height={96}
+                  priority
+                  src="/illustrations/empty-transactions.svg"
+                  width={128}
+                />
+              )}
               {filters.search
                 ? <p>تراکنشی پیدا نشد؛ عبارت را تغییر دهید یا فیلترها را پاک کنید.</p>
                 : <p>برای دیدن روند مالی، نخستین درآمد یا هزینه را ثبت کنید.</p>}

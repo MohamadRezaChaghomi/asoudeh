@@ -5,11 +5,11 @@ export type BrandLogoVariant = 'primary' | 'horizontal' | 'symbol' | 'white' | '
 type BrandLogoSize = 'sidebar' | 'mobile' | 'auth' | 'landing' | 'footer';
 
 const logoAssets: Record<BrandLogoVariant, { src: string; width: number; height: number }> = {
-  primary: { src: '/logo/asoudeh-primary.svg', width: 160, height: 170 },
-  horizontal: { src: '/logo/asoudeh-horizontal.svg', width: 170, height: 160 },
-  symbol: { src: '/logo/asoudeh-symbol.svg', width: 200, height: 200 },
-  white: { src: '/logo/asoudeh-white.svg', width: 190, height: 190 },
-  monochrome: { src: '/logo/asoudeh-monochrome.svg', width: 190, height: 190 },
+  primary: { src: '/logo/asoudeh-primary.svg', width: 600, height: 780 },
+  horizontal: { src: '/logo/asoudeh-horizontal.svg', width: 440, height: 110 },
+  symbol: { src: '/logo/asoudeh-symbol.svg', width: 512, height: 512 },
+  white: { src: '/logo/asoudeh-white.svg', width: 512, height: 512 },
+  monochrome: { src: '/logo/asoudeh-monochrome.svg', width: 512, height: 512 },
 };
 
 const logoSizes: Record<BrandLogoSize, string> = {
@@ -55,7 +55,7 @@ export function BrandLogo({
         src={asset.src}
         width={asset.width}
       />
-      {variant !== 'symbol' && (
+      {(variant === 'white' || variant === 'monochrome') && (
         <span aria-hidden="true" className="brand-logo-wordmark">
           آسوده
         </span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -262,6 +263,14 @@ export default function BudgetsPage() {
             </h2>
             {!monthData?.budgets.length ? (
               <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+                <Image
+                  alt=""
+                  aria-hidden="true"
+                  className="mb-3 h-auto w-32"
+                  height={96}
+                  src="/illustrations/empty-budgets.svg"
+                  width={128}
+                />
                 <p>برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.</p>
                 <a className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="#budget-form">
                   ساخت نخستین بودجه

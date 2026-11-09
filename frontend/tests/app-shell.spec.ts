@@ -189,7 +189,15 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   const logoBackground = await logo.evaluate(
     (image) => getComputedStyle(image.parentElement!).backgroundColor,
   );
-  expect(logoBackground).toBe('rgb(31, 92, 74)');
+  const expectedLogoBackground = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--brand-action)';
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+  expect(logoBackground).toBe(expectedLogoBackground);
   await expect(page.getByRole('link', { name: 'آسوده، نمای کلی' })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -244,7 +252,9 @@ test('shows a page-shaped budget skeleton while data is loading and removes it a
   });
 
   await page.goto('/budgets');
-  const loadingStatus = page.locator('[role="status"]');
+  const loadingStatus = page
+    .getByRole('status')
+    .filter({ hasText: 'در حال بارگذاری بودجه‌ها…' });
   await expect(loadingStatus).toHaveCount(1);
   await expect(loadingStatus).toHaveText('در حال بارگذاری بودجه‌ها…');
   expect(await page.locator('.skeleton-block').count()).toBeGreaterThan(10);

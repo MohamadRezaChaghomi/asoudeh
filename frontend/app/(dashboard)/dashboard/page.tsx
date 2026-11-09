@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -192,6 +193,15 @@ export default function DashboardPage() {
                 </div>
                 {dashboard.recentTransactions.length === 0 ? (
                   <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+                    <Image
+                      alt=""
+                      aria-hidden="true"
+                      className="mb-3 h-auto w-32"
+                      height={96}
+                      priority
+                      src="/illustrations/empty-transactions.svg"
+                      width={128}
+                    />
                     <p>با ثبت نخستین درآمد یا هزینه، روند مالی ماه را ببینید.</p>
                     <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-asoudeh-navy px-4 font-medium text-white" href="/transactions#transaction-form">
                       ثبت نخستین تراکنش
@@ -236,6 +246,14 @@ export default function DashboardPage() {
                 </div>
                 {dashboard.upcomingReminders.length === 0 ? (
                   <div className="app-muted mt-4 rounded-lg bg-slate-50 p-4">
+                    <Image
+                      alt=""
+                      aria-hidden="true"
+                      className="mb-3 h-auto w-32"
+                      height={96}
+                      src="/illustrations/empty-reminders.svg"
+                      width={128}
+                    />
                     <p>برای قبض‌ها و پرداخت‌های آینده یادآور بسازید تا سررسیدشان را فراموش نکنید.</p>
                     <Link className="mt-3 inline-flex min-h-12 items-center rounded-lg border border-slate-300 px-4 font-medium" href="/reminders#reminder-form">
                       افزودن یادآور

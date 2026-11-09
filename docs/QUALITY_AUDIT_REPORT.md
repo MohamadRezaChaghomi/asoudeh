@@ -46,8 +46,8 @@ None identified.
 
 ### Informational
 
-- The horizontal 3:2 wordmark and square PWA icon are intentionally different assets: `logo.svg` is the UI wordmark; `asoudeh.svg` has a 512×512 viewBox for installed-app contexts. The production PWA test verifies the manifest/worker asset behavior. Do not replace the square icon with the horizontal wordmark.
-- The supplied PNG is 1536×1024 and contains pale lettering that is poorly legible on light surfaces. The UI uses the supplied SVG wordmark instead. Browser runtime measured the SVG at intrinsic 800×533 and rendered 128×85.3 with its ratio preserved; the SVG inspection found no script, embedded image, or external references.
+- The UI wordmarks in `frontend/public/logo/` and the square manifest icons in `frontend/public/icons/` serve different purposes; do not replace the square icon with a horizontal logo. The production brand asset test checks all referenced URLs and manifest raster dimensions.
+- The source horizontal/primary/OG SVGs contain text using `font-family: Estedad`; they were left untouched. The generated OG PNG renders with the locally self-hosted Estedad font. Outlined source SVGs remain a designer follow-up.
 - The independent security-review agent reported **no vulnerability findings in the code it reviewed**. This is not a penetration test, compliance certification, or claim of zero security risk.
 
 ## D. Validation evidence
