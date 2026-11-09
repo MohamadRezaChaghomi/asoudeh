@@ -88,6 +88,19 @@ test('requires manual OTP entry and never returns or stores the development OTP'
   await expect(page).toHaveURL(/\/verify-otp$/);
   await expect(page.getByLabel('کد تأیید')).toBeVisible();
   await expect(page.getByText('کد شبیه‌ساز توسعه:')).toHaveCount(0);
+  const storage = await page.evaluate(() => ({
+    localStorageKeys: Object.keys(localStorage),
+    sessionStorageKeys: Object.keys(sessionStorage),
+    pendingFlow: JSON.parse(sessionStorage.getItem('asoudeh.pendingOtp') ?? 'null'),
+  }));
+  expect(storage.localStorageKeys).toEqual([]);
+  expect(storage.sessionStorageKeys).toEqual(['asoudeh.pendingOtp']);
+  expect(Object.keys(storage.pendingFlow).sort()).toEqual([
+    'phone',
+    'resendAvailableAt',
+    'step',
+  ]);
+  expect(storage.pendingFlow).not.toHaveProperty('code');
   const pendingFlow = JSON.parse(
     (await page.evaluate(() => sessionStorage.getItem('asoudeh.pendingOtp'))) ?? 'null',
   ) as Record<string, unknown>;

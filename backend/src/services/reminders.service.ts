@@ -304,7 +304,7 @@ export async function completeReminder(
   let completion: CompletionDocument | undefined;
   try {
     completion = (await ReminderCompletion.findOneAndUpdate(
-      { reminderId: targetId, monthKey },
+      { reminderId: targetId, userId: ownerId, monthKey },
       {
         $setOnInsert: {
           userId: ownerId,

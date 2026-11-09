@@ -215,7 +215,10 @@ export async function createTransaction(
     ...input,
     userId: new mongoose.Types.ObjectId(userId),
   });
-  const populated = await Transaction.findById(transaction._id)
+  const populated = await Transaction.findOne({
+    _id: transaction._id,
+    userId: transaction.userId,
+  })
     .populate<{ categoryId: TransactionRecord['categoryId'] }>({
       path: 'categoryId',
       select: 'name icon',

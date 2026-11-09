@@ -585,7 +585,7 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
 
   if (current.rotatedAt || current.revokedAt) {
     await AuthSession.updateMany(
-      { familyId: current.familyId, revokedAt: null },
+      { familyId: current.familyId, userId: current.userId, revokedAt: null },
       { $set: { revokedAt: now } },
     );
     throw new HttpError(401, 'REFRESH_TOKEN_REUSED', 'نشست امنیتی لغو شد. دوباره وارد شوید.');
@@ -593,14 +593,17 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
 
   if (!current.idleExpiresAt || current.idleExpiresAt <= now) {
     await AuthSession.updateMany(
-      { familyId: current.familyId, revokedAt: null },
+      { familyId: current.familyId, userId: current.userId, revokedAt: null },
       { $set: { revokedAt: now } },
     );
     throw new HttpError(401, 'SESSION_EXPIRED', 'به‌دلیل بی‌کاری، نشست منقضی شده است.');
   }
 
   if (current.expiresAt <= now) {
-    await AuthSession.updateOne({ _id: current._id }, { $set: { revokedAt: now } });
+    await AuthSession.updateOne(
+      { _id: current._id, userId: current.userId },
+      { $set: { revokedAt: now } },
+    );
     throw new HttpError(401, 'SESSION_EXPIRED', 'نشست منقضی شده است. دوباره وارد شوید.');
   }
 
@@ -610,7 +613,7 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
   });
   if (!activeUser) {
     await AuthSession.updateMany(
-      { familyId: current.familyId, revokedAt: null },
+      { familyId: current.familyId, userId: current.userId, revokedAt: null },
       { $set: { revokedAt: now } },
     );
     throw new HttpError(401, 'SESSION_INVALID', 'این حساب دیگر فعال نیست.');
@@ -628,6 +631,7 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
   const claimed = await AuthSession.findOneAndUpdate(
     {
       _id: current._id,
+      userId: current.userId,
       rotatedAt: null,
       revokedAt: null,
       expiresAt: { $gt: now },
@@ -639,14 +643,17 @@ export async function rotateRefreshToken(refreshToken: string): Promise<AuthToke
 
   if (!claimed) {
     await AuthSession.updateOne(
-      { _id: successor._id, revokedAt: null },
+      { _id: successor._id, userId: current.userId, revokedAt: null },
       { $set: { revokedAt: now } },
     );
-    const latest = await AuthSession.findById(current._id);
+    const latest = await AuthSession.findOne({
+      _id: current._id,
+      userId: current.userId,
+    });
 
     if (latest?.rotatedAt) {
       await AuthSession.updateMany(
-        { familyId: current.familyId, revokedAt: null },
+        { familyId: current.familyId, userId: current.userId, revokedAt: null },
         { $set: { revokedAt: now } },
       );
     }
@@ -694,14 +701,14 @@ export async function revokeRefreshSession(refreshToken?: string): Promise<void>
 
   if (session) {
     await AuthSession.updateMany(
-      { familyId: session.familyId, revokedAt: null },
+      { familyId: session.familyId, userId: session.userId, revokedAt: null },
       { $set: { revokedAt: new Date() } },
     );
   }
 }
 
 export async function getProfile(userId: string): Promise<PublicProfile> {
-  const user = await User.findById(userId);
+  const user = await User.findOne({ _id: userId });
 
   if (!user) {
     throw new HttpError(401, 'SESSION_INVALID', 'نشست معتبر نیست. دوباره وارد شوید.');
@@ -732,7 +739,11 @@ export async function updateProfile(
     updates['accessibilitySettings.highContrast'] = input.accessibilitySettings.highContrast;
   }
 
-  const user = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true });
+  const user = await User.findOneAndUpdate(
+    { _id: userId },
+    { $set: updates },
+    { new: true },
+  );
 
   if (!user) {
     throw new HttpError(401, 'SESSION_INVALID', 'نشست معتبر نیست. دوباره وارد شوید.');
@@ -745,7 +756,9 @@ export async function scheduleAccountDeletion(
   userId: string,
   code: string,
 ): Promise<{ scheduledFor: string }> {
-  const user = await User.findById(userId).select('phone deletionScheduledAt').lean();
+  const user = await User.findOne({ _id: userId })
+    .select('phone deletionScheduledAt')
+    .lean();
   if (!user?.phone) {
     throw new HttpError(404, 'ACCOUNT_NOT_FOUND', 'حساب کاربری پیدا نشد.');
   }

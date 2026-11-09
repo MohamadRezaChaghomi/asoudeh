@@ -99,6 +99,7 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect.poll(() => activityRequests).toBe(1);
   expect(clientErrors).toEqual([]);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['asoudeh.theme']);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 

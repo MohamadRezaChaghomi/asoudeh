@@ -243,6 +243,9 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     expect(response.status).toBe(200);
     expect(response.body.data.scheduledFor).toBeTruthy();
     expect(response.body.message).toContain('۳۰ روز');
+    expect(JSON.stringify(response.body)).not.toMatch(
+      /phoneHash|otpHash|tokenHash|deletionRequestedAt|deletionScheduledAt/i,
+    );
     const scheduledFor = new Date(response.body.data.scheduledFor).getTime();
     expect(scheduledFor - Date.now()).toBeGreaterThan(29 * 24 * 60 * 60 * 1000);
     expect(scheduledFor - Date.now()).toBeLessThanOrEqual(30 * 24 * 60 * 60 * 1000);

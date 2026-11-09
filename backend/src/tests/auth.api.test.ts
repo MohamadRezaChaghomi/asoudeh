@@ -270,6 +270,9 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(developmentResponse.status).toBe(200);
     expect(developmentResponse.body.data.developmentOtp).toBeUndefined();
     expect(JSON.stringify(developmentResponse.body)).not.toContain(env.otpDevFallbackCode);
+    expect(JSON.stringify(developmentResponse.body)).not.toMatch(
+      /phoneHash|otpHash|tokenHash|refreshToken|accessToken|deletionScheduledAt/i,
+    );
     const challenge = await OtpChallenge.findOne({
       phoneHash: hashAuthValue('phone', phone),
     }).lean();
@@ -558,6 +561,17 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       birthYear: null,
       initialBalance: 0,
     });
+    expect(Object.keys(registered.body.data.profile).sort()).toEqual([
+      'accessibilitySettings',
+      'birthYear',
+      'displayName',
+      'id',
+      'initialBalance',
+      'phone',
+    ]);
+    expect(JSON.stringify(registered.body)).not.toMatch(
+      /phoneHash|otpHash|tokenHash|refreshToken|accessToken|deletionRequestedAt|deletionScheduledAt/i,
+    );
     expect(setCookie(registered, 'asoudeh_access')).toContain('HttpOnly');
     expect(setCookie(registered, 'asoudeh_access')).toContain('Secure');
     expect(setCookie(registered, 'asoudeh_access')).toContain('Path=/api/v1');
@@ -612,6 +626,9 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     const profile = await agent.get('/api/v1/me');
     expect(profile.status).toBe(200);
     expect(profile.body.data.profile.displayName).toBe('کاربر آزمایشی');
+    expect(JSON.stringify(profile.body)).not.toMatch(
+      /phoneHash|otpHash|tokenHash|refreshToken|accessToken|deletionRequestedAt|deletionScheduledAt/i,
+    );
     expect((await request(app)
       .get('/api/v1/me')
       .set('Cookie', `asoudeh_access=${originalAccess}`)).status).toBe(200);
@@ -626,6 +643,7 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
         initialBalance: 250000,
         accessibilitySettings: { fontScale: 1.5, highContrast: true },
       });
+
     expect(updated.status).toBe(200);
     expect(updated.body.data.profile).toMatchObject({
       id: user.id,
@@ -657,6 +675,22 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
       .get('/api/v1/me')
       .set('Cookie', `asoudeh_access=${originalAccess}`);
     expect(replayedAccess.status).toBe(401);
+  });
+
+  it('does not echo submitted OTP phone or code in validation errors', async () => {
+    const phone = await createUniquePhone();
+    const code = 'private-otp-value';
+    const csrf = await csrfForRequest();
+    const response = await request(app)
+      .post('/api/v1/auth/otp/verify')
+      .set('Origin', origin)
+      .set('Cookie', `asoudeh_csrf=${csrf}`)
+      .set('X-CSRF-Token', csrf)
+      .send({ phone, code });
+
+    expect(response.status).toBe(400);
+    expect(JSON.stringify(response.body)).not.toContain(phone);
+    expect(JSON.stringify(response.body)).not.toContain(code);
   });
 
   it('rotates refresh tokens and revokes the entire family when an old token is reused', async () => {

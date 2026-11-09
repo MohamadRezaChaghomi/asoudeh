@@ -91,3 +91,18 @@ test('content pages provide a navigable table of contents and mobile menu', asyn
   }));
   expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
 });
+
+test('privacy and terms describe current SMS, assistant, cookie, storage, and deletion behavior', async ({
+  page,
+}) => {
+  await page.goto('/privacy');
+  await expect(page.getByText(/SMS\.ir/)).toBeVisible();
+  await expect(page.getByText(/ارائه‌دهنده هوش مصنوعی پیکربندی‌شده/)).toBeVisible();
+  await expect(page.getByText(/HttpOnly/).first()).toBeVisible();
+  await expect(page.getByText(/localStorage/)).toBeVisible();
+  await expect(page.locator('main').getByText(/۳۰ روز/).first()).toBeVisible();
+
+  await page.goto('/terms');
+  await expect(page.getByText(/شماره همراه و کد یک‌بارمصرف به SMS\.ir/)).toBeVisible();
+  await expect(page.getByText(/برای ۳۰ روز بعد زمان‌بندی می‌شود/)).toBeVisible();
+});

@@ -99,6 +99,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
   let otherUser: TestIdentity;
   let monthKey: string;
   let transactionCategoryId: mongoose.Types.ObjectId;
+  let seniorTransactionId: string;
 
   beforeAll(async () => {
     if (!isIsolatedTestUri(testMongoUri) || !isIsolatedTestUri(configuredMongoUri)) {
@@ -142,6 +143,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
       date: current.today,
     });
     transactionIds.push(transaction._id);
+    seniorTransactionId = transaction._id.toString();
     const deletedTransaction = await Transaction.create({
       userId: new mongoose.Types.ObjectId(senior.userId),
       type: 'expense',
@@ -183,6 +185,9 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
       status: 'pending',
       permissions: ['VIEW_SUMMARY', 'VIEW_TRANSACTIONS', 'VIEW_REPORTS'],
     });
+    expect(JSON.stringify(invite.body)).not.toMatch(
+      /phoneHash|otpHash|tokenHash|deletionRequestedAt|deletionScheduledAt/i,
+    );
 
     expect(
       (await authenticatedGet('/api/v1/caregiver/invitations', otherUser))
@@ -193,6 +198,16 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
       id: inviteId,
       seniorName: 'Caregiver test senior',
     });
+    expect(JSON.stringify(incoming.body)).not.toMatch(
+      /phoneHash|otpHash|tokenHash|deletionRequestedAt|deletionScheduledAt/i,
+    );
+    expect(incoming.body.data.invitations[0]).not.toHaveProperty('caregiverPhone');
+    expect(
+      (await authenticatedGet(
+        `/api/v1/caregiver/seniors/${senior.userId}/summary`,
+        caregiver,
+      )).status,
+    ).toBe(404);
     expect(
       (await authenticatedMutation('patch', `/api/v1/caregiver/invitations/${inviteId}`, otherUser, {
         decision: 'accept',
@@ -229,6 +244,28 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
     );
     expect(report.status).toBe(200);
     expect(report.body.data.report.totals.expenses).toBe('10000');
+    const caregiverWrites = await Promise.all([
+      authenticatedMutation(
+        'patch',
+        `/api/v1/transactions/${seniorTransactionId}`,
+        caregiver,
+        { amount: 1 },
+      ),
+      authenticatedMutation(
+        'delete',
+        `/api/v1/transactions/${seniorTransactionId}`,
+        caregiver,
+      ),
+      authenticatedMutation(
+        'post',
+        `/api/v1/transactions/${seniorTransactionId}/restore`,
+        caregiver,
+      ),
+    ]);
+    expect(caregiverWrites.map(({ status }) => status)).toEqual([404, 404, 404]);
+    expect(
+      (await Transaction.findById(seniorTransactionId).lean())?.amount,
+    ).toBe(10_000);
     const caregiverAuditEntries = await AuditLog.find({
       actorId: new mongoose.Types.ObjectId(caregiver.userId),
       targetUserId: new mongoose.Types.ObjectId(senior.userId),
@@ -245,10 +282,12 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
       caregiverAuditEntries.every(
         (entry) =>
           !Object.keys(entry).some((field) =>
-            /phone|amount|note|transaction/i.test(field),
+            /phone|amount|note|transaction|hash|token|deletion/i.test(field),
           ),
       ),
     ).toBe(true);
+    expect(JSON.stringify(caregiverAuditEntries)).not.toContain(senior.phone);
+    expect(JSON.stringify(caregiverAuditEntries)).not.toContain(caregiver.phone);
 
     const revoke = await authenticatedMutation(
       'delete',
@@ -289,6 +328,55 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
     ).toBe(404);
   });
 
+  it('keeps rejected invitations revoked and unavailable to the invitee', async () => {
+    const invitation = await authenticatedMutation(
+      'post',
+      '/api/v1/caregiver/links',
+      senior,
+      {
+        phone: otherUser.phone,
+        permissions: ['VIEW_SUMMARY'],
+      },
+    );
+    expect(invitation.status).toBe(201);
+    const invitationId = invitation.body.data.invitation.id as string;
+    linkIds.push(new mongoose.Types.ObjectId(invitationId));
+    expect(invitation.body.data.invitation.status).toBe('pending');
+    expect(
+      (await authenticatedGet(
+        `/api/v1/caregiver/seniors/${senior.userId}/summary`,
+        otherUser,
+      )).status,
+    ).toBe(404);
+
+    const rejected = await authenticatedMutation(
+      'patch',
+      `/api/v1/caregiver/invitations/${invitationId}`,
+      otherUser,
+      { decision: 'reject' },
+    );
+    expect(rejected.status).toBe(200);
+    expect(rejected.body.data.invitation.status).toBe('revoked');
+    expect(
+      (await authenticatedGet('/api/v1/caregiver/seniors', otherUser))
+        .body.data.seniors,
+    ).not.toContainEqual(expect.objectContaining({ seniorId: senior.userId }));
+    expect(
+      (await authenticatedGet(
+        `/api/v1/caregiver/seniors/${senior.userId}/summary`,
+        otherUser,
+      )).status,
+    ).toBe(404);
+    expect(
+      (await authenticatedMutation(
+        'patch',
+        `/api/v1/caregiver/invitations/${invitationId}`,
+        otherUser,
+        { decision: 'accept' },
+      )).status,
+    ).toBe(404);
+  });
+
   it('rejects self-invites, duplicate active invitations, and ungranted access', async () => {
     const selfInvite = await authenticatedMutation(
       'post',
@@ -320,7 +408,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
         targetUserId: new mongoose.Types.ObjectId(senior.userId),
         action: 'caregiver.invited',
       }),
-    ).toBe(2);
+    ).toBe(3);
 
     for (const path of [
       `/api/v1/caregiver/seniors/${senior.userId}/summary`,

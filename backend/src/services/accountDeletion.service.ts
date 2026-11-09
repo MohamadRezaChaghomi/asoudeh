@@ -77,7 +77,9 @@ export async function purgeExpiredAccountDeletions(
     try {
       if (await purgeScheduledAccountDeletion(user._id, now)) purgedCount += 1;
     } catch (error) {
-      console.error('Failed to purge an expired account deletion.', error);
+      console.error('Failed to purge an expired account deletion.', {
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+      });
     }
   }
 

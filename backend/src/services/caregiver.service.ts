@@ -54,7 +54,7 @@ export interface CaregiverLinkResponse {
   id: string;
   seniorId: string;
   caregiverId?: string;
-  caregiverPhone: string;
+  caregiverPhone?: string;
   status: 'pending' | 'active' | 'revoked';
   permissions: CaregiverPermission[];
   createdAt: string;
@@ -62,7 +62,8 @@ export interface CaregiverLinkResponse {
   revokedAt?: string;
 }
 
-export interface IncomingInvitationResponse extends CaregiverLinkResponse {
+export interface IncomingInvitationResponse
+  extends Omit<CaregiverLinkResponse, 'caregiverPhone'> {
   seniorName: string;
 }
 
@@ -86,13 +87,18 @@ function idString(value: LinkDocument['seniorId']): string {
   return ('_id' in value ? value._id : value).toString();
 }
 
-function toLinkResponse(link: LinkDocument): CaregiverLinkResponse {
+function toLinkResponse(
+  link: LinkDocument,
+  includeCaregiverPhone = true,
+): CaregiverLinkResponse {
   const seniorId = idString(link.seniorId);
   return {
     id: link._id.toString(),
     seniorId,
     ...(link.caregiverId ? { caregiverId: link.caregiverId.toString() } : {}),
-    caregiverPhone: link.caregiverPhone ?? '',
+    ...(includeCaregiverPhone && link.caregiverPhone
+      ? { caregiverPhone: link.caregiverPhone }
+      : {}),
     status: link.status,
     permissions: linkPermissions(link.permissions),
     createdAt: link.createdAt.toISOString(),
@@ -152,14 +158,14 @@ export async function listCaregiverLinks(
   })
     .sort({ createdAt: -1, _id: -1 })
     .lean()) as LinkDocument[];
-  return links.map(toLinkResponse);
+  return links.map((link) => toLinkResponse(link));
 }
 
 export async function inviteCaregiver(
   seniorId: string,
   input: InviteCaregiverInput,
 ): Promise<CaregiverLinkResponse> {
-  const owner = await User.findById(seniorId).select('phone').lean();
+  const owner = await User.findOne({ _id: seniorId }).select('phone').lean();
   if (!owner) throw new HttpError(404, 'USER_NOT_FOUND', 'کاربر پیدا نشد.');
   if (owner.phone && owner.phone === input.phone) {
     throw new HttpError(400, 'CAREGIVER_SELF_INVITATION', 'نمی‌توانید خودتان را دعوت کنید.');
@@ -210,7 +216,7 @@ export async function inviteCaregiver(
 export async function listIncomingInvitations(
   caregiverId: string,
 ): Promise<IncomingInvitationResponse[]> {
-  const caregiver = await User.findById(caregiverId).select('phone').lean();
+  const caregiver = await User.findOne({ _id: caregiverId }).select('phone').lean();
   if (!caregiver?.phone) return [];
   const links = (await CaregiverLink.find({
     caregiverPhone: caregiver.phone,
@@ -231,7 +237,7 @@ export async function listIncomingInvitations(
       return [];
     }
     return [{
-      ...toLinkResponse(link),
+      ...toLinkResponse(link, false),
       seniorName: link.seniorId.name,
     }];
   });
@@ -271,7 +277,7 @@ export async function respondToInvitation(
   invitationId: string,
   input: CaregiverDecisionInput,
 ): Promise<CaregiverLinkResponse> {
-  const caregiver = await User.findById(caregiverId).select('phone').lean();
+  const caregiver = await User.findOne({ _id: caregiverId }).select('phone').lean();
   if (!caregiver?.phone) {
     throw new HttpError(403, 'CAREGIVER_PHONE_REQUIRED', 'برای پذیرش دعوت، شماره همراه حساب لازم است.');
   }
@@ -309,7 +315,7 @@ export async function respondToInvitation(
     idString(link.seniorId),
     input.decision === 'accept' ? 'caregiver.accepted' : 'caregiver.rejected',
   );
-  return toLinkResponse(link);
+  return toLinkResponse(link, false);
 }
 
 export async function revokeCaregiverLink(
@@ -391,7 +397,7 @@ export async function getCaregiverSummary(
   const ownerId = new mongoose.Types.ObjectId(seniorId);
   const { year, month, startDate, endDateExclusive } = getCurrentJalaliMonthRange();
   const [user, totals] = await Promise.all([
-    User.findById(ownerId).select('initialBalance').lean(),
+    User.findOne({ _id: ownerId }).select('initialBalance').lean(),
     Transaction.aggregate<{ _id: string; amount: { toString(): string } }>([
       {
         $match: {

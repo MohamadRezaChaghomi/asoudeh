@@ -8,7 +8,9 @@ const ACCOUNT_DELETION_CHECK_INTERVAL_MS = 60_000;
 function startAccountDeletionWorker(): void {
   const processDueAccounts = () => {
     void purgeExpiredAccountDeletions().catch((error: unknown) => {
-      console.error('Account deletion worker failed.', error);
+      console.error('Account deletion worker failed.', {
+        errorType: error instanceof Error ? error.name : 'UnknownError',
+      });
     });
   };
 
@@ -25,7 +27,9 @@ async function bootstrap(): Promise<void> {
   });
 }
 
-bootstrap().catch((error) => {
-  console.error('Server startup failed:', error);
+bootstrap().catch((error: unknown) => {
+  console.error('Server startup failed.', {
+    errorType: error instanceof Error ? error.name : 'UnknownError',
+  });
   process.exit(1);
 });

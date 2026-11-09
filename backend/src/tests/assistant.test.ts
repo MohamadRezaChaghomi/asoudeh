@@ -55,9 +55,19 @@ describe('OpenAI-compatible assistant provider', () => {
       messages: Array<{ role: string; content: string }>;
     };
     expect(requestBody.model).toBe('test-model');
-    expect(requestBody.messages[1]?.content).toContain('چطور هزینه ثبت کنم؟');
-    expect(requestBody.messages[1]?.content).not.toContain('شماره همراه');
-    expect(requestBody.messages[1]?.content).not.toContain('test-provider-secret');
+    expect(requestBody.messages).toHaveLength(2);
+    const userMessage = JSON.parse(requestBody.messages[1]?.content ?? 'null') as {
+      question: string;
+      reference: Array<{ question: string; answer: string }>;
+    };
+    expect(Object.keys(userMessage).sort()).toEqual(['question', 'reference']);
+    expect(userMessage).toEqual({
+      question: 'چطور هزینه ثبت کنم؟',
+      reference: knowledge.map(({ question, answer }) => ({ question, answer })),
+    });
+    expect(JSON.stringify(requestBody)).not.toMatch(
+      /phone|profile|transaction|budget|conversation|token|test-provider-secret/i,
+    );
   });
 
   it('rejects unsafe provider URLs and sanitizes provider failures', async () => {

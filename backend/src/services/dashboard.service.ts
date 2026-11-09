@@ -71,7 +71,7 @@ export async function getDashboard(
     getCurrentJalaliMonthRange(now);
 
   const [user, totals, recentTransactions, upcomingReminders] = await Promise.all([
-    User.findById(ownerId).select('initialBalance').lean(),
+    User.findOne({ _id: ownerId }).select('initialBalance').lean(),
     Transaction.aggregate<MonthlyTotal>([
       {
         $match: {
