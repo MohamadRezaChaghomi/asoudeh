@@ -15,6 +15,7 @@ import {
   secureStringEqual,
 } from '../utils/authCrypto.js';
 import { HttpError } from '../utils/httpError.js';
+import { logger } from '../utils/logger.js';
 import { sendSmsIrOtp, SmsIrProviderError } from './smsIrProvider.js';
 import type {
   CompleteRegistrationInput,
@@ -224,7 +225,11 @@ function mapProfile(user: {
   };
 }
 
-export async function requestOtp(phone: string, ipAddress: string): Promise<OtpRequestResult> {
+export async function requestOtp(
+  phone: string,
+  ipAddress: string,
+  requestId = generateId(),
+): Promise<OtpRequestResult> {
   const now = new Date();
   const normalizedPhone = normalizeIranianMobile(phone);
   if (!normalizedPhone) {
@@ -271,7 +276,6 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
     }
     throw error;
   }
-  const requestId = generateId();
   const lockExpiresAt = new Date(now.getTime() + OTP_SEND_LOCK_MS);
   let challengeId = '';
   try {
@@ -365,11 +369,14 @@ export async function requestOtp(phone: string, ipAddress: string): Promise<OtpR
     );
 
     if (error instanceof SmsIrProviderError) {
-      console.error('SMS.ir OTP request failed.', {
-        correlationId: requestId,
-        category: error.category,
-        ...(error.httpStatus ? { httpStatus: error.httpStatus } : {}),
-      });
+      logger.error(
+        {
+          requestId,
+          category: error.category,
+          ...(error.httpStatus ? { httpStatus: error.httpStatus } : {}),
+        },
+        'smsir_otp_request_failed',
+      );
       const configurationFailure = [
         'missing_api_key',
         'invalid_template_id',

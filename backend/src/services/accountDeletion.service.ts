@@ -13,6 +13,7 @@ import ReminderCompletion from '../models/ReminderCompletion.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 import { hashAuthValue } from '../utils/authCrypto.js';
+import { logger } from '../utils/logger.js';
 
 const ACCOUNT_DELETION_BATCH_SIZE = 100;
 
@@ -77,9 +78,10 @@ export async function purgeExpiredAccountDeletions(
     try {
       if (await purgeScheduledAccountDeletion(user._id, now)) purgedCount += 1;
     } catch (error) {
-      console.error('Failed to purge an expired account deletion.', {
-        errorType: error instanceof Error ? error.name : 'UnknownError',
-      });
+      logger.error(
+        { errorType: error instanceof Error ? error.name : 'UnknownError' },
+        'account_deletion_purge_failed',
+      );
     }
   }
 

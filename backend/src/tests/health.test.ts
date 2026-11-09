@@ -5,6 +5,8 @@ import app from '../app.js';
 import { env } from '../config/env.js';
 import * as database from '../config/db.js';
 import { errorHandler } from '../middleware/errorHandler.js';
+import { requestLogger } from '../middleware/requestLogger.js';
+import { logger } from '../utils/logger.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -68,6 +70,7 @@ describe('HTTP application baseline', () => {
     const response = await request(app).get('/api/v1/health');
 
     expect(app.get('trust proxy')).toBe(env.trustProxyHops);
+    expect(response.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
     expect(response.headers['content-security-policy']).toContain("default-src 'self'");
     expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(response.headers['x-frame-options']).toBeDefined();
@@ -84,13 +87,32 @@ describe('HTTP application baseline', () => {
   });
 
   it('does not log request query values', async () => {
-    const output = vi.spyOn(process.stdout, 'write');
+    const requestLog = vi.spyOn(logger, 'info');
 
     await request(app).get('/api/v1/health?phone=log-sentinel');
 
-    expect(output.mock.calls.map(([chunk]) => String(chunk)).join('')).not.toContain(
-      'log-sentinel',
-    );
+    const loggedFields = JSON.stringify(requestLog.mock.calls);
+    expect(loggedFields).not.toContain('log-sentinel');
+    expect(requestLog.mock.calls[0]?.[0]).toMatchObject({
+      requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      method: 'GET',
+      path: '/api/v1/health',
+    });
+  });
+
+  it('logs a structured request ID without sensitive query or body values', async () => {
+    const requestLog = vi.spyOn(logger, 'info');
+    const response = await request(app)
+      .post('/api/v1/auth/otp/request?phone=query-sentinel')
+      .send({ phone: 'body-sentinel', code: 'otp-sentinel', token: 'token-sentinel' });
+    const loggedFields = JSON.stringify(requestLog.mock.calls);
+
+    expect(response.headers['x-request-id']).toBeTruthy();
+    expect(loggedFields).toContain(response.headers['x-request-id']);
+    expect(loggedFields).not.toContain('query-sentinel');
+    expect(loggedFields).not.toContain('body-sentinel');
+    expect(loggedFields).not.toContain('otp-sentinel');
+    expect(loggedFields).not.toContain('token-sentinel');
   });
 
   it('returns the standard not-found response for unknown routes', async () => {
@@ -105,11 +127,12 @@ describe('HTTP application baseline', () => {
 
   it('returns a generic server error without exposing internal details', async () => {
     const errorApp = express();
+    errorApp.use(requestLogger);
     errorApp.post('/error', (_req, _res, next) => {
       next(new Error('internal database details'));
     });
     errorApp.use(errorHandler);
-    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorLog = vi.spyOn(logger, 'error');
 
     const response = await request(errorApp)
       .post('/error')
@@ -125,12 +148,13 @@ describe('HTTP application baseline', () => {
     });
     expect(JSON.stringify(response.body)).not.toContain('internal database details');
     expect(errorLog).toHaveBeenCalledOnce();
-    expect(String(errorLog.mock.calls[0][0])).not.toContain('internal database details');
-    expect(String(errorLog.mock.calls[0][0])).not.toContain('09121234567');
-    expect(String(errorLog.mock.calls[0][0])).not.toContain('123456');
-    expect(String(errorLog.mock.calls[0][0])).not.toContain('secret-token');
-    expect(JSON.parse(String(errorLog.mock.calls[0][0]))).toMatchObject({
-      level: 'error',
+    const logs = JSON.stringify(errorLog.mock.calls);
+    expect(logs).not.toContain('internal database details');
+    expect(logs).not.toContain('09121234567');
+    expect(logs).not.toContain('123456');
+    expect(logs).not.toContain('secret-token');
+    expect(errorLog.mock.calls[0]?.[0]).toMatchObject({
+      requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       event: 'http_error',
       statusCode: 500,
       code: 'INTERNAL_ERROR',

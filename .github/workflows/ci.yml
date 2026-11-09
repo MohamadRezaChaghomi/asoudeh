@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:8.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+          --replSet rs0 --bind_ip_all
+    env:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://127.0.0.1:27017/asoudeh_test?replicaSet=rs0
+      TEST_MONGODB_URI: mongodb://127.0.0.1:27017/asoudeh_test?replicaSet=rs0
+      JWT_SECRET: ci-only-jwt-secret-not-used-outside-tests
+      AUTH_HASH_SECRET: ci-only-auth-hash-secret-not-used-outside-tests
+      CLIENT_URL: http://localhost:3000
+      OTP_DEV_SIMULATOR_ENABLED: "false"
+      NEXT_PUBLIC_API_URL: https://example.invalid/api/v1
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - name: Initialize test replica set
+        working-directory: backend
+        run: |
+          node --input-type=module <<'NODE'
+          import mongoose from 'mongoose';
+          await mongoose.connect('mongodb://127.0.0.1:27017/admin');
+          const admin = mongoose.connection.db.admin();
+          try {
+            await admin.command({
+              replSetInitiate: {
+                _id: 'rs0',
+                members: [{ _id: 0, host: '127.0.0.1:27017' }],
+              },
+            });
+          } catch (error) {
+            if (error.codeName !== 'AlreadyInitialized') throw error;
+          }
+          const deadline = Date.now() + 30000;
+          while (Date.now() < deadline) {
+            try {
+              const status = await admin.command({ isMaster: 1 });
+              if (status.ismaster) break;
+            } catch {}
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+          const status = await admin.command({ isMaster: 1 });
+          if (!status.ismaster) throw new Error('MongoDB replica set did not elect a primary.');
+          await mongoose.disconnect();
+          NODE
+      - run: npm run typecheck --prefix backend
+      - run: npm run typecheck --prefix frontend
+      - run: npm run lint --prefix backend
+      - run: npm run lint --prefix frontend
+      - run: npm test --prefix backend
+      - run: npm run test:jalali --prefix frontend
+      - run: npm run build --prefix backend
+      - name: Build frontend
+        env:
+          NODE_ENV: production
+        run: npm run build --prefix frontend
+      - run: npm audit --omit=dev --prefix backend
+      - run: npm audit --omit=dev --prefix frontend
+
+  playwright:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: https://example.invalid/api/v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - run: npm exec --prefix frontend -- playwright install --with-deps chromium
+      - run: npm run test:e2e --prefix frontend -- --workers=1

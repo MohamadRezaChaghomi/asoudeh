@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { HttpError } from '../utils/httpError.js';
-import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 export const notFound: RequestHandler = (_req, res) => res.status(404).json({
   success: false,
@@ -29,20 +29,15 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
     error.type === 'entity.too.large';
   const statusCode = isKnownError ? error.statusCode : isPayloadTooLarge ? 413 : 500;
   const code = isKnownError ? error.code : isPayloadTooLarge ? 'PAYLOAD_TOO_LARGE' : 'INTERNAL_ERROR';
-  const stack =
-    env.nodeEnv === 'development' && error instanceof Error
-      ? error.stack?.split('\n').slice(1).join('\n')
-      : undefined;
-
-  console.error(
-    JSON.stringify({
-      level: 'error',
+  logger.error(
+    {
+      requestId: res.locals.requestId,
       event: 'http_error',
       statusCode,
       code,
       errorType: error instanceof Error ? error.name : 'UnknownError',
-      ...(stack ? { stack } : {}),
-    }),
+    },
+    'http_error',
   );
 
   if (isKnownError && error.retryAfter) {

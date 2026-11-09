@@ -75,6 +75,7 @@ export const requestOtp = [
     const result = await requestOtpService(
       input.phone,
       req.ip || req.socket.remoteAddress || 'unknown',
+      String(res.locals.requestId),
     );
 
     res.json({
