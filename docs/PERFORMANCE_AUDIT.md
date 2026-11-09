@@ -96,13 +96,63 @@ A single Edge run against the local production build of the public home page, at
 | React rendering/request optimization | Completed for the evidenced repeated profile request; a React Profiler session was not available. |
 | Next.js initial bundle optimization | Completed for the reports chart; no other route showed a comparable bundle outlier in the production build. |
 | Fonts and image assets | Inspected; no change made. |
-| Backend/API optimization | Needs production-like workload measurements; no source changes made. |
-| MongoDB optimization/index rollout | Needs query profiler and live index inventory; no new indexes or migrations made. |
+| Backend/API optimization | A local 50k-transaction test fixture was measured on 2026-11-09; results and remaining staging limitation are below. |
+| MongoDB optimization/index rollout | The measured local query plans use existing indexes; no new indexes or migrations were justified. |
 | Startup time | Not measured. |
 | Caching strategy | Existing privacy-preserving service-worker boundary reviewed and retained; no private-data cache introduced. |
 | Performance testing | Typecheck, lint, backend tests, browser tests, PWA test, and production builds passed as detailed above. |
-| Before/after Web Vitals | Not comparable because no pre-change browser baseline was captured. |
+| Before/after Web Vitals | Lighthouse navigation-mode LCP/CLS were captured before and after the cache/compression configuration; INP is not emitted without a qualifying interaction. |
 | Documentation | Completed. |
 | Git commit/push | Limited to the audited files; pre-existing unrelated user worktree changes are excluded. |
 
-Next useful measurement: run Lighthouse/Web Vitals against a staging build on representative hardware/network and benchmark the dashboard, reports, and transaction APIs against a seeded, non-production MongoDB dataset with query profiling enabled. Review the unreferenced PNG assets with the product owner before deletion.
+Next useful measurement: repeat Lighthouse/Web Vitals against a staging build on representative hardware/network. Review the unreferenced PNG assets with the product owner before deletion.
+
+## Measured performance pass (2026-11-09)
+
+This pass did not repeat the lazy Recharts or profile-fetch deduplication work above. It used a local production frontend build and only the credential-free local `asoudeh_test` database.
+
+### Backend fixture and query measurements
+
+`backend/src/scripts/performanceSeed.ts` replaces only its reserved `performance-seed@asoudeh.invalid` test user and creates 50,000 transactions in batches. `backend/src/scripts/performanceMeasure.ts` authenticates locally, times dashboard, monthly-report, and first-page transaction-list requests (2 warmups + 12 samples), and prints `explain("executionStats")` summaries. Both scripts refuse any URI except local `asoudeh_test`; the measurement script also requires the API URL to be local. No production or remote database was contacted.
+
+| Endpoint / query | Median API time | p95 API time | Explain execution time | Docs / keys examined | Plan |
+|---|---:|---:|---:|---:|---|
+| Dashboard | 18.1 ms | 23.3 ms | 6 ms | 1,242 / 1,242 | `IXSCAN userId_1_deletedAt_1_date_-1__id_-1` |
+| Monthly report | 18.1 ms | 24.0 ms | 5 ms | 966 / 970 | `IXSCAN userId_1_type_1_deletedAt_1_categoryId_1_date_-1` |
+| Transaction list page (100 rows) | 24.1 ms | 45.4 ms | 5 ms | 100 / 100 | `IXSCAN userId_1_deletedAt_1_date_-1__id_-1` |
+| Transaction-list count | — | — | 18 ms | 0 / 50,001 | `COUNT_SCAN userId_1_deletedAt_1_date_-1__id_-1` |
+
+All measured API p95s and query explain times are below the ~200 ms threshold, so no backend query or index change was made. The count plan scans the matching index keys without fetching transaction documents. The report performs one batched category `$in` lookup rather than an N+1 lookup; transaction reads are paged at a maximum of 100. Service aggregations put owner/deletion/date/type `$match` stages before grouping, and the find queries use selected fields or bounded result sets. Query projections and existing indexes were retained because the measured plans were already selective and fast.
+
+To reproduce from `backend/` with `NODE_ENV=test`, `MONGODB_URI` and `TEST_MONGODB_URI` both set to `mongodb://127.0.0.1:27017/asoudeh_test`, and synthetic test-only secrets:
+
+```powershell
+npm run perf:seed
+npm run dev
+# In another terminal, with the same test-only environment:
+npm run perf:measure
+```
+
+The seed run inserted 50,000 transactions in 2.8 seconds. The measurement run returned HTTP success for all three endpoints. No SMS or external API calls are made.
+
+### Production frontend measurements and headers
+
+The before build was run before the static-asset header/compression config change; the after build includes it. Lighthouse 12.8.2 ran in mobile navigation mode against the same local production home page with local Chrome and the same machine. Values are one lab run each, not field data.
+
+| Lighthouse metric | Before | After | Notes |
+|---|---:|---:|---|
+| LCP | 1,963 ms | 1,951 ms | No material change |
+| INP | Not reported | Not reported | Navigation-mode Lighthouse ran no qualifying user interaction; a separate after-build Event Timing check produced no entries at the browser’s 16 ms reporting threshold, so no numeric INP is claimed. |
+| CLS | 0.000 | 0.000 | No layout shift observed |
+| Performance score | 0.99 | 0.99 | Same score |
+
+The after `next build` reported the largest First Load JS route as `/transactions` at **141 kB**, under the 150 kB threshold. No route exceeded the limit, so no route bundle was changed. The relevant brand image already uses `next/image`; no raw `<img>` usage was found in app/components.
+
+| Bundle measurement | Before config change | After config change | Result |
+|---|---:|---:|---|
+| Largest route First Load JS | 141 kB (`/transactions`) | 141 kB (`/transactions`) | No route exceeded 150 kB |
+| Shared First Load JS | 103 kB | 103 kB | Unchanged |
+
+Production response checks confirmed gzip `Content-Encoding` for HTML and JavaScript, and `Cache-Control: public, max-age=31536000, immutable` for `/_next/static` chunks. Next config now explicitly enables compression and assigns long immutable caching to build-hashed chunks, with one-day caching plus revalidation for public `/icons/` and `/logo/` assets. The existing Caddy config already enables `encode zstd gzip` for proxied responses.
+
+Focused validation: backend typecheck/lint and frontend typecheck/lint passed; `npm run perf:measure` completed against the seeded local test database; a wrong-database seeder invocation was rejected before connecting; and the new production-asset Playwright check passed.

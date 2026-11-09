@@ -9,6 +9,17 @@ test('serves the configured security response headers', async ({ page }) => {
   expect(response?.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin');
 });
 
+test('compresses production pages and caches static assets', async ({ page }) => {
+  const pageResponse = await page.goto('/');
+  expect(pageResponse?.headers()['content-encoding']).toBe('gzip');
+
+  const assetResponse = await page.request.get('/icons/icon-192.png');
+  expect(assetResponse.ok()).toBe(true);
+  expect(assetResponse.headers()['cache-control']).toBe(
+    'public, max-age=86400, stale-while-revalidate=604800',
+  );
+});
+
 test('keeps all app routes reachable and preserves the selected theme', async ({ page }) => {
   const clientErrors: string[] = [];
   let activityRequests = 0;
