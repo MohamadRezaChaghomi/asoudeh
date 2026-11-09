@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 test('public information pages share navigation and are available without signing in', async ({
   page,

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 const csrfToken = 'reminder-e2e-csrf-token';
 
@@ -104,14 +104,16 @@ test('creates, completes, and archives a monthly reminder while showing persiste
   page.on('dialog', (dialog) => dialog.accept());
 
   await page.goto('/reminders');
-  await expect(page.getByText(/هنوز یادآوری ثبت نکرده‌اید/)).toBeVisible();
+  await expect(page.getByText(/برای قبض یا پرداخت بعدی یادآور بسازید/)).toBeVisible();
   await page.getByLabel('عنوان').fill('پرداخت قبض');
   await page.getByLabel('روز').selectOption('10');
   await page.getByLabel('مبلغ (اختیاری، تومان)').fill('۱۲۵۰۰۰');
   await page.getByLabel('تکرار').selectOption('monthly');
   await page.getByRole('button', { name: 'ثبت یادآور' }).click();
 
-  await expect(page.getByRole('status')).toContainText('یادآور ثبت شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'یادآور ثبت شد.' })).toContainText(
+    'یادآور ثبت شد.',
+  );
   expect(createPayload).toMatchObject({
     title: 'پرداخت قبض',
     recurrence: 'monthly',
@@ -122,15 +124,21 @@ test('creates, completes, and archives a monthly reminder while showing persiste
   await page.getByRole('button', { name: 'ویرایش' }).click();
   await page.getByLabel('عنوان').fill('قبض برق');
   await page.getByRole('button', { name: 'ذخیرهٔ تغییرات' }).click();
-  await expect(page.getByRole('status')).toContainText('یادآور ویرایش شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'یادآور ویرایش شد.' })).toContainText(
+    'یادآور ویرایش شد.',
+  );
   expect(updatePayload).toMatchObject({ title: 'قبض برق' });
 
   await page.getByRole('button', { name: 'انجام شد' }).click();
-  await expect(page.getByRole('status')).toContainText('یادآور این ماه انجام شد');
+  await expect(page.getByRole('status').filter({ hasText: 'یادآور این ماه انجام شد' })).toContainText(
+    'یادآور این ماه انجام شد',
+  );
   await expect(page.getByText(/وضعیت: انجام‌شده در این ماه/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'انجام شد' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'بایگانی' }).click();
-  await expect(page.getByRole('status')).toContainText('یادآور بایگانی شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'یادآور بایگانی شد.' })).toContainText(
+    'یادآور بایگانی شد.',
+  );
   await expect(page.getByText(/وضعیت: انجام‌شده در این ماه/)).toBeVisible();
 });

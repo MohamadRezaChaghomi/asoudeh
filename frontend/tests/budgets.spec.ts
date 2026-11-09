@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 const csrfToken = 'budget-e2e-csrf-token';
 const expenseCategory = {
@@ -114,12 +114,14 @@ test('creates, edits, and deletes a monthly budget using live API responses', as
   page.on('dialog', (dialog) => dialog.accept());
 
   await page.goto('/budgets');
-  await expect(page.getByText('برای این ماه هنوز بودجه‌ای ثبت نشده است.')).toBeVisible();
+  await expect(page.getByText('برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.')).toBeVisible();
   await expect(page.getByLabel('دستهٔ هزینه')).toHaveValue(expenseCategory.id);
   await page.getByLabel('سقف بودجه (تومان)').fill('۱۰۰۰۰۰');
   await page.getByRole('button', { name: 'ثبت بودجه' }).click();
 
-  await expect(page.getByRole('status')).toContainText('بودجه ثبت شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'بودجه ثبت شد.' })).toContainText(
+    'بودجه ثبت شد.',
+  );
   await expect(page.getByText('به ۸۰٪ بودجه رسیده‌اید.')).toBeVisible();
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '85');
   expect(requestedMonth).toMatch(/^\d{2}-\d{4}$/);
@@ -132,13 +134,17 @@ test('creates, edits, and deletes a monthly budget using live API responses', as
   await page.getByRole('button', { name: 'ویرایش' }).click();
   await page.getByLabel('سقف بودجه (تومان)').fill('۲۰۰۰۰۰');
   await page.getByRole('button', { name: 'ذخیرهٔ تغییرات' }).click();
-  await expect(page.getByRole('status')).toContainText('بودجه ویرایش شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'بودجه ویرایش شد.' })).toContainText(
+    'بودجه ویرایش شد.',
+  );
   await expect(page.getByText('مصرف بودجه در محدودهٔ عادی است.')).toBeVisible();
   expect(updatePayload).toMatchObject({ limitAmount: 200_000 });
 
   await page.getByRole('button', { name: 'حذف' }).click();
-  await expect(page.getByRole('status')).toContainText('بودجه حذف شد.');
-  await expect(page.getByText('برای این ماه هنوز بودجه‌ای ثبت نشده است.')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'بودجه حذف شد.' })).toContainText(
+    'بودجه حذف شد.',
+  );
+  await expect(page.getByText('برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.')).toBeVisible();
 });
 
 test('refreshes an expired session and retries loading budgets', async ({ page }) => {

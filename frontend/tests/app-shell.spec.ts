@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 test('serves the configured security response headers', async ({ page }) => {
   const response = await page.goto('/');

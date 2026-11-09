@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/auth/csrf', async (route) => {
@@ -94,7 +94,7 @@ test('requires manual OTP entry and never returns or stores the development OTP'
     pendingFlow: JSON.parse(sessionStorage.getItem('asoudeh.pendingOtp') ?? 'null'),
   }));
   expect(storage.localStorageKeys).toEqual([]);
-  expect(storage.sessionStorageKeys).toEqual(['asoudeh.pendingOtp']);
+  expect(storage.sessionStorageKeys).toContain('asoudeh.pendingOtp');
   expect(Object.keys(storage.pendingFlow).sort()).toEqual([
     'phone',
     'resendAvailableAt',

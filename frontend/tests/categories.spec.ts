@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 const csrfToken = 'category-e2e-csrf-token';
 const firstCategoryId = '64b000000000000000000101';
@@ -100,7 +100,9 @@ test('lists, creates, edits, activates and deactivates categories in RTL; deleti
   await page.getByLabel('نوع').selectOption('expense');
   await page.getByRole('button', { name: 'افزودن' }).click();
   await expect(page.getByText('قبض‌ها', { exact: true })).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('دسته‌بندی با موفقیت اضافه شد');
+  await expect(page.getByRole('status').filter({ hasText: 'دسته‌بندی با موفقیت اضافه شد' })).toContainText(
+    'دسته‌بندی با موفقیت اضافه شد',
+  );
 
   const addedCategory = page.locator('li').filter({ hasText: 'قبض‌ها' });
   await addedCategory.getByRole('button', { name: 'ویرایش' }).click();

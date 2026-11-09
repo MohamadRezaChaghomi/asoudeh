@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 import {
   formatTomanAmount,
   formatTomanAmountInput,
@@ -140,7 +140,9 @@ test('creates an income through the three-step form with Persian amount and Jala
   await page.getByLabel('توضیح (اختیاری)').fill('حقوق ماهانه');
   await page.getByRole('button', { name: 'ثبت تراکنش' }).click();
 
-  await expect(page.getByRole('status')).toContainText('تراکنش ثبت شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'تراکنش ثبت شد.' })).toContainText(
+    'تراکنش ثبت شد.',
+  );
   await expect.poll(() =>
     page.evaluate(
       (key) => sessionStorage.getItem(key),
@@ -229,7 +231,9 @@ test('allows editing an existing transaction while retaining its inactive catego
   ).toBeVisible();
   await page.getByRole('button', { name: 'ذخیرهٔ تغییرات' }).click();
 
-  await expect(page.getByRole('status')).toContainText('تراکنش ویرایش شد.');
+  await expect(page.getByRole('status').filter({ hasText: 'تراکنش ویرایش شد.' })).toContainText(
+    'تراکنش ویرایش شد.',
+  );
   expect(updatePayload).toMatchObject({
     type: 'expense',
     amount: 4500,
@@ -420,7 +424,9 @@ test('restores an opted-in draft only for the same authenticated account', async
     .toContain('"amount":"۷۵٬۰۰۰"');
 
   await page.reload();
-  await expect(page.getByRole('status')).toContainText('پیش‌نویس محلی این حساب بازیابی شد');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'پیش‌نویس محلی این حساب بازیابی شد' }),
+  ).toContainText('پیش‌نویس محلی این حساب بازیابی شد');
   await expect(page.getByLabel('دسته‌بندی')).toHaveValue(incomeCategory.id);
   await expect(page.getByRole('list', { name: 'مراحل ثبت تراکنش' }).getByRole('listitem').nth(1))
     .toHaveAttribute('aria-current', 'step');
@@ -437,7 +443,9 @@ test('restores an opted-in draft only for the same authenticated account', async
 
   activeUserId = firstAccountId;
   await page.reload();
-  await expect(page.getByRole('status')).toContainText('پیش‌نویس محلی این حساب بازیابی شد');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'پیش‌نویس محلی این حساب بازیابی شد' }),
+  ).toContainText('پیش‌نویس محلی این حساب بازیابی شد');
   expect(createRequests).toBe(0);
 
   activeUserId = '64b000000000000000000098';

@@ -80,12 +80,14 @@ Coverage was collected with Vitest V8 using the test database and synthetic test
 | Check | Result |
 |---|---|
 | Backend coverage run (`npx vitest run --coverage --coverage.reporter=text`) on local `asoudeh_test` | **159 passed, 1 skipped** (18 test files passed, 1 skipped; 19 files total); **87.80% statements, 88.43% lines**. The SMS Sandbox opt-in was disabled. |
+| Latest backend suite and explicit database test on local `asoudeh_test` | **167 passed, 1 skipped** in the full suite; **6 passed** in `test:db`. |
 | Lowest line coverage among critical backend runtime files | See the ranked table below; the two assistant rows are low because assistant provider behavior is separately mocked and has narrow service coverage. |
 | Focused backend regression files | **59 passed across 5 files**: auth, transactions, budgets, caregiver, and reminder calendar. |
-| Frontend category and changed auth Playwright specs | **16 passed** with one worker. |
-| Frontend Jalali utility spec | **5 passed**. |
+| Full frontend Playwright suite (Edge, one worker) | **67 passed, 1 skipped**. |
+| Frontend Jalali utility spec | **7 passed**. |
 | Production PWA Playwright spec (`PWA_TEST=true`, Edge) | **1 passed, 1 skipped**; the development-only service-worker test is skipped by design. |
 | Frontend production build; backend/frontend typecheck and lint | **Passed**. |
+| Production dependency audits (`npm audit --omit=dev`) | **0 vulnerabilities** in both backend and frontend. |
 
 These are local automated checks, not a production deployment test or live SMS verification.
 

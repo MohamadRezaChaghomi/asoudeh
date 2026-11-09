@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 const userId = '64b000000000000000000099';
 const seniorId = '64b000000000000000000023';

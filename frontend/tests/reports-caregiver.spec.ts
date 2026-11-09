@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 const csrfToken = 'reports-caregiver-e2e-csrf-token';
 
@@ -140,14 +140,18 @@ test('invites, accepts, and revokes a caregiver with selected read-only permissi
   await page.getByLabel('شماره همراه مراقب').fill('09120000002');
   await page.getByLabel('مشاهدهٔ خلاصهٔ مالی').check();
   await page.getByRole('button', { name: 'ثبت دعوت' }).click();
-  await expect(page.getByRole('status')).toContainText('دعوت ثبت شد');
+  await expect(page.getByRole('status').filter({ hasText: 'دعوت ثبت شد' })).toContainText('دعوت ثبت شد');
   await expect(page.getByText('09120000002')).toBeVisible();
 
   await page.getByRole('button', { name: 'پذیرفتن' }).click();
-  await expect(page.getByRole('status')).toContainText('دعوت پذیرفته شد');
+  await expect(page.getByRole('status').filter({ hasText: 'دعوت پذیرفته شد' })).toContainText(
+    'دعوت پذیرفته شد',
+  );
   await expect(page.getByText('دعوت در انتظاری ندارید.')).toBeVisible();
 
   await page.getByRole('button', { name: 'لغو دسترسی' }).click();
-  await expect(page.getByRole('status')).toContainText('دسترسی مراقب لغو شد');
+  await expect(page.getByRole('status').filter({ hasText: 'دسترسی مراقب لغو شد' })).toContainText(
+    'دسترسی مراقب لغو شد',
+  );
   await expect(page.getByText('لغوشده')).toBeVisible();
 });

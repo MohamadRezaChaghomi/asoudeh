@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
+import type { Page } from '@playwright/test';
 
 const pageRoutes: { path: string; label: string; otp?: boolean }[] = [
   { path: '/login', label: 'login' },
@@ -156,7 +157,15 @@ for (const route of pageRoutes) {
       await page.addInitScript(
         ({ selectedTheme, highContrast }) => {
           localStorage.setItem('asoudeh.theme', selectedTheme);
-          if (highContrast) document.documentElement.dataset.highContrast = 'true';
+          if (highContrast) {
+            document.addEventListener(
+              'DOMContentLoaded',
+              () => {
+                document.documentElement.dataset.highContrast = 'true';
+              },
+              { once: true },
+            );
+          }
         },
         {
           selectedTheme: theme.name === 'dark' ? 'dark' : 'light',

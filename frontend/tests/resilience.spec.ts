@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 async function mockSession(page: import('@playwright/test').Page) {
   await page.route('**/api/v1/me', (route) =>

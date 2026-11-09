@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 test('does not register a service worker in development', async ({ page }) => {
   test.skip(process.env.PWA_TEST === 'true');

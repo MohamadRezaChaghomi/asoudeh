@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './diagnostics-test';
 
 const profile = {
   id: 'assistant-test-user',
@@ -22,7 +22,7 @@ test('keeps assistant unavailable until configured without inventing an AI reply
   await page.goto('/dashboard');
   await page.getByRole('button', { name: 'بازکردن راهنمای آسوده' }).click();
 
-  await expect(page.getByRole('status')).toContainText('هنوز برای سامانه پیکربندی نشده است');
+  await expect(page.locator('.assistant-status')).toContainText('هنوز برای سامانه پیکربندی نشده است');
   await expect(page.getByLabel('پرسش شما')).toBeDisabled();
   await expect(page.locator('.assistant-message')).toHaveCount(0);
 });
