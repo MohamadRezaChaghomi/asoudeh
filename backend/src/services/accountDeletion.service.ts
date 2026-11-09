@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import mongoose from 'mongoose';
+import AssistantRateLimit from '../models/AssistantRateLimit.js';
 import AuditLog from '../models/AuditLog.js';
 import AuthSession from '../models/AuthSession.js';
 import Budget from '../models/Budget.js';
@@ -19,6 +21,9 @@ async function purgeAccount(
   now: Date,
 ): Promise<boolean> {
   const userId = user._id;
+  const assistantRateLimitPrefix = createHash('sha256')
+    .update(userId.toString())
+    .digest('hex');
   const phoneHash = user.phone ? hashAuthValue('phone', user.phone) : null;
   const phoneRateLimitIds = user.phone
     ? [
@@ -28,6 +33,9 @@ async function purgeAccount(
     : [];
 
   await Promise.all([
+    AssistantRateLimit.deleteMany({
+      _id: { $regex: `^${assistantRateLimitPrefix}:` },
+    }),
     AuditLog.deleteMany({ $or: [{ actorId: userId }, { targetUserId: userId }] }),
     AuthSession.deleteMany({ userId }),
     Budget.deleteMany({ userId }),

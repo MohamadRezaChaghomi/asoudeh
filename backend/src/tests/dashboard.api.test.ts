@@ -122,7 +122,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Dashboard API', () => {
     const category = await Category.create({
       userId: new mongoose.Types.ObjectId(owner.userId),
       name: `Dashboard ${randomUUID()}`,
-      type: 'both',
+      type: 'expense',
     });
     categoryId = category._id;
     categoryIds.push(categoryId);
@@ -227,17 +227,20 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Dashboard API', () => {
         userId: new mongoose.Types.ObjectId(owner.userId),
         title: `Too late ${randomUUID()}`,
         date: dateAtOffset(today, 8),
+        recurrence: 'none',
       },
       {
         userId: new mongoose.Types.ObjectId(owner.userId),
         title: `Inactive ${randomUUID()}`,
         date: dateAtOffset(today, 2),
+        recurrence: 'none',
         isActive: false,
       },
       {
         userId: new mongoose.Types.ObjectId(otherUser.userId),
         title: `Other ${randomUUID()}`,
         date: dateAtOffset(today, 1),
+        recurrence: 'none',
       },
     ]);
     reminderIds.push(...reminders.map(({ _id }) => _id));

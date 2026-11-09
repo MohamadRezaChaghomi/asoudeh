@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getJalaliMonthRange } from '../utils/jalaliMonth.js';
 
 const reminderCompletionSchema = new mongoose.Schema(
   {
@@ -16,6 +17,18 @@ const reminderCompletionSchema = new mongoose.Schema(
       type: String,
       required: true,
       match: /^(0[1-9]|1[0-2])-(12\d{2}|13\d{2}|14\d{2}|15\d{2}|1600)$/,
+      validate: {
+        validator: (value: string) => {
+          const [month, year] = value.split('-');
+          try {
+            getJalaliMonthRange(Number(year), Number(month));
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        message: 'monthKey must be a valid Solar Hijri month.',
+      },
     },
     completedAt: { type: Date, required: true, default: Date.now },
   },
@@ -27,5 +40,6 @@ reminderCompletionSchema.index(
   { unique: true, name: 'reminder_month_completion_unique' },
 );
 reminderCompletionSchema.index({ userId: 1, monthKey: 1 });
+reminderCompletionSchema.index({ userId: 1, reminderId: 1, completedAt: -1 });
 
 export default mongoose.model('ReminderCompletion', reminderCompletionSchema);

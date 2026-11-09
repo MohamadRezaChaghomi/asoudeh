@@ -394,22 +394,29 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Reminder API', () => {
   });
 
   it('retains legacy yearly reminders without allowing new yearly behavior', async () => {
-    const legacy = await Reminder.create({
+    const legacyId = new mongoose.Types.ObjectId();
+    const now = new Date();
+    await Reminder.collection.insertOne({
+      _id: legacyId,
       userId: new mongoose.Types.ObjectId(owner.userId),
       title: `Legacy ${randomUUID()}`,
       date: new Date('2026-10-21T00:00:00.000Z'),
       recurrence: 'yearly',
+      isActive: true,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now,
     });
-    reminderIds.push(legacy._id);
+    reminderIds.push(legacyId);
     const completion = await authenticatedMutation(
       'post',
-      `/api/v1/reminders/${legacy.id}/complete`,
+      `/api/v1/reminders/${legacyId}/complete`,
       owner,
       {},
     );
     expect(completion.status).toBe(409);
     expect(completion.body.error.code).toBe('LEGACY_REMINDER_RECURRENCE_UNSUPPORTED');
-    expect((await Reminder.findById(legacy._id).lean())?.recurrence).toBe('yearly');
+    expect((await Reminder.findById(legacyId).lean())?.recurrence).toBe('yearly');
   });
 
   it('shows only actionable due reminders within seven days on the dashboard', async () => {

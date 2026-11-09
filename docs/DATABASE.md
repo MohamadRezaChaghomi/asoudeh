@@ -13,10 +13,10 @@ The backend uses MongoDB through Mongoose. Model schemas and indexes are declare
 | `OtpChallenge` | Phone and phone hash, OTP hash, delivery mode, expiry, attempt/block and send-lock state | One challenge per phone hash; OTP is not stored in plaintext. Expiry cleanup uses a TTL index. |
 | `OtpRateLimit` | Hashed scope key, request timestamps, expiry | TTL-cleaned phone/IP request-limit records; raw phone/IP values are not used as keys. |
 | `Category` | Optional owner, name, income/expense type, icon, active state | `userId: null` denotes a system category. Unique `(userId, type, name)` index. |
-| `Transaction` | Owner, type, integer amount, category, date, optional note, soft-delete timestamp | Owner and date/category indexes support list and aggregate queries. Deletion is soft; category ownership is checked by services. |
-| `Budget` | Owner, category, Solar Hijri month key, limit amount | Unique `(userId, categoryId, monthKey)` index; owner index. |
-| `Reminder` | Owner, title, date, recurrence, optional amount, active/deletion state | Owner and active/date indexes support list and dashboard reads. |
-| `ReminderCompletion` | Owner, reminder, month key, completion time | Unique `(reminderId, monthKey)` index makes monthly completion idempotent. |
+| `Transaction` | Owner, type, integer amount, category, date, optional note, soft-delete timestamp | Owner/deletion/date, category/date, amount-sort, and aggregation indexes support real list and monthly sum queries. |
+| `Budget` | Owner, category, Solar Hijri month key, limit amount | Unique `(userId, categoryId, monthKey)` and `(userId, monthKey)` lookup indexes. |
+| `Reminder` | Owner, title, date, recurrence, optional amount, active/deletion state | Owner/deletion/date list and owner/active/deletion/date upcoming-reminder indexes. |
+| `ReminderCompletion` | Owner, reminder, month key, completion time | Unique `(reminderId, monthKey)` index makes monthly completion idempotent; owner/month and owner/reminder/time indexes support reads. |
 | `CaregiverLink` | Senior, optional caregiver account/phone, state, read permissions, response/revocation times | Partial uniqueness prevents duplicate pending/active links for the same senior/phone. |
 | `AuditLog` | Actor, target user, caregiver action, event time | Indexed by actor/target and target/time for access-event queries. |
 | `AssistantRateLimit` | Hashed-user/time-window key, request count, expiry | TTL-cleaned per-user assistant rate-limit record; no question or conversation is stored. |
@@ -39,11 +39,16 @@ Inspect the model files for field-level types, defaults, and complete index defi
 
 ## Indexes and operational cautions
 
-Models declare unique, lookup, and TTL indexes, including unique phone/email, owner/category/month budget, reminder/month completion, OTP phone hash, session token hash, and expiration cleanup indexes.
+Models declare unique, lookup, and TTL indexes, including unique phone/email, owner/category/month budget, reminder/month completion, OTP phone hash, session token hash, and expiration cleanup indexes. Production Mongoose automatic index creation is disabled.
 
-The inspected connection setup calls `mongoose.connect`; it does not provide a reviewed production index migration process. Index definitions in code do not prove that indexes exist in an already-running database. Before production, inspect existing duplicate data, plan index creation/rollout, and verify readiness on a non-production copy. Backup and restore procedures also remain unverified.
+Run `npm --prefix backend run db:ensure-indexes` to detect and report duplicates before creating any declared unique indexes; it refuses non-test databases unless `--confirm-non-test-db` is supplied. Run `npm --prefix backend run db:report-orphans` for a read-only reference-integrity report. Neither script is called by server startup. Verify index rollout on a non-production copy and maintain backups.
 
-Category deletion/reassignment is intentionally disabled by the API until a concurrency-safe workflow and a type-correct fallback are agreed. The current standalone local MongoDB topology does not provide multi-document transaction guarantees.
+## Category deletion options
+
+- **Archive-only:** preserve historical references; safest and simplest, but archived categories remain stored.
+- **Reassign:** transactionally move references to an active, type-compatible fallback (income to income, expense to expense) before deletion; requires safe budget and uniqueness-conflict handling.
+
+Category deletion remains disabled until a concurrency-safe option is agreed; the current standalone local MongoDB topology does not provide multi-document transaction guarantees. Legacy records with `Reminder.recurrence=yearly` or `Category.type=both` remain readable; current model and API validation reject those values on new writes.
 
 ## Test databases
 

@@ -97,7 +97,7 @@ async function requireAvailableCategory(
     ],
   })
     .select('type')
-    .lean();
+    .lean<{ type: 'income' | 'expense' | 'both' }>();
 
   if (!category) {
     throw new HttpError(400, 'CATEGORY_UNAVAILABLE', 'دسته‌بندی انتخاب‌شده در دسترس نیست.');

@@ -3,9 +3,9 @@ import mongoose from 'mongoose';
 const categorySchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    name: { type: String, required: true, trim: true, maxlength: 50 },
-    type: { type: String, enum: ['income', 'expense', 'both'], default: 'both' },
-    icon: { type: String, default: 'wallet' },
+    name: { type: String, required: true, trim: true, minlength: 1, maxlength: 50 },
+    type: { type: String, enum: ['income', 'expense'], required: true },
+    icon: { type: String, trim: true, minlength: 1, default: 'wallet' },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

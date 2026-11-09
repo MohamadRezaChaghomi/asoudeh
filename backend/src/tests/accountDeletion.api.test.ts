@@ -1,4 +1,4 @@
-import { randomBytes, randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import app from '../app.js';
 import { connectDB } from '../config/db.js';
 import { env } from '../config/env.js';
+import AssistantRateLimit from '../models/AssistantRateLimit.js';
 import AuditLog from '../models/AuditLog.js';
 import AuthSession, { AUTH_SESSION_IDLE_TIMEOUT_MS } from '../models/AuthSession.js';
 import Budget from '../models/Budget.js';
@@ -34,6 +35,7 @@ const reminderIds: mongoose.Types.ObjectId[] = [];
 const completionIds: mongoose.Types.ObjectId[] = [];
 const caregiverLinkIds: mongoose.Types.ObjectId[] = [];
 const auditLogIds: mongoose.Types.ObjectId[] = [];
+const assistantRateLimitIds: string[] = [];
 const phones: string[] = [];
 const testIps: string[] = [];
 
@@ -150,6 +152,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
 
     await connectDB(testMongoUri);
     await Promise.all([
+      AssistantRateLimit.init(),
       AuditLog.init(),
       AuthSession.init(),
       Budget.init(),
@@ -165,8 +168,8 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     const userIndexes = await User.collection.indexes();
     expect(userIndexes).toContainEqual(
       expect.objectContaining({
-        name: 'deletionScheduledAt_1',
-        key: { deletionScheduledAt: 1 },
+        name: 'deletionScheduledAt_1__id_1',
+        key: { deletionScheduledAt: 1, _id: 1 },
       }),
     );
   }, 20_000);
@@ -193,6 +196,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
         ]),
       ];
       await Promise.all([
+        AssistantRateLimit.deleteMany({ _id: { $in: assistantRateLimitIds } }),
         AuditLog.deleteMany({
           $or: [{ actorId: userFilter }, { targetUserId: userFilter }],
         }),
@@ -279,6 +283,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
   it('purges all account-owned records and phone-bound invitations after the deadline', async () => {
     const identity = await createIdentity('Account deletion purge');
     const otherUser = await createIdentity('Unrelated account');
+    const anotherSenior = await createIdentity('Another senior account');
     const ownerId = new mongoose.Types.ObjectId(identity.userId);
     const otherUserId = new mongoose.Types.ObjectId(otherUser.userId);
     const category = await Category.create({
@@ -323,12 +328,36 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
       permissions: { readSummary: true, readTransactions: false, readReports: false },
     });
     caregiverLinkIds.push(link._id);
+    const seniorLink = await CaregiverLink.create({
+      seniorId: ownerId,
+      caregiverId: otherUserId,
+      caregiverPhone: otherUser.phone,
+      status: 'active',
+      respondedAt: new Date(),
+    });
+    const caregiverLink = await CaregiverLink.create({
+      seniorId: otherUserId,
+      caregiverId: ownerId,
+      status: 'active',
+      respondedAt: new Date(),
+    });
+    const phoneInvitation = await CaregiverLink.create({
+      seniorId: new mongoose.Types.ObjectId(anotherSenior.userId),
+      caregiverPhone: identity.phone,
+      status: 'pending',
+    });
+    caregiverLinkIds.push(seniorLink._id, caregiverLink._id, phoneInvitation._id);
     const auditLog = await AuditLog.create({
       actorId: ownerId,
       targetUserId: otherUserId,
       action: 'caregiver.invited',
     });
-    auditLogIds.push(auditLog._id);
+    const targetedAuditLog = await AuditLog.create({
+      actorId: otherUserId,
+      targetUserId: ownerId,
+      action: 'caregiver.invited',
+    });
+    auditLogIds.push(auditLog._id, targetedAuditLog._id);
     const session = await AuthSession.create({
       userId: ownerId,
       familyId: randomUUID(),
@@ -343,21 +372,30 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
       'otp-rate-limit',
       `verify-phone\0${identity.phone}`,
     );
+    const assistantRateLimitId = `${createHash('sha256')
+      .update(ownerId.toString())
+      .digest('hex')}:${Math.floor(Date.now() / 60_000)}`;
+    assistantRateLimitIds.push(assistantRateLimitId);
     await Promise.all([
       OtpChallenge.create({
         phoneHash,
         phone: identity.phone,
-        deleteAt: new Date(Date.now() + 60_000),
+        deleteAt: new Date(Date.now() + 86_400_000),
       }),
       OtpRateLimit.create({
         _id: rateLimitId,
         requestTimes: [new Date()],
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 86_400_000),
       }),
       OtpRateLimit.create({
         _id: verifyRateLimitId,
         requestTimes: [new Date()],
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      }),
+      AssistantRateLimit.create({
+        _id: assistantRateLimitId,
+        requestCount: 1,
+        expiresAt: new Date(Date.now() + 86_400_000),
       }),
     ]);
     await User.updateOne(
@@ -383,6 +421,30 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Account deletion API', ()
     expect(await OtpChallenge.exists({ phoneHash })).toBeNull();
     expect(await OtpRateLimit.exists({ _id: rateLimitId })).toBeNull();
     expect(await OtpRateLimit.exists({ _id: verifyRateLimitId })).toBeNull();
+    expect(await AssistantRateLimit.exists({ _id: assistantRateLimitId })).toBeNull();
+    expect(
+      await Promise.all([
+        Transaction.exists({ userId: ownerId }),
+        Budget.exists({ userId: ownerId }),
+        Category.exists({ userId: ownerId }),
+        Reminder.exists({ userId: ownerId }),
+        ReminderCompletion.exists({ userId: ownerId }),
+        AuthSession.exists({ userId: ownerId }),
+        AuditLog.exists({ $or: [{ actorId: ownerId }, { targetUserId: ownerId }] }),
+        CaregiverLink.exists({
+          $or: [
+            { seniorId: ownerId },
+            { caregiverId: ownerId },
+            { caregiverPhone: identity.phone },
+          ],
+        }),
+        AssistantRateLimit.exists({
+          _id: { $regex: `^${createHash('sha256').update(ownerId.toString()).digest('hex')}:` },
+        }),
+      ]),
+    ).toEqual(Array(9).fill(null));
+    expect(await purgeScheduledAccountDeletion(ownerId)).toBe(false);
     expect(await User.exists({ _id: otherUserId })).not.toBeNull();
+    expect(await User.exists({ _id: new mongoose.Types.ObjectId(anotherSenior.userId) })).not.toBeNull();
   });
 });

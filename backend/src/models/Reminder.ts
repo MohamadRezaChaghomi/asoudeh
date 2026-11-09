@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 
 const reminderSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    title: { type: String, required: true, trim: true, maxlength: 120 },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    title: { type: String, required: true, trim: true, minlength: 1, maxlength: 120 },
     date: { type: Date, required: true },
-    recurrence: { type: String, enum: ['none', 'monthly', 'yearly'], default: 'none' },
+    recurrence: { type: String, enum: ['none', 'monthly'], required: true },
     amount: {
       type: Number,
       min: 1,
@@ -19,6 +19,7 @@ const reminderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-reminderSchema.index({ userId: 1, isActive: 1, date: 1 });
+reminderSchema.index({ userId: 1, deletedAt: 1, date: 1, _id: 1 });
+reminderSchema.index({ userId: 1, isActive: 1, deletedAt: 1, date: 1, _id: 1 });
 
 export default mongoose.model('Reminder', reminderSchema);
