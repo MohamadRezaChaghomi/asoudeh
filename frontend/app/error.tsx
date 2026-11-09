@@ -4,13 +4,14 @@ import { useEffect } from 'react';
 
 export default function ErrorPage({
   reset,
+  error,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('Application route error');
-  }, []);
+    console.error('Application route error', error);
+  }, [error]);
 
   return (
     <main className="mx-auto max-w-xl p-8 text-center" dir="rtl" id="main-content" tabIndex={-1}>

@@ -861,7 +861,11 @@ export default function TransactionsPage() {
                 }`}
                 key={label}
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-current text-xs">
+                <span
+                  className={`transaction-step-number ${
+                    step === index + 1 ? 'transaction-step-number-active' : ''
+                  }`}
+                >
                   {formatInteger(index + 1)}
                 </span>
                 <span>{label}</span>

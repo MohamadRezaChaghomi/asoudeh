@@ -14,6 +14,7 @@ const config = [
     ignores: [
       '.next/**',
       '.next-dev/**',
+      '.next-playwright/**',
       'node_modules/**',
       'out/**',
       'test-results/**',

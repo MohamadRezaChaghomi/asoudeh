@@ -63,6 +63,21 @@ test('public information pages share navigation and are available without signin
     'href',
     '/reports',
   );
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/faq');
+  const breadcrumb = page.locator('.public-breadcrumbs');
+  await expect(breadcrumb).toHaveCSS('white-space', 'nowrap');
+  const breadcrumbRows = await breadcrumb.evaluate((element) => {
+    const items = [...element.children].map((item) => item.getBoundingClientRect());
+    return {
+      height: element.getBoundingClientRect().height,
+      sameRow: items.every((item) => Math.abs(item.top - items[0].top) < 1),
+      childrenFit: element.scrollWidth === element.clientWidth,
+    };
+  });
+  expect(breadcrumbRows.height).toBeLessThanOrEqual(40);
+  expect(breadcrumbRows.sameRow).toBe(true);
+  expect(breadcrumbRows.childrenFit).toBe(true);
   expect(errors).toEqual([]);
 });
 

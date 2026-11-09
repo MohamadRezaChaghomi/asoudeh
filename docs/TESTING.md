@@ -32,6 +32,8 @@ npm --prefix frontend run test:e2e
 
 The Playwright origin defaults to `http://localhost:3000` to match the backend's default `CLIENT_URL`. If `PLAYWRIGHT_BASE_URL` uses another hostname, configure `CLIENT_URL` to match it; `localhost` and `127.0.0.1` are different browser origins and a mismatch will block API requests through CORS.
 
+Playwright development servers use the separate `.next-playwright` output directory so their webpack chunks cannot overwrite those of a concurrently running local development server.
+
 To run the production PWA path in Microsoft Edge:
 
 ```powershell

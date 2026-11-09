@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api, ensureCsrfToken } from '@/lib/api/client';
+import { hasSessionHint, sessionHintEvent, setSessionHint } from '@/lib/auth/sessionHint';
 
 const ACTIVITY_SYNC_INTERVAL_MS = 15_000;
 const IDLE_WARNING_MS = 9 * 60 * 1000;
@@ -11,10 +12,34 @@ const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
 export function SessionActivityMonitor() {
   const router = useRouter();
+  const pathname = usePathname();
   const [idleWarning, setIdleWarning] = useState(false);
   const [connectionError, setConnectionError] = useState('');
+  const [sessionActive, setSessionActive] = useState(false);
+  const pathnameRef = useRef(pathname);
 
   useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
+    const syncSessionHint = () => setSessionActive(hasSessionHint());
+    syncSessionHint();
+    window.addEventListener(sessionHintEvent, syncSessionHint);
+    window.addEventListener('storage', syncSessionHint);
+    return () => {
+      window.removeEventListener(sessionHintEvent, syncSessionHint);
+      window.removeEventListener('storage', syncSessionHint);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionActive) {
+      setIdleWarning(false);
+      setConnectionError('');
+      return;
+    }
+
     let lastActivityAt = Date.now();
     let lastSyncAt = 0;
     let syncInProgress = false;
@@ -24,6 +49,11 @@ export function SessionActivityMonitor() {
     function scheduleIdleTimers() {
       clearTimeout(warningTimer);
       clearTimeout(expiryTimer);
+      if (isInformationalRoute(pathname)) {
+        setIdleWarning(false);
+        return;
+      }
+
       const idleDuration = Date.now() - lastActivityAt;
       const warningRemaining = IDLE_WARNING_MS - idleDuration;
       if (warningRemaining <= 0) {
@@ -44,7 +74,10 @@ export function SessionActivityMonitor() {
       } catch {
         setConnectionError('نشست شما پایان یافت؛ برای ادامه دوباره وارد شوید.');
       } finally {
-        router.replace('/login?session=expired');
+        setSessionHint(false);
+        if (isProtectedRoute(pathnameRef.current)) {
+          router.replace('/login?session=expired');
+        }
       }
     }
 
@@ -59,7 +92,10 @@ export function SessionActivityMonitor() {
         setConnectionError('');
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
-          router.replace('/login?session=expired');
+          setSessionHint(false);
+          if (isProtectedRoute(pathnameRef.current)) {
+            router.replace('/login?session=expired');
+          }
           return;
         }
         lastSyncAt = 0;
@@ -84,16 +120,26 @@ export function SessionActivityMonitor() {
     activityEvents.forEach((eventName) =>
       window.addEventListener(eventName, recordHumanActivity, { passive: true, capture: true }),
     );
+    const activityInterval = window.setInterval(() => {
+      if (
+        document.visibilityState === 'visible' &&
+        (isInformationalRoute(pathnameRef.current) ||
+          Date.now() - lastActivityAt < IDLE_TIMEOUT_MS)
+      ) {
+        void syncActivity();
+      }
+    }, ACTIVITY_SYNC_INTERVAL_MS);
     scheduleIdleTimers();
 
     return () => {
       clearTimeout(warningTimer);
       clearTimeout(expiryTimer);
+      window.clearInterval(activityInterval);
       activityEvents.forEach((eventName) =>
         window.removeEventListener(eventName, recordHumanActivity, true),
       );
     };
-  }, [router]);
+  }, [pathname, router, sessionActive]);
 
   if (!idleWarning && !connectionError) return null;
 
@@ -111,4 +157,22 @@ export function SessionActivityMonitor() {
       )}
     </div>
   );
+}
+
+function isProtectedRoute(pathname: string): boolean {
+  return [
+    '/dashboard',
+    '/transactions',
+    '/categories',
+    '/budgets',
+    '/reminders',
+    '/reports',
+    '/caregiver',
+    '/settings',
+    '/welcome',
+  ].some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+function isInformationalRoute(pathname: string): boolean {
+  return ['/', '/guide', '/faq', '/about', '/terms', '/privacy', '/contact'].includes(pathname);
 }

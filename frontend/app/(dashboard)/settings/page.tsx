@@ -8,6 +8,7 @@ import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { Select } from '@/components/ui/Select';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import { setSessionHint } from '@/lib/auth/sessionHint';
 import { normalizeDigits } from '@/lib/normalizeDigits';
 import { parseTomanAmount } from '@/lib/tomanAmount';
 
@@ -51,6 +52,7 @@ export default function SettingsPage() {
       try {
         const response = await api.get('/me');
         if (!active) return;
+        setSessionHint(true);
         const loaded = response.data.data.profile as Profile;
         setProfile(loaded);
         setDisplayName(loaded.displayName);
@@ -61,6 +63,7 @@ export default function SettingsPage() {
       } catch (loadError) {
         if (!active) return;
         if (axios.isAxiosError(loadError) && loadError.response?.status === 401) {
+          setSessionHint(false);
           router.replace('/login');
           return;
         }
@@ -125,6 +128,7 @@ export default function SettingsPage() {
     try {
       await ensureCsrfToken();
       await api.post('/auth/logout');
+      setSessionHint(false);
       router.replace('/login');
     } catch (logoutError) {
       setError(getApiErrorMessage(logoutError));

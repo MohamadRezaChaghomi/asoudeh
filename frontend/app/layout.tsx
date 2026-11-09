@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { AccessibilityNavigation } from '@/components/AccessibilityNavigation';
+import { SessionActivityMonitor } from '@/components/layout/SessionActivityMonitor';
 import './globals.css';
 
 const metadataBase = new URL(
@@ -114,6 +115,7 @@ export default function RootLayout({
       <body>
         <AccessibilityNavigation />
         <ServiceWorkerRegistration />
+        <SessionActivityMonitor />
         {children}
       </body>
     </html>

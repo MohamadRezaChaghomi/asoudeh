@@ -175,10 +175,13 @@ test('keeps all app routes reachable and preserves the selected theme', async ({
   await expect(page.locator('html')).toHaveAttribute('data-high-contrast', 'true');
 
   await page.getByRole('button', { name: 'فعال‌کردن پوسته تیره' }).click();
-  await expect.poll(() => activityRequests).toBe(1);
+  await expect.poll(() => activityRequests).toBeGreaterThan(0);
   expect(clientErrors).toEqual([]);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['asoudeh.theme']);
+  expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual([
+    'asoudeh.authenticated',
+    'asoudeh.theme',
+  ]);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 

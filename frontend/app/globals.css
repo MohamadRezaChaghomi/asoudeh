@@ -369,6 +369,7 @@ html[data-theme='dark'] .brand-logo-image--white {
 .brand-logo-frame--auth .brand-logo-mark,
 .brand-logo-frame--auth-symbol .brand-logo-mark {
   width: 3.5rem;
+  height: 3.5rem;
 }
 
 .brand-logo-frame--auth-symbol .brand-logo-wordmark {
@@ -1171,6 +1172,12 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   font-size: 0.85rem;
 }
 
+.public-breadcrumbs > * {
+  min-height: 0;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
 .public-breadcrumbs a,
 .public-content a,
 .public-related-links a {
@@ -1821,6 +1828,28 @@ select {
   min-width: 8rem;
 }
 
+.transaction-step-number {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+  color: var(--brand-800);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.transaction-step-number-active {
+  background: var(--text-on-action);
+  box-shadow: none;
+  color: var(--brand-action);
+}
+
 .public-breadcrumbs {
   max-width: 100%;
   overflow-x: auto;
@@ -1859,6 +1888,11 @@ select {
 @media (max-height: 700px) {
   .brand-logo-frame--auth-symbol {
     width: 3.5rem;
+  }
+
+  .brand-logo-frame--auth-symbol .brand-logo-mark {
+    width: 3rem;
+    height: 3rem;
   }
 }
 

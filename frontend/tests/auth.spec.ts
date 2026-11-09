@@ -21,13 +21,18 @@ test('shows the symbol mark on login and OTP registration without duplicating th
   page,
 }) => {
   await page.goto('/login');
-  const loginLogo = page.getByRole('img', { name: 'نشان آسوده' });
+  const loginLogo = page.locator('.auth-card .brand-logo-image--symbol');
   await expect(loginLogo).toBeVisible();
   await expect(loginLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
   const loginLogoWidth = await loginLogo.evaluate(
     (image: HTMLImageElement) => image.naturalWidth,
   );
   expect(loginLogoWidth).toBeGreaterThan(0);
+  const loginMarkBounds = await page.locator('.auth-card .brand-logo-mark').boundingBox();
+  expect(loginMarkBounds?.width).toBe(56);
+  expect(loginMarkBounds?.height).toBe(56);
+  await expect(page.getByRole('button', { name: 'بازگشت' }).locator('svg path').last())
+    .toHaveAttribute('d', 'M5 12h14');
   await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
   const [logoBounds, backBounds] = await Promise.all([
     loginLogo.boundingBox(),
@@ -59,13 +64,18 @@ test('shows the symbol mark on login and OTP registration without duplicating th
     );
   });
   await page.goto('/verify-otp');
-  const verificationLogo = page.getByRole('img', { name: 'نشان آسوده' });
+  const verificationLogo = page.locator('.auth-card .brand-logo-image--symbol');
   await expect(verificationLogo).toBeVisible();
   await expect(verificationLogo).toHaveAttribute('src', '/logo/asoudeh-symbol.svg');
   await expect
     .poll(() => verificationLogo.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0);
+  const verificationMarkBounds = await page.locator('.auth-card .brand-logo-mark').boundingBox();
+  expect(verificationMarkBounds?.width).toBe(56);
+  expect(verificationMarkBounds?.height).toBe(56);
   await expect(page.getByRole('heading', { name: 'ساخت حساب کاربری' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'بازگشت' }).locator('svg path').last())
+    .toHaveAttribute('d', 'M5 12h14');
   const [verificationLogoBounds, verificationBackBounds] = await Promise.all([
     verificationLogo.boundingBox(),
     page.getByRole('button', { name: 'بازگشت' }).boundingBox(),
@@ -366,10 +376,12 @@ test('rejects an invalid OTP without authenticating or leaving the verification 
 });
 
 test('keeps browser errors clear after confirmed OTP login', async ({ page }) => {
+  await page.clock.install();
   let verificationPayload: Record<string, string> | undefined;
   let csrfRequests = 0;
   let profileRequests = 0;
   let dashboardRequests = 0;
+  let activityRequests = 0;
   const browserErrors: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error') browserErrors.push(message.text());
@@ -431,6 +443,7 @@ test('keeps browser errors clear after confirmed OTP login', async ({ page }) =>
     });
   });
   await page.route('**/api/v1/auth/activity', async (route) => {
+    activityRequests += 1;
     await route.fulfill({ json: { success: true, data: { active: true } } });
   });
   await page.goto('/login');
@@ -445,6 +458,16 @@ test('keeps browser errors clear after confirmed OTP login', async ({ page }) =>
   await expect.poll(() => profileRequests).toBe(1);
   await expect.poll(() => dashboardRequests).toBeGreaterThan(0);
   expect(csrfRequests).toBe(1);
+  await page.locator('.app-sidebar').getByRole('link', { name: 'راهنمای استفاده' }).click();
+  await expect(page).toHaveURL(/\/guide$/);
+  await expect.poll(() => activityRequests).toBeGreaterThan(0);
+  expect(await page.evaluate(() => localStorage.getItem('asoudeh.authenticated'))).toBe('true');
+  await page.clock.runFor(11 * 60 * 1000);
+  await expect(page).toHaveURL(/\/guide$/);
+  await expect.poll(() => activityRequests).toBeGreaterThan(1);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
   await page.waitForTimeout(3000);
   expect(browserErrors).toEqual([]);
   await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toHaveCount(0);

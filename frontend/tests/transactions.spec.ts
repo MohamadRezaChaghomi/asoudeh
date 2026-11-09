@@ -112,6 +112,18 @@ test('creates an income through the three-step form with Persian amount and Jala
   await page.goto('/transactions');
   await expect(page.getByTestId('empty-transactions-illustration')).toBeVisible();
   await expectThemeAwareIllustration(page, 'empty-transactions-illustration');
+  const steps = page.getByRole('list', { name: 'مراحل ثبت تراکنش' });
+  const activeStep = steps.getByRole('listitem').first();
+  const stepNumber = activeStep.locator('.transaction-step-number');
+  const stepNumberBounds = await stepNumber.boundingBox();
+  expect(stepNumberBounds?.width).toBe(32);
+  expect(stepNumberBounds?.height).toBe(32);
+  await expect(stepNumber).toHaveCSS('display', 'grid');
+  const stepNumberLineHeight = await stepNumber.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).lineHeight),
+  );
+  expect(stepNumberLineHeight).toBeGreaterThan(0);
+  await expect(stepNumber).toHaveClass(/transaction-step-number-active/);
   await page.getByLabel('ذخیرهٔ موقت این پیش‌نویس در نشست فعلی مرورگر').check();
   const amount = page.getByLabel('مبلغ (تومان)');
   await amount.fill('۱۲۳۴۵۶');

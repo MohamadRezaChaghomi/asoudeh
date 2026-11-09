@@ -6,7 +6,7 @@ import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { AppShell } from '@/components/layout/AppShell';
-import { SessionActivityMonitor } from '@/components/layout/SessionActivityMonitor';
+import { setSessionHint } from '@/lib/auth/sessionHint';
 
 interface AccessibilityProfile {
   accessibilitySettings: {
@@ -34,6 +34,7 @@ export default function DashboardLayout({
           success: true;
           data: { profile: AccessibilityProfile };
         }>('/me');
+        setSessionHint(true);
         const settings = response.data.data.profile.accessibilitySettings;
         document.documentElement.style.setProperty(
           '--font-scale',
@@ -43,6 +44,7 @@ export default function DashboardLayout({
       } catch (loadError) {
         accessibilityPreferencesRequested.current = false;
         if (axios.isAxiosError(loadError) && loadError.response?.status === 401) {
+          setSessionHint(false);
           router.replace('/login');
           return;
         }
@@ -63,7 +65,6 @@ export default function DashboardLayout({
 
   return (
     <AppShell>
-      <SessionActivityMonitor key="session-monitor" />
       {error && (
         <p className="mx-auto max-w-6xl px-5 pt-4 text-red-800" key="accessibility-error" role="alert">
           {error}

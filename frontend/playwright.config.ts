@@ -19,6 +19,7 @@ export default defineConfig({
     command: isProductionPwaTest
       ? 'npm run start'
       : 'npm run dev -- --hostname 127.0.0.1',
+    ...(!isProductionPwaTest ? { env: { NEXT_BUILD_DIR: '.next-playwright' } } : {}),
     url: baseURL,
     reuseExistingServer: !process.env.CI && !isProductionPwaTest,
     timeout: 120_000,

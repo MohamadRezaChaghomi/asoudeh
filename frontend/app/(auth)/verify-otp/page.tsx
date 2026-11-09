@@ -7,6 +7,7 @@ import { AuthBackButton } from '@/components/auth/AuthBackButton';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import { setSessionHint } from '@/lib/auth/sessionHint';
 import {
   clearPendingOtpFlow,
   readPendingOtpFlow,
@@ -122,6 +123,7 @@ export default function VerifyOtpPage() {
       }
 
       clearPendingOtpFlow();
+      setSessionHint(true);
       router.replace('/dashboard');
     } catch (verifyError) {
       setError(getApiErrorMessage(verifyError));
@@ -140,6 +142,7 @@ export default function VerifyOtpPage() {
       await ensureCsrfToken();
       await api.post('/auth/register/complete', { displayName });
       clearPendingOtpFlow();
+      setSessionHint(true);
       router.replace('/dashboard');
     } catch (registrationError) {
       setError(getApiErrorMessage(registrationError));
