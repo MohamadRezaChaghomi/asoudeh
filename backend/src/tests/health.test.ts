@@ -6,13 +6,97 @@ import { env } from '../config/env.js';
 import * as database from '../config/db.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 import { requestLogger } from '../middleware/requestLogger.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { logger } from '../utils/logger.js';
+import { z } from 'zod';
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 describe('HTTP application baseline', () => {
+  it.each([
+    {
+      label: 'Zod validation',
+      error: z.object({ amount: z.number() }).safeParse({ amount: 'invalid' }).error,
+      status: 400,
+      code: 'VALIDATION_ERROR',
+    },
+    {
+      label: 'Mongoose CastError',
+      error: Object.assign(new Error('private cast value'), { name: 'CastError' }),
+      status: 400,
+      code: 'INVALID_IDENTIFIER',
+    },
+    {
+      label: 'duplicate key',
+      error: Object.assign(new Error('private duplicate value'), { code: 11000 }),
+      status: 409,
+      code: 'RESOURCE_CONFLICT',
+    },
+    {
+      label: 'MongoDB disconnection',
+      error: Object.assign(new Error('private database address'), {
+        name: 'MongoNetworkError',
+      }),
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+    },
+    {
+      label: 'Mongoose disconnected buffering timeout',
+      error: Object.assign(new Error('Operation secret collection buffering timed out'), {
+        name: 'MongooseError',
+      }),
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+    },
+  ])('maps $label into the public error contract', async ({ error, status, code }) => {
+    const errorApp = express();
+    errorApp.post('/error', (_req, _res, next) => next(error));
+    errorApp.use(errorHandler);
+
+    const response = await request(errorApp).post('/error').send({});
+
+    expect(response.status).toBe(status);
+    expect(response.body).toMatchObject({
+      success: false,
+      error: { code, message: expect.any(String) },
+    });
+    expect(JSON.stringify(response.body)).not.toContain('private');
+  });
+
+  it('maps malformed JSON into the public error contract', async () => {
+    const parserApp = express();
+    parserApp.use(express.json({ limit: '1mb' }));
+    parserApp.post('/error', (_req, res) => res.json({ success: true }));
+    parserApp.use(errorHandler);
+
+    const response = await request(parserApp)
+      .post('/error')
+      .set('Content-Type', 'application/json')
+      .send('{"broken":');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('MALFORMED_JSON');
+  });
+
+  it('forwards rejected async handler promises into the error middleware', async () => {
+    const errorApp = express();
+    errorApp.post(
+      '/error',
+      asyncHandler(async () => {
+        throw new Error('private async failure');
+      }),
+    );
+    errorApp.use(errorHandler);
+
+    const response = await request(errorApp).post('/error');
+
+    expect(response.status).toBe(500);
+    expect(response.body.error.code).toBe('INTERNAL_ERROR');
+    expect(JSON.stringify(response.body)).not.toContain('private async failure');
+  });
+
   it('returns the current health response shape', async () => {
     const response = await request(app).get('/api/v1/health');
 

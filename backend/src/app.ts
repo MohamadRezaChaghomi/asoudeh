@@ -20,7 +20,31 @@ const app = express();
 app.set('trust proxy', env.trustProxyHops);
 app.use(requestLogger);
 app.use(helmet());
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(
+  cors({
+    origin: env.clientUrl,
+    credentials: true,
+    exposedHeaders: ['Retry-After'],
+  }),
+);
+app.use((_req, res, next) => {
+  const timeout = setTimeout(() => {
+    if (res.headersSent) {
+      res.destroy();
+      return;
+    }
+    res.status(408).json({
+      success: false,
+      error: {
+        code: 'REQUEST_TIMEOUT',
+        message: 'زمان پاسخ‌گویی درخواست به پایان رسید. دوباره تلاش کنید.',
+      },
+    });
+  }, 30_000);
+  res.once('finish', () => clearTimeout(timeout));
+  res.once('close', () => clearTimeout(timeout));
+  next();
+});
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/', (req, res) => {

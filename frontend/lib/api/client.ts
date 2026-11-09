@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios';
+import { getApiErrorMessage } from './errorMessage';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
@@ -40,6 +41,23 @@ api.interceptors.response.use(
   },
   (error: unknown) => {
     if (!axios.isAxiosError(error)) return Promise.reject(error);
+    const safeMessage = getApiErrorMessage(error);
+    error.message = safeMessage;
+    if (error.response) {
+      const body: unknown = error.response.data;
+      const apiBody =
+        typeof body === 'object' && body !== null
+          ? (body as { error?: unknown })
+          : {};
+      const apiError =
+        typeof apiBody.error === 'object' && apiBody.error !== null
+          ? (apiBody.error as Record<string, unknown>)
+          : {};
+      error.response.data = {
+        success: false,
+        error: { ...apiError, code: apiError.code ?? 'REQUEST_FAILED', message: safeMessage },
+      };
+    }
     const config = error.config as AxiosRequestConfig | undefined;
     const isRefreshableRequest =
       config?.url?.startsWith('/auth/activity') ||

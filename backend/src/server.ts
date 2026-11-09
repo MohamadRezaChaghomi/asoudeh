@@ -7,6 +7,8 @@ import { purgeExpiredAccountDeletions } from './services/accountDeletion.service
 import { logger } from './utils/logger.js';
 
 const ACCOUNT_DELETION_CHECK_INTERVAL_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 30_000;
+const HEADERS_TIMEOUT_MS = 15_000;
 let server: Server | undefined;
 let accountDeletionInterval: NodeJS.Timeout | undefined;
 let shuttingDown = false;
@@ -69,15 +71,31 @@ async function bootstrap(): Promise<void> {
   server = createServer(app).listen(env.port, () => {
     logger.info({ port: env.port }, 'server_listening');
   });
+  server.requestTimeout = REQUEST_TIMEOUT_MS;
+  server.headersTimeout = HEADERS_TIMEOUT_MS;
 }
 
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.fatal(
+    { errorType: reason instanceof Error ? reason.name : 'UnknownError' },
+    'unhandled_rejection',
+  );
+  process.exitCode = 1;
+  void shutdown('unhandledRejection');
+});
+process.on('uncaughtException', (error: Error) => {
+  logger.fatal({ errorType: error.name }, 'uncaught_exception');
+  process.exitCode = 1;
+  void shutdown('uncaughtException');
+});
 
 bootstrap().catch((error: unknown) => {
   logger.fatal(
     { errorType: error instanceof Error ? error.name : 'UnknownError' },
     'server_startup_failed',
   );
-  process.exit(1);
+  process.exitCode = 1;
+  void shutdown('startup_failure');
 });

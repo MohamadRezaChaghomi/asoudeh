@@ -104,6 +104,7 @@ export function AssistantWidget() {
       const publicMessage = axios.isAxiosError<ApiErrorBody>(error)
         ? error.response?.data.error?.message
         : undefined;
+      setMessage(submittedMessage);
       appendMessage({
         role: 'error',
         text: publicMessage ?? 'پاسخی دریافت نشد. کمی بعد دوباره تلاش کنید.',
