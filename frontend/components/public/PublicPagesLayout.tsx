@@ -20,9 +20,6 @@ const footerLinks = [
 export function PublicPagesLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="public-site">
-      <Link className="public-skip-link" href="#public-main">
-        رفتن به محتوای اصلی
-      </Link>
       <PublicHeader />
       {children}
       <PublicFooter />

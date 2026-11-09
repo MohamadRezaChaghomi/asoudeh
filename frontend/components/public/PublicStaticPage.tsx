@@ -11,7 +11,7 @@ export function publicPageMetadata(page: PublicPageContent): Metadata {
 
 export function PublicStaticPage({ page }: { page: PublicPageContent }) {
   return (
-    <main className="public-main" id="public-main">
+    <main className="public-main" id="main-content">
       <article className="public-article">
         <nav aria-label="مسیر صفحه" className="public-breadcrumbs">
           <Link href="/">صفحه اصلی</Link>

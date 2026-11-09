@@ -143,6 +143,7 @@ export default function RemindersPage() {
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string>();
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState<'amount' | 'title' | null>(null);
   const [notice, setNotice] = useState('');
 
   const loadReminders = useCallback(async () => {
@@ -212,6 +213,7 @@ export default function RemindersPage() {
   async function saveReminder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setFieldError(null);
     setNotice('');
     const numericAmount = amount.trim() ? parseTomanAmount(amount) : undefined;
     if (
@@ -220,10 +222,12 @@ export default function RemindersPage() {
         (!Number.isSafeInteger(numericAmount) || numericAmount < 1 || numericAmount > MAX_AMOUNT))
     ) {
       setError('مبلغ باید عدد صحیحی بین ۱ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰٬۰۰۰ تومان باشد.');
+      setFieldError('amount');
       return;
     }
     if (!title.trim()) {
       setError('عنوان یادآور را وارد کنید.');
+      setFieldError('title');
       return;
     }
 
@@ -305,14 +309,14 @@ export default function RemindersPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-5 sm:p-6">
+      <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
         <PageSkeleton label="در حال بارگذاری یادآورها…" variant="reminders" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-5 sm:p-6">
+    <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
         <section className="app-panel order-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-1 sm:p-8">
           <header className="flex flex-wrap items-start justify-between gap-4">
@@ -326,8 +330,8 @@ export default function RemindersPage() {
             </Link>
           </header>
 
-          {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">{error}</p>}
-          {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status">{notice}</p>}
+          {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" id={fieldError ? 'reminder-field-error' : undefined} role="alert">{error}</p>}
+          {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
           {!data?.reminders.length ? (
             <p className="app-muted mt-6 rounded-lg bg-slate-50 p-5">
@@ -412,14 +416,19 @@ export default function RemindersPage() {
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editing ? 'ویرایش یادآور' : 'افزودن یادآور'}
           </h2>
-          <form className="mt-5 space-y-4" onSubmit={saveReminder}>
+          <form className="mt-5 space-y-4" noValidate onSubmit={saveReminder}>
             <div>
               <label className="mb-1 block font-medium" htmlFor="reminder-title">عنوان</label>
               <input
                 className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
                 id="reminder-title"
                 maxLength={120}
-                onChange={(event) => setTitle(event.target.value)}
+                aria-invalid={fieldError === 'title'}
+                aria-describedby={fieldError === 'title' ? 'reminder-field-error' : undefined}
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  setFieldError(null);
+                }}
                 required
                 value={title}
               />
@@ -435,7 +444,12 @@ export default function RemindersPage() {
                 dir="ltr"
                 id="reminder-amount"
                 inputMode="numeric"
-                onChange={(event) => setAmount(formatTomanAmountInput(event.target.value))}
+                aria-invalid={fieldError === 'amount'}
+                aria-describedby={fieldError === 'amount' ? 'reminder-field-error' : undefined}
+                onChange={(event) => {
+                  setAmount(formatTomanAmountInput(event.target.value));
+                  setFieldError(null);
+                }}
                 placeholder="۱٬۰۰۰٬۰۰۰"
                 value={amount}
               />

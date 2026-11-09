@@ -33,6 +33,7 @@ export function AssistantWidget() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const nextId = useRef(0);
+  const launcherRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -60,18 +61,55 @@ export function AssistantWidget() {
   useEffect(() => {
     if (!isOpen) return;
 
-    function closeOnEscape(event: globalThis.KeyboardEvent) {
-      if (event.key === 'Escape') setIsOpen(false);
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const launcher = launcherRef.current;
+    const panel = document.getElementById('assistant-panel');
+    const firstFocusable = panel?.querySelector<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    if (inputRef.current && !inputRef.current.disabled) inputRef.current.focus();
+    else firstFocusable?.focus();
+
+    function manageDialogKeys(event: globalThis.KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const panel = document.getElementById('assistant-panel');
+      const focusable = panel?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
 
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    window.addEventListener('keydown', manageDialogKeys);
+    return () => {
+      window.removeEventListener('keydown', manageDialogKeys);
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      else launcher?.focus();
+    };
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight });
-  }, [isOpen, messages, sending]);
+  }, [messages, sending]);
 
   function appendMessage(next: Omit<ChatMessage, 'id'>) {
     nextId.current += 1;
@@ -118,7 +156,8 @@ export function AssistantWidget() {
     <div className="assistant-widget">
       {isOpen && (
         <section
-          aria-label="دستیار راهنمای آسوده"
+          aria-labelledby="assistant-title"
+          aria-modal="true"
           className="assistant-panel"
           id="assistant-panel"
           role="dialog"
@@ -128,7 +167,7 @@ export function AssistantWidget() {
               <Bot size={20} />
             </span>
             <div>
-              <h2>راهنمای آسوده</h2>
+              <h2 id="assistant-title">راهنمای آسوده</h2>
               <p>
                 {availability === 'available'
                   ? 'پاسخ‌گویی به پرسش‌های راهنمای برنامه'
@@ -220,6 +259,7 @@ export function AssistantWidget() {
         aria-label={isOpen ? 'بستن راهنمای آسوده' : 'بازکردن راهنمای آسوده'}
         className="assistant-launcher"
         onClick={() => setIsOpen((open) => !open)}
+        ref={launcherRef}
         type="button"
       >
         {isOpen ? <X aria-hidden="true" size={22} /> : <MessageCircle aria-hidden="true" size={22} />}

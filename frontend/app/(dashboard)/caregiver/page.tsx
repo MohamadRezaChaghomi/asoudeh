@@ -50,6 +50,7 @@ export default function CaregiverPage() {
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string>();
   const [error, setError] = useState('');
+  const [permissionsFieldError, setPermissionsFieldError] = useState(false);
   const [notice, setNotice] = useState('');
 
   const loadData = useCallback(async () => {
@@ -111,8 +112,10 @@ export default function CaregiverPage() {
     event.preventDefault();
     setError('');
     setNotice('');
+    setPermissionsFieldError(false);
     if (!permissions.length) {
       setError('حداقل یک سطح دسترسی را انتخاب کنید.');
+      setPermissionsFieldError(true);
       return;
     }
     setSaving(true);
@@ -180,7 +183,7 @@ export default function CaregiverPage() {
   }
 
   return (
-    <main className="min-h-screen p-5 sm:p-6">
+    <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="app-panel flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>
@@ -192,8 +195,8 @@ export default function CaregiverPage() {
           </Link>
         </header>
 
-        {error && <p className="rounded-lg bg-red-50 p-3 text-red-800" role="alert">{error}</p>}
-        {notice && <p className="rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status">{notice}</p>}
+        {error && <p className="rounded-lg bg-red-50 p-3 text-red-800" id={permissionsFieldError ? 'caregiver-permissions-error' : undefined} role="alert">{error}</p>}
+        {notice && <p className="rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
         {loading ? (
           <PageSkeleton label="در حال بارگذاری دسترسی‌ها…" showHeader={false} variant="caregiver" />
@@ -218,13 +221,20 @@ export default function CaregiverPage() {
                     value={phone}
                   />
                 </div>
-                <fieldset className="space-y-3">
+                <fieldset
+                  aria-invalid={permissionsFieldError}
+                  aria-describedby={permissionsFieldError ? 'caregiver-permissions-error' : undefined}
+                  className="space-y-3"
+                >
                   <legend className="mb-2 font-medium">انتخاب دسترسی‌ها</legend>
                   {(Object.keys(permissionLabels) as Permission[]).map((permission) => (
                     <label className="flex min-h-11 items-center gap-3" key={permission}>
                       <input
                         checked={permissions.includes(permission)}
-                        onChange={() => togglePermission(permission)}
+                        onChange={() => {
+                          togglePermission(permission);
+                          setPermissionsFieldError(false);
+                        }}
                         type="checkbox"
                       />
                       <span>{permissionLabels[permission]}</span>

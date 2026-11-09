@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
+import { AccessibilityNavigation } from '@/components/AccessibilityNavigation';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body>
+        <AccessibilityNavigation />
         <ServiceWorkerRegistration />
         {children}
       </body>

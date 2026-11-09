@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <main className="public-main public-home" id="public-main">
+    <main className="public-main public-home" id="main-content" tabIndex={-1}>
       <section aria-labelledby="public-home-title" className="public-home-intro">
         <p className="public-eyebrow">مدیریت مالی شخصی، مخصوص سالمندان</p>
         <h1 id="public-home-title">مدیریت مالی ساده و قابل اعتماد</h1>

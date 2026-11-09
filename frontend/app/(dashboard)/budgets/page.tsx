@@ -66,6 +66,7 @@ export default function BudgetsPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string>();
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState<'amount' | 'category' | null>(null);
   const [notice, setNotice] = useState('');
 
   const activeExpenseCategories = categories.filter(
@@ -133,17 +134,20 @@ export default function BudgetsPage() {
     setCategoryId(budget.categoryId);
     setLimitAmount(formatTomanAmount(budget.limitAmount));
     setError('');
+    setFieldError(null);
     setNotice('');
   }
 
   async function saveBudget(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setFieldError(null);
     setNotice('');
 
     const amount = parseTomanAmount(limitAmount);
     if (amount === undefined) {
       setError('مبلغ بودجه باید عدد صحیح مثبت به تومان باشد.');
+      setFieldError('amount');
       return;
     }
     if (
@@ -152,10 +156,12 @@ export default function BudgetsPage() {
       amount > MAX_BUDGET_AMOUNT
     ) {
       setError('مبلغ بودجه باید بین ۱ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰٬۰۰۰ تومان باشد.');
+      setFieldError('amount');
       return;
     }
     if (!categoryId) {
       setError('ابتدا یک دستهٔ هزینهٔ شخصی و فعال انتخاب کنید.');
+      setFieldError('category');
       return;
     }
 
@@ -206,14 +212,14 @@ export default function BudgetsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-5 sm:p-6">
+      <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
         <PageSkeleton label="در حال بارگذاری بودجه‌ها…" variant="budgets" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-5 sm:p-6">
+    <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
         <section className="app-panel order-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-1 sm:p-8">
           <header className="flex flex-wrap items-start justify-between gap-4">
@@ -226,8 +232,8 @@ export default function BudgetsPage() {
             </Link>
           </header>
 
-          {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">{error}</p>}
-          {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status">{notice}</p>}
+          {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" id={fieldError ? 'budget-field-error' : undefined} role="alert">{error}</p>}
+          {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
           <nav className="mt-6 flex items-center justify-between gap-3" aria-label="انتخاب ماه بودجه">
             <button
@@ -353,14 +359,19 @@ export default function BudgetsPage() {
             {editingBudget ? 'ویرایش بودجه' : 'ثبت بودجهٔ ماهانه'}
           </h2>
           <p className="app-muted mt-2">{formatJalaliMonth(monthKey)}</p>
-          <form className="mt-5 space-y-4" onSubmit={saveBudget}>
+          <form className="mt-5 space-y-4" noValidate onSubmit={saveBudget}>
             <div>
               <label className="mb-2 block font-medium" htmlFor="budgetCategory">دستهٔ هزینه</label>
               <select
                 className="w-full rounded-lg border border-slate-300 bg-white px-4"
                 disabled={!activeExpenseCategories.length && !editingBudget}
                 id="budgetCategory"
-                onChange={(event) => setCategoryId(event.target.value)}
+                aria-invalid={fieldError === 'category'}
+                aria-describedby={fieldError === 'category' ? 'budget-field-error' : undefined}
+                onChange={(event) => {
+                  setCategoryId(event.target.value);
+                  setFieldError(null);
+                }}
                 required
                 value={categoryId}
               >
@@ -393,7 +404,12 @@ export default function BudgetsPage() {
                 dir="ltr"
                 id="budgetAmount"
                 inputMode="numeric"
-                onChange={(event) => setLimitAmount(formatTomanAmountInput(event.target.value))}
+                aria-invalid={fieldError === 'amount'}
+                aria-describedby={fieldError === 'amount' ? 'budget-field-error' : undefined}
+                onChange={(event) => {
+                  setLimitAmount(formatTomanAmountInput(event.target.value));
+                  setFieldError(null);
+                }}
                 placeholder="۱٬۰۰۰٬۰۰۰"
                 required
                 value={limitAmount}

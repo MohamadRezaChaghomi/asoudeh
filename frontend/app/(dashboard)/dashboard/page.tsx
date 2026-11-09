@@ -88,14 +88,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-5 sm:p-6">
+      <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
         <PageSkeleton label="در حال بارگذاری وضعیت مالی…" variant="dashboard" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-5 sm:p-6">
+    <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>

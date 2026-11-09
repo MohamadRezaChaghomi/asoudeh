@@ -32,6 +32,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [phoneFieldError, setPhoneFieldError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const requestInFlight = useRef(false);
@@ -49,9 +50,12 @@ export default function LoginPage() {
     if (requestInFlight.current) return;
 
     setError('');
+    setPhoneFieldError('');
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) {
-      setError('شماره همراه ایرانی معتبر وارد کنید؛ مانند ۰۹۱۲۱۲۳۴۵۶۷.');
+      const message = 'شماره همراه ایرانی معتبر وارد کنید؛ مانند ۰۹۱۲۱۲۳۴۵۶۷.';
+      setPhoneFieldError(message);
+      setError(message);
       return;
     }
 
@@ -84,7 +88,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-5">
+    <main className="flex min-h-screen items-center justify-center p-5" id="main-content" tabIndex={-1}>
       <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
         <LoginBackButton />
         <BrandLogo
@@ -113,7 +117,12 @@ export default function LoginPage() {
             dir="ltr"
             id="phone"
             inputMode="tel"
-            onChange={(event) => setPhone(event.target.value)}
+            aria-invalid={Boolean(phoneFieldError)}
+            aria-describedby={phoneFieldError ? 'phone-error' : undefined}
+            onChange={(event) => {
+              setPhone(event.target.value);
+              setPhoneFieldError('');
+            }}
             placeholder="مثلاً ۰۹۱۲۱۲۳۴۵۶۷"
             required
             value={phone}
@@ -128,7 +137,11 @@ export default function LoginPage() {
         </form>
 
         {error && (
-          <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">
+          <p
+            className="mt-4 rounded-lg bg-red-50 p-3 text-red-800"
+            id={phoneFieldError ? 'phone-error' : undefined}
+            role="alert"
+          >
             {error}
           </p>
         )}

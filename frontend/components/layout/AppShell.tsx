@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -42,6 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const [speechMessage, setSpeechMessage] = useState('');
   const [themeReady, setThemeReady] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setIsMobileNavigationOpen(false);
@@ -50,12 +51,38 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isMobileNavigationOpen) return;
 
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsMobileNavigationOpen(false);
+    const navigation = document.getElementById('mobile-navigation');
+    const getFocusable = () =>
+      navigation?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])');
+    getFocusable()?.[0]?.focus();
+
+    function manageNavigationKeys(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsMobileNavigationOpen(false);
+        mobileMenuButtonRef.current?.focus();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusable();
+      if (!focusable?.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
 
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    window.addEventListener('keydown', manageNavigationKeys);
+    return () => window.removeEventListener('keydown', manageNavigationKeys);
   }, [isMobileNavigationOpen]);
 
   useEffect(() => {
@@ -222,6 +249,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={isMobileNavigationOpen ? 'بستن ناوبری' : 'بازکردن ناوبری'}
             className="mobile-menu-toggle"
             onClick={() => setIsMobileNavigationOpen((open) => !open)}
+            ref={mobileMenuButtonRef}
             type="button"
           >
             {isMobileNavigationOpen ? <X aria-hidden="true" size={19} /> : <Menu aria-hidden="true" size={19} />}
@@ -242,7 +270,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button
           aria-label="بستن ناوبری"
           className="mobile-nav-backdrop"
-          onClick={() => setIsMobileNavigationOpen(false)}
+          onClick={() => {
+            setIsMobileNavigationOpen(false);
+            mobileMenuButtonRef.current?.focus();
+          }}
           type="button"
         />
       )}

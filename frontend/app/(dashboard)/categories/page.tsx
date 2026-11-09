@@ -35,6 +35,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState<'name' | 'editName' | null>(null);
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
@@ -67,11 +68,13 @@ export default function CategoriesPage() {
   async function addCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setFieldError(null);
     setNotice('');
 
     const normalizedName = name.trim();
     if (!normalizedName || normalizedName.length > 50) {
       setError('نام دسته‌بندی باید بین ۱ تا ۵۰ نویسه باشد.');
+      setFieldError('name');
       return;
     }
 
@@ -128,6 +131,7 @@ export default function CategoriesPage() {
     const normalizedName = editName.trim();
     if (!normalizedName || normalizedName.length > 50) {
       setError('نام دسته‌بندی باید بین ۱ تا ۵۰ نویسه باشد.');
+      setFieldError('editName');
       return;
     }
 
@@ -160,14 +164,14 @@ export default function CategoriesPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-5 sm:p-6">
+      <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
         <PageSkeleton label="در حال بارگذاری دسته‌بندی‌ها…" variant="categories" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-5">
+    <main className="min-h-screen p-5" id="main-content" tabIndex={-1}>
       <section className="app-panel mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -180,14 +184,19 @@ export default function CategoriesPage() {
           </Link>
         </div>
 
-        <form className="mt-7 grid gap-4 sm:grid-cols-[1fr_10rem_auto]" onSubmit={addCategory}>
+        <form className="mt-7 grid gap-4 sm:grid-cols-[1fr_10rem_auto]" noValidate onSubmit={addCategory}>
           <div>
             <label className="mb-2 block font-medium" htmlFor="categoryName">نام دسته‌بندی</label>
             <input
               className="w-full rounded-lg border border-slate-300 bg-transparent px-4"
               id="categoryName"
               maxLength={50}
-              onChange={(event) => setName(event.target.value)}
+              aria-invalid={fieldError === 'name'}
+              aria-describedby={fieldError === 'name' ? 'category-field-error' : undefined}
+              onChange={(event) => {
+                setName(event.target.value);
+                setFieldError(null);
+              }}
               required
               value={name}
             />
@@ -215,8 +224,8 @@ export default function CategoriesPage() {
           </button>
         </form>
 
-        {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">{error}</p>}
-        {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status">{notice}</p>}
+        {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" id={fieldError ? 'category-field-error' : undefined} role="alert">{error}</p>}
+        {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
         <section className="mt-8" aria-labelledby="category-list-heading">
           <h2 className="text-xl font-bold text-asoudeh-navy" id="category-list-heading">
@@ -257,7 +266,12 @@ export default function CategoriesPage() {
                         className="rounded-lg border border-slate-300 bg-transparent px-3"
                         id={`edit-category-${category.id}`}
                         maxLength={50}
-                        onChange={(event) => setEditName(event.target.value)}
+                        aria-invalid={fieldError === 'editName'}
+                        aria-describedby={fieldError === 'editName' ? 'category-field-error' : undefined}
+                        onChange={(event) => {
+                          setEditName(event.target.value);
+                          setFieldError(null);
+                        }}
                         required
                         value={editName}
                       />

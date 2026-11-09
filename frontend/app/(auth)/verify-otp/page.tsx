@@ -29,6 +29,7 @@ export default function VerifyOtpPage() {
   const [flow, setFlow] = useState<PendingOtpFlow | null>(null);
   const [flowLoaded, setFlowLoaded] = useState(false);
   const [code, setCode] = useState('');
+  const [codeFieldError, setCodeFieldError] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -91,9 +92,12 @@ export default function VerifyOtpPage() {
     if (!flow || loading) return;
 
     setError('');
+    setCodeFieldError('');
     const normalizedCode = normalizeDigits(code).replace(/\s/g, '');
     if (!/^\d{6}$/.test(normalizedCode)) {
-      setError('کد تأیید باید شامل ۶ رقم باشد.');
+      const message = 'کد تأیید باید شامل ۶ رقم باشد.';
+      setCodeFieldError(message);
+      setError(message);
       return;
     }
 
@@ -149,14 +153,14 @@ export default function VerifyOtpPage() {
 
   if (!flowLoaded || !flow) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-5" aria-live="polite">
+      <main className="flex min-h-screen items-center justify-center p-5" id="main-content" tabIndex={-1} aria-live="polite">
         <p className="app-muted">در حال آماده‌سازی تأیید…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-5">
+    <main className="flex min-h-screen items-center justify-center p-5" id="main-content" tabIndex={-1}>
       <section className="app-panel w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
         <BrandLogo
           className="mx-auto mb-5"
@@ -170,7 +174,7 @@ export default function VerifyOtpPage() {
         </h1>
 
         {flow.step === 'code' ? (
-          <form className="mt-6 space-y-4" onSubmit={verifyCode}>
+          <form className="mt-6 space-y-4" noValidate onSubmit={verifyCode}>
             <p className="app-muted">
               کد شش‌رقمی ارسال‌شده به <bdi dir="ltr">{maskPhone(flow.phone)}</bdi> را وارد کنید.
             </p>
@@ -185,9 +189,12 @@ export default function VerifyOtpPage() {
               id="otp"
               inputMode="numeric"
               maxLength={6}
-              onChange={(event) =>
-                setCode(normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 6))
-              }
+              aria-invalid={Boolean(codeFieldError)}
+              aria-describedby={codeFieldError ? 'otp-error' : undefined}
+              onChange={(event) => {
+                setCodeFieldError('');
+                setCode(normalizeDigits(event.target.value).replace(/\D/g, '').slice(0, 6));
+              }}
               pattern="[0-9]{6}"
               required
               value={code}
@@ -245,7 +252,12 @@ export default function VerifyOtpPage() {
         </button>
 
         {error && (
-          <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">
+          <p
+            className="mt-4 rounded-lg bg-red-50 p-3 text-red-800"
+            id={codeFieldError ? 'otp-error' : undefined}
+            role="alert"
+            aria-live="assertive"
+          >
             {error}
           </p>
         )}

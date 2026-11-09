@@ -22,7 +22,7 @@
   --skeleton-base: #e5e9e3;
   --skeleton-highlight: #f7f8f5;
   --text: #1d2925;
-  --text-muted: #63756d;
+  --text-muted: #586b62;
   --text-subtle: #839087;
   --border: #dfe5dc;
   --border-strong: #c8d2c8;
@@ -116,6 +116,31 @@ body {
   transition:
     background-color var(--motion-standard) var(--ease-standard),
     color var(--motion-standard) var(--ease-standard);
+}
+
+.global-skip-link:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.global-skip-link:focus {
+  position: fixed;
+  z-index: 100;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  padding-inline: 1rem;
+  border: 2px solid var(--focus);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
 }
 
 html[data-theme='dark'] body {
@@ -854,8 +879,7 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   color: var(--text);
 }
 
-.public-sr-only,
-.public-skip-link:not(:focus) {
+.public-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -863,19 +887,6 @@ html[data-high-contrast='true'] .app-content .text-gray-900 {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   clip-path: inset(50%);
-}
-
-.public-skip-link:focus {
-  position: fixed;
-  z-index: 20;
-  inset-block-start: 0.75rem;
-  inset-inline-start: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  padding-inline: 1rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
 }
 
 .public-header {

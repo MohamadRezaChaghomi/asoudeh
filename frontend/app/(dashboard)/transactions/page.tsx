@@ -246,6 +246,7 @@ export default function TransactionsPage() {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState<'amount' | 'category' | 'date' | null>(null);
   const [notice, setNotice] = useState('');
 
   const activeCategories = useMemo(
@@ -499,9 +500,11 @@ export default function TransactionsPage() {
 
   function validatedAmount(): number | undefined {
     setError('');
+    setFieldError(null);
     const numericAmount = parseTomanAmount(amount);
     if (numericAmount === undefined) {
       setError('مبلغ باید عدد صحیح مثبت به تومان باشد.');
+      setFieldError('amount');
       return undefined;
     }
     if (
@@ -510,6 +513,7 @@ export default function TransactionsPage() {
       numericAmount > 1_000_000_000_000
     ) {
       setError('مبلغ باید بین ۱ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰٬۰۰۰ تومان باشد.');
+      setFieldError('amount');
       return undefined;
     }
     return numericAmount;
@@ -517,16 +521,19 @@ export default function TransactionsPage() {
 
   function advanceStep() {
     setError('');
+    setFieldError(null);
     if (step === 1) {
       if (validatedAmount() !== undefined) setStep(2);
       return;
     }
     if (!canUseSelectedCategory) {
       setError('برای این نوع تراکنش، دسته‌بندی فعالی انتخاب کنید.');
+      setFieldError('category');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayDate()) {
       setError('تاریخ انتخاب‌شده معتبر نیست.');
+      setFieldError('date');
       return;
     }
     setStep(3);
@@ -535,11 +542,15 @@ export default function TransactionsPage() {
   async function saveTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setFieldError(null);
     setNotice('');
 
     const numericAmount = validatedAmount();
     if (numericAmount === undefined || !categoryId) {
-      if (!categoryId) setError('برای این نوع تراکنش، دسته‌بندی فعالی وجود ندارد.');
+      if (!categoryId) {
+        setError('برای این نوع تراکنش، دسته‌بندی فعالی وجود ندارد.');
+        setFieldError('category');
+      }
       return;
     }
 
@@ -711,14 +722,14 @@ export default function TransactionsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-5 sm:p-6">
+      <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
         <PageSkeleton label="در حال بارگذاری تراکنش‌ها…" variant="transactions" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-5">
+    <main className="min-h-screen p-5" id="main-content" tabIndex={-1}>
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
         <section className="app-panel order-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-1 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -731,8 +742,8 @@ export default function TransactionsPage() {
             </Link>
           </div>
 
-          {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" role="alert">{error}</p>}
-          {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status">{notice}</p>}
+          {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-800" id={fieldError ? 'transaction-field-error' : undefined} role="alert">{error}</p>}
+          {notice && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
           {pendingUndoItems.length > 0 && (
             <ul className="mt-4 space-y-2" aria-label="تراکنش‌های حذف‌شدهٔ قابل‌بازگردانی">
@@ -746,6 +757,8 @@ export default function TransactionsPage() {
                     className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-amber-50 p-3 text-amber-950"
                     key={item.id}
                     role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
                   >
                     <span>برای بازگردانی {formatInteger(secondsRemaining)} ثانیه فرصت دارید.</span>
                     <button
@@ -923,7 +936,7 @@ export default function TransactionsPage() {
               </li>
             ))}
           </ol>
-          <form className="mt-5 space-y-4" onSubmit={handleFormSubmit}>
+          <form className="mt-5 space-y-4" noValidate onSubmit={handleFormSubmit}>
             {!isOnline && (
               <p className="rounded-lg bg-amber-50 p-3 text-amber-950" role="status">
                 اتصال اینترنت برقرار نیست. ثبت یا ویرایش تراکنش تا اتصال دوباره انجام نمی‌شود.
@@ -973,7 +986,12 @@ export default function TransactionsPage() {
                     dir="ltr"
                     id="transactionAmount"
                     inputMode="numeric"
-                    onChange={(event) => setAmount(formatTomanAmountInput(event.target.value))}
+                    aria-invalid={fieldError === 'amount'}
+                    aria-describedby={fieldError === 'amount' ? 'transaction-field-error' : undefined}
+                    onChange={(event) => {
+                      setAmount(formatTomanAmountInput(event.target.value));
+                      setFieldError(null);
+                    }}
                     placeholder="۲۰۰٬۰۰۰"
                     required
                     value={amount}
@@ -991,7 +1009,12 @@ export default function TransactionsPage() {
                     className="w-full rounded-lg border border-slate-300 bg-white px-4"
                     disabled={!activeCategories.length}
                     id="transactionCategory"
-                    onChange={(event) => setCategoryId(event.target.value)}
+                    aria-invalid={fieldError === 'category'}
+                    aria-describedby={fieldError === 'category' ? 'transaction-field-error' : undefined}
+                    onChange={(event) => {
+                      setCategoryId(event.target.value);
+                      setFieldError(null);
+                    }}
                     required
                     value={categoryId}
                   >
@@ -1022,11 +1045,13 @@ export default function TransactionsPage() {
                 </div>
                 <div>
                   <p className="mb-2 block font-medium" id="transactionDateLabel">تاریخ شمسی</p>
-                  <JalaliDatePicker
-                    maxDate={todayDate()}
-                    onChange={setDate}
-                    value={date}
-                  />
+                  <div
+                    aria-describedby={fieldError === 'date' ? 'transaction-field-error' : undefined}
+                    aria-labelledby="transactionDateLabel"
+                    role="group"
+                  >
+                    <JalaliDatePicker maxDate={todayDate()} onChange={setDate} value={date} />
+                  </div>
                   <p className="app-muted mt-2 text-sm" aria-labelledby="transactionDateLabel">
                     {formatDate(date)}
                   </p>

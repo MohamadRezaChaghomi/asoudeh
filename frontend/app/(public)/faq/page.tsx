@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function FaqPage() {
   return (
-    <main className="public-main" id="public-main">
+    <main className="public-main" id="main-content" tabIndex={-1}>
       <article className="public-article">
         <nav aria-label="مسیر صفحه" className="public-breadcrumbs">
           <Link href="/">صفحه اصلی</Link>

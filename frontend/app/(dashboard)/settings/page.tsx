@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const [deletionError, setDeletionError] = useState('');
   const [deletionNotice, setDeletionNotice] = useState('');
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState<'birthYear' | 'initialBalance' | null>(null);
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
@@ -82,16 +83,19 @@ export default function SettingsPage() {
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setFieldError(null);
     setNotice('');
 
     const amount = parseTomanAmount(initialBalance);
     if (amount === undefined) {
       setError('موجودی اولیه را به‌صورت عدد صحیح و غیرمنفی وارد کنید.');
+      setFieldError('initialBalance');
       return;
     }
     const normalizedBirthYear = normalizeDigits(birthYear).trim();
     if (normalizedBirthYear && !/^\d{4}$/.test(normalizedBirthYear)) {
       setError('سال تولد باید به‌صورت سال چهاررقمی شمسی وارد شود.');
+      setFieldError('birthYear');
       return;
     }
 
@@ -165,7 +169,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-5 sm:p-6">
+      <main className="min-h-screen p-5 sm:p-6" id="main-content" tabIndex={-1}>
         <PageSkeleton label="در حال بارگذاری پروفایل…" variant="settings" />
       </main>
     );
@@ -173,7 +177,7 @@ export default function SettingsPage() {
 
   if (!profile) {
     return (
-      <main className="min-h-screen p-6">
+      <main className="min-h-screen p-6" id="main-content" tabIndex={-1}>
         <p className="rounded-lg bg-red-50 p-4 text-red-800" role="alert">
           {error || 'بارگذاری پروفایل ممکن نشد.'}
         </p>
@@ -185,7 +189,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen p-5">
+    <main className="min-h-screen p-5" id="main-content" tabIndex={-1}>
       <section className="app-panel mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -230,7 +234,12 @@ export default function SettingsPage() {
               id="birthYear"
               inputMode="numeric"
               maxLength={4}
-              onChange={(event) => setBirthYear(event.target.value)}
+              aria-invalid={fieldError === 'birthYear'}
+              aria-describedby={fieldError === 'birthYear' ? 'profile-field-error' : undefined}
+              onChange={(event) => {
+                setBirthYear(event.target.value);
+                setFieldError(null);
+              }}
               placeholder="۱۳۳۵"
               value={birthYear}
             />
@@ -246,7 +255,12 @@ export default function SettingsPage() {
               id="initialBalance"
               inputMode="numeric"
               min="0"
-              onChange={(event) => setInitialBalance(event.target.value)}
+              aria-invalid={fieldError === 'initialBalance'}
+              aria-describedby={fieldError === 'initialBalance' ? 'profile-field-error' : undefined}
+              onChange={(event) => {
+                setInitialBalance(event.target.value);
+                setFieldError(null);
+              }}
               required
               value={initialBalance}
             />
@@ -278,8 +292,8 @@ export default function SettingsPage() {
             کنتراست بالا
           </label>
 
-          {error && <p className="rounded-lg bg-red-50 p-3 text-red-800" role="alert">{error}</p>}
-          {notice && <p className="rounded-lg bg-green-50 p-3 text-green-800" role="status">{notice}</p>}
+          {error && <p className="rounded-lg bg-red-50 p-3 text-red-800" id={fieldError ? 'profile-field-error' : undefined} role="alert">{error}</p>}
+          {notice && <p className="rounded-lg bg-green-50 p-3 text-green-800" role="status" aria-live="polite" aria-atomic="true">{notice}</p>}
 
           <button
             className="w-full rounded-lg bg-asoudeh-navy px-4 font-semibold text-white disabled:opacity-60"
@@ -362,7 +376,7 @@ export default function SettingsPage() {
           </p>
         )}
         {deletionNotice && (
-          <p className="mt-4 rounded-lg bg-green-50 p-3 text-green-800" role="status">
+          <p className="mt-4 rounded-lg bg-green-50 p-3 text-green-800" role="status" aria-live="polite" aria-atomic="true">
             {deletionNotice}
           </p>
         )}
