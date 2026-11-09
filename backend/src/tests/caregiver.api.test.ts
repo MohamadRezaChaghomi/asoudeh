@@ -475,6 +475,29 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Caregiver API', () => {
         otherUser,
       )).status,
     ).toBe(404);
+
+    const transactionWrites = await Promise.all([
+      authenticatedMutation(
+        'patch',
+        `/api/v1/transactions/${seniorTransactionId}`,
+        invitee,
+        { amount: 1 },
+      ),
+      authenticatedMutation(
+        'delete',
+        `/api/v1/transactions/${seniorTransactionId}`,
+        invitee,
+      ),
+      authenticatedMutation(
+        'post',
+        `/api/v1/transactions/${seniorTransactionId}/restore`,
+        invitee,
+      ),
+    ]);
+    expect(transactionWrites.map(({ status }) => status)).toEqual([404, 404, 404]);
+    expect(
+      (await Transaction.findById(seniorTransactionId).lean())?.amount,
+    ).toBe(10_000);
   });
 
   it('does not treat legacy active links without verified invitation consent as access', async () => {

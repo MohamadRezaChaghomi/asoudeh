@@ -307,6 +307,21 @@ describe.skipIf(!testMongoUri)('Authentication API', () => {
     expect(replayedInProduction.status).toBe(400);
   });
 
+  it('returns the same OTP request response for registered and unregistered phones', async () => {
+    const registeredPhone = await createUniquePhone();
+    const unregisteredPhone = await createUniquePhone();
+    await User.create({ phone: registeredPhone, name: 'OTP privacy comparison' });
+
+    const registered = await otpRequest(registeredPhone);
+    const unregistered = await otpRequest(unregisteredPhone);
+
+    expect(registered.status).toBe(200);
+    expect(unregistered.status).toBe(200);
+    expect(unregistered.body).toEqual(registered.body);
+    expect(JSON.stringify(registered.body)).not.toContain(registeredPhone);
+    expect(JSON.stringify(unregistered.body)).not.toContain(unregisteredPhone);
+  });
+
   it('never signals or performs quick login for any development phone', async () => {
     const phone = await createUniquePhone();
     const response = await otpRequest(phone);

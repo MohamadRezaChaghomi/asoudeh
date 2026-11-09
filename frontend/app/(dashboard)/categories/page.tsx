@@ -39,6 +39,8 @@ export default function CategoriesPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string>();
+  const [editName, setEditName] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -120,6 +122,41 @@ export default function CategoriesPage() {
         ),
       );
       setNotice(category.isActive ? 'دسته‌بندی غیرفعال شد.' : 'دسته‌بندی فعال شد.');
+    } catch (updateError) {
+      if (axios.isAxiosError(updateError) && updateError.response?.status === 401) {
+        router.replace('/login');
+        return;
+      }
+      setError(errorMessage(updateError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveCategory(event: FormEvent<HTMLFormElement>, category: Category) {
+    event.preventDefault();
+    const normalizedName = editName.trim();
+    if (!normalizedName || normalizedName.length > 50) {
+      setError('نام دسته‌بندی باید بین ۱ تا ۵۰ نویسه باشد.');
+      return;
+    }
+
+    setError('');
+    setNotice('');
+    setSaving(true);
+    try {
+      await ensureCsrfToken();
+      const response = await api.patch<{
+        success: true;
+        data: { category: Category };
+      }>(`/categories/${category.id}`, { name: normalizedName });
+      setCategories((current) =>
+        current.map((item) =>
+          item.id === category.id ? response.data.data.category : item,
+        ),
+      );
+      setEditingCategoryId(undefined);
+      setNotice('دسته‌بندی با موفقیت ویرایش شد.');
     } catch (updateError) {
       if (axios.isAxiosError(updateError) && updateError.response?.status === 401) {
         router.replace('/login');
@@ -218,16 +255,60 @@ export default function CategoriesPage() {
                       {!category.isActive ? ' · غیرفعال' : ''}
                     </p>
                   </div>
-                  {!category.isDefault && (
-                    <button
-                      className="rounded-lg border border-slate-300 px-4 py-2 font-medium disabled:opacity-60"
-                      disabled={saving}
-                      onClick={() => void toggleCategory(category)}
-                      type="button"
+                  {!category.isDefault && editingCategoryId === category.id ? (
+                    <form
+                      className="flex flex-wrap gap-2"
+                      onSubmit={(event) => void saveCategory(event, category)}
                     >
-                      {category.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}
-                    </button>
-                  )}
+                      <label className="sr-only" htmlFor={`edit-category-${category.id}`}>
+                        نام جدید دسته‌بندی {category.name}
+                      </label>
+                      <input
+                        className="rounded-lg border border-slate-300 bg-transparent px-3"
+                        id={`edit-category-${category.id}`}
+                        maxLength={50}
+                        onChange={(event) => setEditName(event.target.value)}
+                        required
+                        value={editName}
+                      />
+                      <button
+                        className="rounded-lg border border-slate-300 px-3 py-2 font-medium disabled:opacity-60"
+                        disabled={saving}
+                        type="submit"
+                      >
+                        ذخیره
+                      </button>
+                      <button
+                        className="rounded-lg border border-slate-300 px-3 py-2 font-medium"
+                        onClick={() => setEditingCategoryId(undefined)}
+                        type="button"
+                      >
+                        انصراف
+                      </button>
+                    </form>
+                  ) : !category.isDefault ? (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-lg border border-slate-300 px-4 py-2 font-medium disabled:opacity-60"
+                        disabled={saving}
+                        onClick={() => {
+                          setEditName(category.name);
+                          setEditingCategoryId(category.id);
+                        }}
+                        type="button"
+                      >
+                        ویرایش
+                      </button>
+                      <button
+                        className="rounded-lg border border-slate-300 px-4 py-2 font-medium disabled:opacity-60"
+                        disabled={saving}
+                        onClick={() => void toggleCategory(category)}
+                        type="button"
+                      >
+                        {category.isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن'}
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>

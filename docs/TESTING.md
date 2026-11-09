@@ -18,6 +18,7 @@ Run from the repository root unless noted:
 npm run lint
 npm run typecheck
 npm run test:backend
+npm --prefix backend run test:coverage
 npm --prefix frontend run test:jalali
 npm run build:backend
 npm run build:frontend
@@ -35,7 +36,7 @@ To run the production PWA path in Microsoft Edge:
 $env:PLAYWRIGHT_CHANNEL = 'msedge'
 $env:PWA_TEST = 'true'
 Set-Location frontend
-npx playwright test --workers=4
+npx playwright test
 Set-Location ..
 Remove-Item Env:PLAYWRIGHT_CHANNEL
 Remove-Item Env:PWA_TEST
@@ -72,25 +73,42 @@ Remove-Item Env:SMSIR_SANDBOX_TEST_ENABLED, Env:SMSIR_SANDBOX_TEST_MOBILE
 
 Configure valid Sandbox credentials in the backend environment first. Never run with production credentials or for a number you do not control. Do not interpret provider acceptance as handset delivery.
 
-## Verification snapshot (2026-11-02)
+## Verification snapshot (2026-11-09)
 
-The following commands were executed for this audit:
+Coverage was collected with Vitest V8 using the test database and synthetic test-only secrets documented above. This baseline predates the focused regression tests added below.
 
 | Check | Result |
 |---|---|
-| Backend complete suite with explicit local `asoudeh_test`, synthetic secrets, SMS key empty, and Sandbox opt-in disabled | **116 passed, 1 skipped** (17 test files passed, 1 skipped; 18 files total). No real SMS request was made. |
-| Frontend Edge production browser suite (`PWA_TEST=true`, 4 workers) | **37 passed, 1 skipped**. The development-only service-worker test is skipped by design. |
-| Frontend Jalali utility tests | **4 passed**; Node emitted experimental type-stripping/module-type warnings. |
-| Backend and frontend production builds | **Passed**. |
-| Frontend/backend lint and typecheck | **Passed** in the preceding verification run for this same code state. |
-| SMS.ir provider unit tests | **12 passed**, with mocked `fetch`; no network request. |
+| Backend coverage run (`npx vitest run --coverage --coverage.reporter=text`) on local `asoudeh_test` | **159 passed, 1 skipped** (18 test files passed, 1 skipped; 19 files total); **87.80% statements, 88.43% lines**. The SMS Sandbox opt-in was disabled. |
+| Lowest line coverage among critical backend runtime files | See the ranked table below; the two assistant rows are low because assistant provider behavior is separately mocked and has narrow service coverage. |
+| Focused backend regression files | **59 passed across 5 files**: auth, transactions, budgets, caregiver, and reminder calendar. |
+| Frontend category and changed auth Playwright specs | **16 passed** with one worker. |
+| Frontend Jalali utility spec | **5 passed**. |
+| Production PWA Playwright spec (`PWA_TEST=true`, Edge) | **1 passed, 1 skipped**; the development-only service-worker test is skipped by design. |
+| Frontend production build; backend/frontend typecheck and lint | **Passed**. |
 
 These are local automated checks, not a production deployment test or live SMS verification.
 
-## Coverage gaps
+### Ten lowest-covered critical backend files (baseline)
 
-- There is no configured coverage-collection script in the package manifests.
-- Frontend has no dedicated category feature E2E spec; shell navigation alone does not verify category editing behavior.
+| Rank | File | Line coverage |
+|---:|---|---:|
+| 1 | `backend/src/services/assistant.service.ts` | 8.00% |
+| 2 | `backend/src/controllers/assistant.controller.ts` | 22.22% |
+| 3 | `backend/src/utils/financialAmount.ts` | 47.05% |
+| 4 | `backend/src/config/db.ts` | 66.66% |
+| 5 | `backend/src/services/assistantProvider.ts` | 66.66% |
+| 6 | `backend/src/utils/restoreCheckSafety.ts` | 71.42% |
+| 7 | `backend/src/middleware/requireOrigin.ts` | 75.00% |
+| 8 | `backend/src/controllers/dashboard.controller.ts` | 80.00% |
+| 9 | `backend/src/models/Budget.ts` | 80.00% |
+| 10 | `backend/src/models/User.ts` | 80.00% |
+
+The requested high-risk regression areas also have focused additions in auth, transaction undo boundaries, exact budget thresholds, caregiver write denial, and Jalali reminder recurrence.
+
+## Remaining coverage limits
+
+- Frontend category list/create/edit/activation and unavailable-delete behavior now has a dedicated E2E spec.
 - Accessibility settings and keyboard behavior have tests, but no measured WCAG conformance, screen-reader certification, or real-user usability study is recorded.
 - Production deployment, database index rollout, backup/restore, and real provider delivery are not covered by the automated suites.
 - SMS Sandbox is deliberately opt-in and was not run in this audit.

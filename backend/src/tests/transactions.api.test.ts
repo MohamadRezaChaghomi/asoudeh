@@ -676,6 +676,49 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Transaction API', () => {
     expect(getDeletedByUpdate.status).toBe(404);
   });
 
+  it('allows undo just inside the ten-second window and rejects the exact cutoff', async () => {
+    const makeDeletedTransaction = async (ageMs: number) => {
+      const created = await authenticatedMutation('post', '/api/v1/transactions', owner, {
+        type: 'expense',
+        amount: 500,
+        categoryId: ownedExpenseCategoryId,
+        date: '2024-05-12',
+      });
+      expect(created.status).toBe(201);
+      const transactionId = created.body.data.transaction.id as string;
+      transactionIds.push(new mongoose.Types.ObjectId(transactionId));
+      const deleted = await authenticatedMutation(
+        'delete',
+        `/api/v1/transactions/${transactionId}`,
+        owner,
+      );
+      expect(deleted.status).toBe(200);
+      await Transaction.updateOne(
+        { _id: new mongoose.Types.ObjectId(transactionId) },
+        { $set: { deletedAt: new Date(Date.now() - ageMs) } },
+      );
+      return transactionId;
+    };
+
+    const insideWindowId = await makeDeletedTransaction(8_000);
+    const expiredId = await makeDeletedTransaction(10_000);
+
+    const insideWindow = await authenticatedMutation(
+      'post',
+      `/api/v1/transactions/${insideWindowId}/restore`,
+      owner,
+    );
+    const atCutoff = await authenticatedMutation(
+      'post',
+      `/api/v1/transactions/${expiredId}/restore`,
+      owner,
+    );
+
+    expect(insideWindow.status).toBe(200);
+    expect(atCutoff.status).toBe(410);
+    expect(atCutoff.body.error.code).toBe('TRANSACTION_UNDO_EXPIRED');
+  });
+
   it('enforces Origin and CSRF checks for state-changing operations', async () => {
     const invalidOrigin = await authenticatedMutation(
       'post',

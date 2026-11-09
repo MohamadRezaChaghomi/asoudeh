@@ -54,6 +54,29 @@ describe('Jalali reminder calendar rules', () => {
     expect(getJalaliDateParts(getMonthlyOccurrenceDate(anchor, 1405, 1)!).day).toBe(31);
   });
 
+  it.each([
+    [1403, 30, 1404, 29],
+    [1404, 29, 1405, 29],
+  ])(
+    'clamps monthly Esfand %i day %i into Esfand %i day %i',
+    (anchorYear, anchorDay, occurrenceYear, occurrenceDay) => {
+      const anchorMonth = getJalaliMonthRange(anchorYear, 12);
+      const anchor = new Date(anchorMonth.startDate.getTime() + (anchorDay - 1) * 86_400_000);
+      const occurrence = getMonthlyOccurrenceDate(anchor, occurrenceYear, 12);
+
+      expect(getJalaliDateParts(anchor)).toMatchObject({
+        year: anchorYear,
+        month: 12,
+        day: anchorDay,
+      });
+      expect(getJalaliDateParts(occurrence!)).toMatchObject({
+        year: occurrenceYear,
+        month: 12,
+        day: occurrenceDay,
+      });
+    },
+  );
+
   it('derives current Jalali month from Tehran local date around midnight boundaries', () => {
     const beforeTehranMidnight = new Date('2026-10-22T20:29:59.000Z');
     const atTehranMidnight = new Date('2026-10-22T20:30:00.000Z');

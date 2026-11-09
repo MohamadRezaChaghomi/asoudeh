@@ -287,6 +287,7 @@ describe.skipIf(!testMongoUri || !configuredMongoUri)('Budget API', () => {
   it.each([
     [7_999, 80, 'normal'],
     [8_000, 80, 'warning'],
+    [9_999, 100, 'warning'],
     [10_000, 100, 'exceeded'],
     [10_001, 100, 'exceeded'],
   ] as const)(

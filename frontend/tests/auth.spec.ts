@@ -114,10 +114,14 @@ test('requires manual OTP entry and never returns or stores the development OTP'
 
 test('navigates to the OTP verification route after the request is accepted', async ({ page }) => {
   let requestCount = 0;
+  let releaseRequest!: () => void;
+  const requestGate = new Promise<void>((resolve) => {
+    releaseRequest = resolve;
+  });
   await page.route('**/api/v1/auth/otp/request', async (route) => {
     requestCount += 1;
     expect(route.request().headers()['x-csrf-token']).toBe('test-csrf-token');
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await requestGate;
     await route.fulfill({
       json: {
         success: true,
@@ -132,6 +136,8 @@ test('navigates to the OTP verification route after the request is accepted', as
   const submit = submitButton.click();
   await expect(submitButton).toBeDisabled();
   await page.locator('form').evaluate((form) => (form as HTMLFormElement).requestSubmit());
+  expect(requestCount).toBe(1);
+  releaseRequest();
   await submit;
 
   await expect(page).toHaveURL(/\/verify-otp$/);
@@ -196,7 +202,10 @@ test('shows API errors and allows retry when requesting an OTP fails', async ({ 
   await page.goto('/login');
   await page.getByLabel('شماره همراه').fill('09121234567');
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText('ارسال کد در دسترس نیست.');
+  await expect(page.locator('p[role="alert"]')).toContainText(
+    'سرویس موقتاً با مشکل روبه‌رو شده است',
+  );
+  await expect(page.getByText('ارسال کد در دسترس نیست.')).toHaveCount(0);
   await expect(page).toHaveURL(/\/login$/);
 
   await page.getByRole('button', { name: 'دریافت کد تأیید' }).click();
