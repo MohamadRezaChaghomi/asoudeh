@@ -12,6 +12,7 @@ import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
+  formatJalaliDate,
   getTehranTodayIso,
   getCurrentJalaliMonthKey,
 } from '@/lib/jalaliDate';
@@ -41,13 +42,6 @@ interface ReminderData {
 }
 
 const MAX_AMOUNT = 1_000_000_000_000;
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  }).format(new Date(`${value}T00:00:00.000Z`));
-}
 
 export default function RemindersPage() {
   const router = useRouter();
@@ -283,7 +277,7 @@ export default function RemindersPage() {
                       <div>
                         <h2 className="font-bold text-asoudeh-navy">{reminder.title}</h2>
                         <p className="app-muted mt-1 text-sm">
-                          سررسید {formatDate(reminder.nextDueDate)}
+                          سررسید {formatJalaliDate(reminder.nextDueDate, 'long')}
                           {reminder.recurrence === 'monthly'
                             ? ' · تکرار ماهانه'
                             : reminder.recurrence === 'yearly'

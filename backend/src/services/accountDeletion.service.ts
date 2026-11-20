@@ -17,6 +17,9 @@ import { logger } from '../utils/logger.js';
 
 const ACCOUNT_DELETION_BATCH_SIZE = 100;
 
+/**
+ * Removes dependent data before the account row so a failed purge can be retried safely.
+ */
 async function purgeAccount(
   user: { _id: mongoose.Types.ObjectId; phone?: string | null },
   now: Date,
@@ -64,6 +67,9 @@ async function purgeAccount(
   return removed.deletedCount === 1;
 }
 
+/**
+ * Processes a bounded batch and isolates failures so one account cannot block later purges.
+ */
 export async function purgeExpiredAccountDeletions(
   now: Date = new Date(),
 ): Promise<number> {
@@ -88,6 +94,9 @@ export async function purgeExpiredAccountDeletions(
   return purgedCount;
 }
 
+/**
+ * Rechecks the scheduled deadline before deleting, allowing the worker to retry partial purges.
+ */
 export async function purgeScheduledAccountDeletion(
   userId: mongoose.Types.ObjectId,
   now: Date = new Date(),

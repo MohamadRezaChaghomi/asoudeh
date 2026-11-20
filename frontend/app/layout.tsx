@@ -4,7 +4,13 @@ import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { AccessibilityNavigation } from '@/components/AccessibilityNavigation';
 import { SessionActivityMonitor } from '@/components/layout/SessionActivityMonitor';
+import '@/styles/tokens.css';
 import './globals.css';
+import '@/styles/base.css';
+import '@/styles/app-shell.css';
+import '@/styles/public-pages.css';
+import '@/styles/controls.css';
+import '@/styles/assistant.css';
 
 const metadataBase = new URL(
   process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_API_URL

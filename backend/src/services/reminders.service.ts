@@ -257,6 +257,9 @@ export async function deleteReminder(userId: string, id: string): Promise<void> 
   }
 }
 
+/**
+ * Records one completion per Tehran-local Jalali month and resolves concurrent retries idempotently.
+ */
 export async function completeReminder(
   userId: string,
   id: string,

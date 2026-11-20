@@ -1,14 +1,15 @@
 import mongoose from 'mongoose';
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
+import type { TransactionType } from '../types/finance.js';
 import { HttpError } from '../utils/httpError.js';
+import { formatUtcDateOnly } from '../utils/jalaliMonth.js';
 import type {
   CreateTransactionInput,
   TransactionQuery,
   UpdateTransactionInput,
 } from '../validators/transaction.validator.js';
 
-type TransactionType = 'income' | 'expense';
 const TRANSACTION_UNDO_WINDOW_MS = 10_000;
 
 interface TransactionRecord {
@@ -77,7 +78,7 @@ function toTransactionResponse(transaction: TransactionRecord): TransactionRespo
     categoryId: transaction.categoryId._id.toString(),
     categoryName: transaction.categoryId.name,
     categoryIcon: transaction.categoryId.icon ?? 'wallet',
-    date: transaction.date.toISOString().slice(0, 10),
+    date: formatUtcDateOnly(transaction.date),
     note: transaction.note ?? '',
   };
 }
@@ -192,7 +193,7 @@ export async function listTransactions(
         categoryId: transaction.categoryId.toString(),
         categoryName: category?.name ?? 'دسته‌بندی ناموجود',
         categoryIcon: category?.icon ?? 'wallet',
-        date: transaction.date.toISOString().slice(0, 10),
+        date: formatUtcDateOnly(transaction.date),
         note: transaction.note ?? '',
       };
     }),

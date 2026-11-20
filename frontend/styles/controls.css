@@ -1,0 +1,153 @@
+select {
+  min-width: 0;
+  padding-block: 0.55rem;
+  padding-inline: 0.75rem;
+  appearance: auto;
+  accent-color: var(--brand-700);
+}
+
+.jalali-calendar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 119;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--overlay-backdrop);
+}
+
+.jalali-calendar-popover {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 120;
+  width: 100%;
+  max-height: min(80dvh, 36rem);
+  overflow-y: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--surface);
+  padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  color: var(--text);
+  box-shadow: var(--shadow-float);
+}
+
+@media (min-width: 641px) {
+  .jalali-calendar-backdrop {
+    display: none;
+  }
+
+  .jalali-calendar-popover {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: auto;
+    top: calc(100% + 0.5rem);
+    width: min(100%, 22rem);
+    max-height: min(28rem, calc(100vh - 2rem));
+    overflow: auto;
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+  }
+}
+
+.sidebar-public-links {
+  display: grid;
+  gap: 0.12rem;
+  margin-block-start: 0.65rem;
+  padding-block-start: 0.65rem;
+  border-block-start: 1px solid var(--border);
+}
+
+.sidebar-public-links a {
+  display: flex;
+  min-height: 2rem;
+  align-items: center;
+  padding-inline: 0.8rem;
+  border-radius: 0.55rem;
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.sidebar-public-links a:hover,
+.mobile-nav-public-link:hover {
+  background: var(--surface-muted);
+  color: var(--brand-800);
+}
+
+.mobile-nav-public-link {
+  grid-column: span 1;
+  text-decoration: none;
+}
+
+.transaction-filter-form input,
+.transaction-filter-form select {
+  min-width: 0;
+}
+
+.transaction-filter-form button {
+  min-width: 8rem;
+}
+
+.transaction-step-number {
+  display: inline-flex;
+  min-width: 2.25rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.35rem;
+  border-radius: 0.65rem;
+  background: var(--surface-raised);
+  color: var(--brand-800);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.transaction-step-number-active {
+  background: var(--text-on-action);
+  color: var(--brand-action);
+}
+
+.auth-back-button {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding-inline: 0.75rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.auth-card-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  direction: ltr;
+  margin-block-end: 0.85rem;
+}
+
+@media (max-height: 700px) {
+  .brand-logo-frame--auth-symbol {
+    width: 3.5rem;
+  }
+
+  .brand-logo-frame--auth-symbol .brand-logo-mark {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.auth-back-button:hover {
+  background: var(--surface-muted);
+  color: var(--brand-900);
+}

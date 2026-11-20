@@ -1,5 +1,7 @@
 import { expect, test } from './diagnostics-test';
 
+const playwrightOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000').origin;
+
 async function mockSession(page: import('@playwright/test').Page) {
   await page.route('**/api/v1/me', (route) =>
     route.fulfill({
@@ -63,7 +65,7 @@ test('shows the Retry-After delay for a rate-limited API request', async ({ page
       status: 429,
       headers: {
         'Retry-After': '12',
-        'Access-Control-Allow-Origin': 'http://127.0.0.1:3000',
+        'Access-Control-Allow-Origin': playwrightOrigin,
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Expose-Headers': 'Retry-After',
       },

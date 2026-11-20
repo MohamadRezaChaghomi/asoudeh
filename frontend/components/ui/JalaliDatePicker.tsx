@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
+  formatJalaliDate,
   formatJalaliYear,
   getJalaliMonthDays,
   getJalaliParts,
@@ -18,19 +19,15 @@ interface JalaliDatePickerProps {
 
 const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  }).format(new Date(`${value}T00:00:00.000Z`));
-}
-
 function shiftIsoDate(value: string, days: number) {
   const date = new Date(`${value}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Provides an accessible Persian calendar while keeping its value Gregorian ISO date-only.
+ */
 export function JalaliDatePicker({
   value,
   onChange,
@@ -161,7 +158,7 @@ export function JalaliDatePicker({
         ref={triggerRef}
         type="button"
       >
-        <span>{formatDate(value)}</span>
+        <span>{formatJalaliDate(value, 'long')}</span>
         <span className="app-muted text-sm">تغییر تاریخ</span>
       </button>
       {open && (
@@ -262,7 +259,7 @@ export function JalaliDatePicker({
             </div>
             {maxDate && (
               <p className="app-muted mt-3 text-center text-xs">
-                امروز: {formatDate(today)}
+                امروز: {formatJalaliDate(today, 'long')}
               </p>
             )}
           </div>

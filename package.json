@@ -16,6 +16,7 @@
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
     "build:backend": "npm --prefix backend run build",
     "test:backend": "npm --prefix backend test",
+    "test:e2e": "npm --prefix frontend run test:e2e",
     "build:frontend": "npm --prefix frontend run build"
   }
 }

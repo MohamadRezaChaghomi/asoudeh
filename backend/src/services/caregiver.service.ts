@@ -338,6 +338,9 @@ export async function revokeCaregiverLink(
   return toLinkResponse(link);
 }
 
+/**
+ * Revalidates consent, account status, and the requested scope on every caregiver read.
+ */
 async function requireActivePermission(
   caregiverId: string,
   seniorId: string,

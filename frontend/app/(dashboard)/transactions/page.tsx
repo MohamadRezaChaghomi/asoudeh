@@ -12,6 +12,7 @@ import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
+  formatJalaliDate,
   getJalaliParts,
   getTehranTodayIso,
 } from '@/lib/jalaliDate';
@@ -20,9 +21,8 @@ import {
   formatTomanAmountInput,
   parseTomanAmount,
 } from '@/lib/tomanAmount';
-
-type TransactionType = 'income' | 'expense';
-type CategoryType = TransactionType | 'both';
+import type { CategoryType } from '@/types/category';
+import type { TransactionType } from '@/types/transaction';
 
 interface Category {
   id: string;
@@ -115,13 +115,6 @@ function todayDate(): string {
 
 function formatInteger(amount: number): string {
   return new Intl.NumberFormat('fa-IR').format(amount);
-}
-
-function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    dateStyle: 'medium',
-    timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00.000Z`));
 }
 
 export default function TransactionsPage() {
@@ -643,7 +636,7 @@ export default function TransactionsPage() {
 
   return (
     <main className="min-h-screen p-5" id="main-content" tabIndex={-1}>
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
         <section className="app-panel order-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-1 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -780,7 +773,7 @@ export default function TransactionsPage() {
                     <div>
                       <p className="font-semibold">{transaction.categoryName}</p>
                       <p className="app-muted mt-1 text-sm">
-                        {formatDate(transaction.date)}
+                        {formatJalaliDate(transaction.date, 'medium')}
                         {transaction.note ? ` · ${transaction.note}` : ''}
                       </p>
                     </div>
@@ -999,7 +992,7 @@ export default function TransactionsPage() {
                     />
                   </div>
                   <p className="app-muted mt-2 text-sm" aria-labelledby="transactionDateLabel">
-                    {formatDate(date)}
+                    {formatJalaliDate(date, 'medium')}
                   </p>
                 </div>
               </>
@@ -1021,7 +1014,7 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">تاریخ</dt>
-                    <dd>{formatDate(date)}</dd>
+                    <dd>{formatJalaliDate(date, 'medium')}</dd>
                   </div>
                 </dl>
                 <div>
@@ -1091,7 +1084,7 @@ export default function TransactionsPage() {
                   </span>
                   <input
                     checked={saveDraftLocally}
-                    className="relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-[var(--border)] transition-colors checked:bg-[var(--brand-action)] before:absolute before:start-1 before:top-1 before:size-4 before:rounded-full before:bg-[var(--surface)] before:transition-transform checked:before:-translate-x-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                    className="relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-[var(--border)] transition-transform checked:bg-[var(--brand-action)] before:absolute before:start-1 before:top-1 before:size-4 before:rounded-full before:bg-[var(--surface)] before:transition-transform checked:before:-translate-x-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
                     disabled={!userId}
                     id="saveTransactionDraft"
                     onChange={(event) => setSaveDraftLocally(event.target.checked)}

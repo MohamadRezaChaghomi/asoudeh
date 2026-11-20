@@ -20,8 +20,7 @@ import {
   formatTomanAmountInput,
   parseTomanAmount,
 } from '@/lib/tomanAmount';
-
-type CategoryType = 'income' | 'expense' | 'both';
+import type { CategoryType } from '@/types/category';
 
 interface Category {
   id: string;

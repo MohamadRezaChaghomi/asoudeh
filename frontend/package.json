@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "perf:budget": "node scripts/check-performance-budget.mjs",
+    "typegen": "node scripts/typegen.mjs --generate-only",
+    "typecheck": "node scripts/typegen.mjs",
     "test:jalali": "node --experimental-strip-types --test tests/jalaliDate.test.mjs",
     "test:e2e": "playwright test"
   },
@@ -23,7 +25,6 @@
     "next": "^15.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.15.0",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {

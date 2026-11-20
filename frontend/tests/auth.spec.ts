@@ -32,7 +32,7 @@ test('shows the symbol mark on login and OTP registration without duplicating th
   expect(loginMarkBounds?.width).toBe(56);
   expect(loginMarkBounds?.height).toBe(56);
   await expect(page.getByRole('button', { name: 'بازگشت' }).locator('svg path').last())
-    .toHaveAttribute('d', 'M5 12h14');
+    .toHaveAttribute('d', 'M19 12H5');
   await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
   const [logoBounds, backBounds] = await Promise.all([
     loginLogo.boundingBox(),
@@ -75,7 +75,7 @@ test('shows the symbol mark on login and OTP registration without duplicating th
   expect(verificationMarkBounds?.height).toBe(56);
   await expect(page.getByRole('heading', { name: 'ساخت حساب کاربری' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'بازگشت' }).locator('svg path').last())
-    .toHaveAttribute('d', 'M5 12h14');
+    .toHaveAttribute('d', 'M19 12H5');
   const [verificationLogoBounds, verificationBackBounds] = await Promise.all([
     verificationLogo.boundingBox(),
     page.getByRole('button', { name: 'بازگشت' }).boundingBox(),

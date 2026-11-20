@@ -34,6 +34,16 @@ const persianPartsFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-lat
 
 const monthStartCache = new Map<string, string>();
 
+export function formatJalaliDate(
+  isoDate: string,
+  dateStyle: NonNullable<Intl.DateTimeFormatOptions['dateStyle']>,
+): string {
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    dateStyle,
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate}T00:00:00.000Z`));
+}
+
 export function getJalaliParts(isoDate: string): JalaliDate {
   const date = new Date(`${isoDate}T00:00:00.000Z`);
   if (

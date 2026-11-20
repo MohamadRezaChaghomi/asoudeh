@@ -1,52 +1,37 @@
 # Asoudeh
 
-Asoudeh is a Persian, right-to-left personal finance web application designed to make everyday money management approachable for older adults and people with limited experience using financial software. It supports personal transactions, budgets, reminders, monthly reports, and optional read-only caregiver access.
+Asoudeh is a Persian, right-to-left personal-finance web application. It helps people record and review income and expenses, organize spending with categories and monthly budgets, manage reminders, and view monthly reports. An account owner can optionally grant a caregiver explicitly accepted, permission-scoped, read-only access.
 
-> **Development status:** This repository is not production-ready. A server-side SMS.ir Verify adapter is implemented, but the checked-in sample has no API key and no live credentials, approved template, or delivery have been verified. Local OTP login is available through an explicitly enabled development simulator.
+The product is designed for older adults and people who benefit from a simpler financial interface. It does not connect to banks, move money, or provide financial, tax, or legal advice.
 
-## Product capabilities
+> **Project status:** Core application flows are implemented and covered by automated tests, but the project is **not production-certified**. Live SMS delivery, production operations, database index rollout, backup/restore drills, formal accessibility conformance, and real-user usability have not been verified.
 
-- Persian/RTL interface with profile-level font scaling and high-contrast settings.
-- OTP-based, passwordless registration and login, cookie-backed sessions, CSRF and Origin checks, profile editing, and account deletion scheduled 30 days after OTP confirmation.
-- Personal and read-only system categories; owner-scoped transaction management, soft deletion with a 10-second undo window, and 20-item pagination.
-- Solar Hijri dashboard, monthly budgets, recurring reminders with month-scoped completion, and monthly reports.
-- Explicitly accepted, permission-scoped, read-only caregiver access with revocation and audit events.
-- Optional Persian guide assistant, disabled until a backend-only provider is configured; it does not receive account or transaction data.
-- Browser text-to-speech for visible page text when a Persian system voice is available.
-- Optional, account-keyed session-only transaction draft storage.
-- A PWA manifest and a limited offline shell. Only a generic public offline page and its icon are cached; authenticated pages and API data are not cached.
+## What it includes
 
-See the [engineering report](docs/PROJECT_REPORT.md) for implementation status, verification evidence, limitations, and recommended next steps. The [API contract](docs/API.md) distinguishes registered routes from planning notes.
+- Persian/RTL web UI with light/dark themes, profile-level text scaling, and high-contrast settings.
+- Passwordless OTP registration and login, HTTP-only session cookies, CSRF/Origin checks, refresh rotation, and idle expiry.
+- Owner-scoped transactions, categories, Solar Hijri monthly budgets, reminders, dashboard summaries, and monthly reports.
+- Optional caregiver access that requires explicit acceptance, individual read permissions, and can be revoked.
+- An optional Persian guide assistant. It remains unavailable until configured on the backend and receives the question plus selected public guide text—not financial records.
+- Browser text-to-speech when a Persian system voice is available.
+- A PWA manifest and limited offline shell. Only a generic offline page and its mark are cached; authenticated pages and API data are not.
 
-## Technology
+## Technology and prerequisites
 
 | Area | Technology |
 | --- | --- |
-| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| Runtime | Node.js `22.14.0` or newer; version is pinned in `.nvmrc` |
+| Package manager | npm |
+| Frontend | Next.js 15 App Router, React 19, TypeScript, Tailwind CSS 3 |
 | Backend | Node.js, Express 4, TypeScript, Zod |
-| Persistence | MongoDB, Mongoose |
+| Database | MongoDB with Mongoose |
 | Tests | Vitest, Supertest, Node test runner, Playwright |
 
-## Repository layout
+For local development, install Node.js and npm and run a local MongoDB instance. Docker is optional for development; the staging Compose file starts MongoDB as a replica set with the application and Caddy.
 
-```text
-backend/      Express API, validation, services, Mongoose models, and API/unit tests
-frontend/     Next.js application, shared UI, Jalali date utilities, and browser tests
-docs/         API, environment, development, decisions, roadmap, handover, and specification
-scripts/      Repository helper scripts
-```
+## Local setup
 
-The backend follows a routes/controllers/services/models structure. The frontend uses the Next.js App Router and calls the API through cookie-based authentication.
-
-## Requirements
-
-- Node.js `22.14.0` or newer (the repository pins `22.14.0` in `.nvmrc`).
-- npm.
-- A local MongoDB instance for the application and database integration tests.
-
-## Local development (PowerShell)
-
-Run these commands from the repository root. They create local environment files only when they do not already exist, so existing local configuration is not overwritten:
+Run the following from the repository root in PowerShell. These commands create environment files only if they do not already exist:
 
 ```powershell
 if (-not (Test-Path 'backend\.env')) {
@@ -60,12 +45,13 @@ npm run install:all
 
 Review the sample files and configure local values in `backend\.env` and `frontend\.env.local`:
 
-- Set independent, randomly generated values for `JWT_SECRET` and `AUTH_HASH_SECRET`. `AUTH_HASH_SECRET` must be at least 32 bytes. Authentication fails closed if it is missing or too short.
-- Keep `MONGODB_URI` pointed at a local development database and `CLIENT_URL` at the frontend origin.
-- `NEXT_PUBLIC_API_URL` is public configuration; never place secrets in it.
-- Never commit or print local `.env` files or their secret values.
+- Keep `MONGODB_URI` pointed to a local development database (the sample uses `asoudeh`).
+- Set `CLIENT_URL=http://localhost:3000` and `NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1` for the default local ports.
+- Use separate random values for `JWT_SECRET` and `AUTH_HASH_SECRET`; the authentication hash secret must be at least 32 bytes.
+- `NEXT_PUBLIC_API_URL` is public configuration. Never put credentials or secrets in a `NEXT_PUBLIC_*` variable.
+- Never print, commit, overwrite, or share local `.env` files or their secret values.
 
-Start MongoDB, then run the backend and frontend in separate PowerShell terminals:
+Start MongoDB, then open two PowerShell terminals at the repository root:
 
 ```powershell
 npm run dev:backend
@@ -75,69 +61,170 @@ npm run dev:backend
 npm run dev:frontend
 ```
 
-The frontend is at <http://localhost:3000>. The API is at <http://localhost:5000>; liveness and database readiness are available at `/api/v1/health` and `/api/v1/health/ready`.
+The frontend is served at <http://localhost:3000>; the API listens on port `5000`. The liveness endpoint is `GET /api/v1/health`; readiness, including MongoDB availability, is `GET /api/v1/health/ready`.
 
-### Local OTP without an SMS provider
+### Local OTP without SMS
 
-For local development without SMS, set `NODE_ENV=development` and `OTP_DEV_SIMULATOR_ENABLED=true` in the backend's local environment file. The simulator uses `OTP_DEV_FALLBACK_CODE`, which must be entered manually on the verification page; the API and browser do not return or store the code. A new account still needs a display name once. Use only a dedicated local database. The challenge is single-use, expires after five minutes, is stored as a keyed digest, and retains the application's rate and attempt limits. Resends have a server-enforced cooldown (60 seconds by default). The simulator is not an automatic fallback after an SMS delivery failure. See [environment setup](docs/ENVIRONMENT.md).
+The backend sample enables the development-only OTP simulator. It requires `NODE_ENV=development`; the configured fallback code must be entered manually on `/verify-otp`. The API never returns the code, and the browser does not store it. Use only a dedicated local database. The simulator is not an automatic fallback for SMS delivery failures and must be disabled outside local development.
 
-SMS.ir OTP delivery is server-side and uses `SMSIR_API_KEY`, `SMSIR_VERIFY_TEMPLATE_ID` (default `123456`), and the fixed `Code` Verify parameter when the development simulator is disabled. Both `SMSIR_MODE=sandbox` and `SMSIR_MODE=production` use the configured Verify endpoint; a successful Sandbox response does not prove handset delivery. No live SMS has been sent or tested. See [SMS.ir setup](docs/SMSIR_SETUP.md).
+SMS.ir delivery is backend-only and requires approved credentials and an active Verify template. A successful provider response, especially in Sandbox, confirms API acceptance only—not handset delivery. No live SMS delivery has been verified. See [Environment and Services](docs/02_API_and_Development/Environment_and_Services.md).
 
-An accepted OTP request navigates to `/verify-otp`. The current tab stores only the pending phone, step, and resend time so the form can recover after refresh; it never stores an OTP or authenticates a user. Only successful backend OTP verification issues an authenticated session.
+## Architecture
 
-## Checks and tests
+```text
+Browser
+  └─ Next.js App Router UI
+       └─ frontend/lib/api/client.ts
+            └─ Express API (/api/v1)
+                 ├─ middleware and route validation (Zod)
+                 ├─ controllers
+                 ├─ domain services
+                 └─ Mongoose models ── MongoDB
+```
 
-Run commands from the repository root:
+### Repository layout
+
+```text
+backend/
+  scripts/           Database maintenance and reporting commands
+  src/
+    config/          Environment validation and database connection
+    controllers/     HTTP request/response handlers
+    middleware/      Authentication, CSRF, Origin, errors and logging
+    models/          Mongoose schemas and indexes
+    routes/          Express route registration
+    services/        Authentication and domain/business logic
+    tests/           API, integration and unit tests
+    validators/      Zod request schemas
+    utils/            Shared backend helpers
+frontend/
+  app/               App Router routes, layouts, metadata and global CSS entry
+  components/        Shared shell, brand, forms and UI components
+  lib/               API client, auth-flow, Persian content and date/amount helpers
+  public/            PWA shell, icons, illustrations and social preview
+  scripts/           Type generation, performance budget and asset export
+  styles/            Design tokens and modular global styles
+  tests/             Playwright and Node utility tests
+docs/                API, architecture, security and operations references
+scripts/             Repository-level backup, restore and helper scripts
+```
+
+### Request and data flow
+
+1. The Next.js UI calls the centralized API client in `frontend/lib/api/client.ts`, which sends credentialed requests and handles CSRF bootstrap, refresh/retry, and API error messages.
+2. Express applies security headers, CORS, request logging, JSON size limits, and request timeouts before dispatching to feature routers.
+3. Validators parse untrusted input. Controllers adapt HTTP requests to service calls; services enforce business rules and ownership.
+4. Mongoose models persist and query MongoDB documents. Personal financial records are always scoped to the authenticated user; caregiver reads require an accepted relationship and the specific permission.
+5. Authentication uses cookies rather than access or refresh tokens in browser storage. State-changing requests require the configured Origin and CSRF cookie/header pair.
+
+For the full registered request contract and response/error shapes, see [API documentation](docs/02_API_and_Development/API_Documentation.md). For implementation boundaries and diagrams, see [System architecture](docs/01_Architecture_and_Design/System_Architecture.md).
+
+### Main API families
+
+All versioned endpoints use `/api/v1`.
+
+| Family | Representative routes | Purpose |
+| --- | --- | --- |
+| Health | `GET /health`, `GET /health/ready` | Liveness and MongoDB readiness |
+| Authentication | `POST /auth/otp/request`, `POST /auth/otp/verify`, `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/activity` | OTP flow and cookie-backed sessions |
+| Profile | `GET /me`, `PATCH /me/profile` | Current profile and accessibility preferences |
+| Transactions | `GET/POST /transactions`, `PATCH/DELETE /transactions/:id`, `POST /transactions/:id/restore` | Owner-scoped records, filters and undo |
+| Categories | `GET/POST /categories`, `PATCH/DELETE /categories/:id` | System and personal categories; physical deletion is intentionally disabled |
+| Dashboard and budgets | `GET /dashboard`, `GET/POST /budgets`, `PATCH/DELETE /budgets/:id` | Monthly totals and Solar Hijri budgets |
+| Reminders and reports | `/reminders`, `GET /reports/monthly` | Reminder lifecycle and monthly reports |
+| Caregiver | `/caregiver/links`, `/caregiver/invitations`, `/caregiver/seniors` | Accepted permission-scoped read-only access |
+| Assistant | `GET /assistant/status`, `POST /assistant/messages` | Optional public-guide help, disabled until configured |
+
+Some endpoints require cookies, CSRF, Origin, or query parameters; consult [the API contract](docs/02_API_and_Development/API_Documentation.md) before calling them.
+
+### Data model overview
+
+| Model | Responsibility |
+| --- | --- |
+| `User`, `AuthSession`, `OtpChallenge`, `OtpRateLimit` | Accounts, refresh-session state and protected OTP challenges/limits |
+| `Category`, `Transaction`, `Budget` | System/personal categories and owner-scoped financial records |
+| `Reminder`, `ReminderCompletion` | Recurring reminders and idempotent Solar Hijri month completion |
+| `CaregiverLink`, `AuditLog` | Accepted access grants, revocation and access audit events |
+| `AssistantRateLimit` | Per-user assistant request limits; conversation content is not persisted |
+
+Amounts are denominated in toman. Financial dates and monthly periods use Solar Hijri rules where applicable; APIs return exact aggregate amounts as integer strings. Model fields, indexes, ownership and migration cautions are documented in [Database design](docs/01_Architecture_and_Design/Database_Design.md).
+
+## Development and verification
+
+Run from the repository root:
 
 ```powershell
-npm run typecheck
 npm run lint
+npm run typecheck
 npm run test:backend
 npm --prefix frontend run test:jalali
+npm run test:e2e
 npm run build:backend
 npm run build:frontend
 ```
 
-Playwright browser tests are run separately:
+Install the Playwright browser if it is not already available. If the machine is resource constrained, run Playwright from the frontend directory with one worker:
 
 ```powershell
-npm --prefix frontend run test:e2e
+Set-Location frontend
+npx playwright test --workers=1
+Set-Location ..
 ```
 
-The backend database integration test is skipped by the regular suite unless `TEST_MONGODB_URI` is configured. It must point to a dedicated local `asoudeh_test` database without credentials. Follow the guarded instructions in [environment setup](docs/ENVIRONMENT.md); do not point test commands at a shared or production database.
+Backend API tests require **both** `MONGODB_URI` and `TEST_MONGODB_URI` to target the credential-free local `asoudeh_test` database. The tests refuse unsafe targets. Never point test commands at a shared, development, or production database. Follow the guarded instructions in [Testing and Performance](docs/04_Academic_and_Quality/Testing_and_Performance.md).
 
-Available root scripts are declared in the root `package.json`. Backend and frontend scripts are declared in their respective package manifests; there is no root script that runs every E2E/browser test.
+The frontend bundle/image budget can be checked with:
 
-## Known limitations
+```powershell
+npm --prefix frontend run perf:budget
+```
 
-- **Production OTP delivery is unverified:** the checked-in sample contains no SMS.ir API key; an approved template and live delivery have not been verified. Configure credentials only in the backend deployment environment. Requests fail closed when SMS settings are unavailable.
-- **Category deletion is intentionally unavailable:** the registered delete route returns `409 CATEGORY_DELETION_UNAVAILABLE`; safely reassigning transactions requires a transaction-capable database topology or an equivalent safe workflow, and a confirmed income fallback.
-- **No reminder or caregiver invitation delivery:** reminders are shown in the app, and caregiver invitations must be communicated out of band.
-- **Account deletion cannot currently be cancelled:** access is revoked immediately and permanent purge is scheduled for 30 days later.
-- **Offline behavior is limited:** the public offline page is cached, but account/API data and automatic offline transaction submission or synchronization are not supported.
-- **Not production-verified:** deployment, production index rollout, WCAG/Lighthouse results, and real-user usability studies have not been verified. The optional guide assistant requires provider configuration; voice input and OCR are not implemented. Browser text-to-speech support depends on the user's system and has not been validated with real assistive technology.
+CI checks are defined in `.github/workflows/ci.yml`. Current feature verification is not a production deployment, live-provider check, WCAG certification, or usability study.
 
-There is no `LICENSE` file in the repository. No deployment URL, demo, screenshot, or CI status is claimed here.
+## Deployment
 
-## Documentation
+The repository includes Dockerfiles, `docker-compose.staging.yml`, and a Caddy reverse-proxy configuration. The Compose setup requires deployment environment values such as `DOMAIN`, database URI, MongoDB credentials, distinct authentication secrets, and SMS.ir Verify credentials; do not put real values in tracked files.
 
-- [Project engineering report](docs/PROJECT_REPORT.md)
-- [Requirements traceability](docs/REQUIREMENTS_TRACEABILITY.md)
-- [Quality audit report](docs/QUALITY_AUDIT_REPORT.md)
-- [API contract](docs/API.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Database model and ownership notes](docs/DATABASE.md)
-- [Security model and operational cautions](docs/SECURITY.md)
-- [Test guide and current verification](docs/TESTING.md)
-- [Current project status](docs/PROJECT_STATUS.md)
-- [Environment setup and safe database testing](docs/ENVIRONMENT.md)
-- [Development guide](docs/DEVELOPMENT.md)
-- [Architecture and security decisions](docs/DECISIONS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Project handover](docs/PROJECT_HANDOVER.md)
-- [Original specification (PDF)](docs/SPECIFICATION.pdf)
-- [Git workflow notes](docs/GIT.md)
+For production builds, `NEXT_PUBLIC_API_URL` must be an HTTPS API URL. Set `NODE_ENV=production`, disable the development OTP simulator, configure production secrets and origins, and use the required MongoDB replica set. Review backup/restore, index rollout, deletion-worker monitoring, health checks, and rollback before exposing traffic. The checked-in deployment setup is a staging scaffold and has not been production-verified.
 
-## Source
+See [Deployment and Backup](docs/03_Operations_and_Security/Deployment_and_Backup.md) and [Environment and Services](docs/02_API_and_Development/Environment_and_Services.md) for operational requirements and safety steps.
 
-Repository: <https://github.com/MohamadRezaChaghomi/asoudeh>
+## Contributing
+
+1. Start from the maintained project branch and create a focused feature or fix branch.
+2. Keep changes scoped; preserve unrelated worktree changes and never commit environment files, generated secrets, test data, or build outputs.
+3. Follow the existing TypeScript, route/controller/service/model, validation, CSS-token, and test patterns. Avoid broad refactors bundled with behavior changes.
+4. Add or update focused tests for new behavior and safety boundaries. Run the relevant tests plus lint/typecheck; run builds before proposing release-impacting changes.
+5. Review the final diff and staged file list before committing. Stage only intentional files rather than using a blanket `git add .`.
+6. Open a Pull Request with a concise problem statement, implementation summary, verification results, screenshots for UI changes, and any migration/configuration notes.
+
+See [Frontend and Backend Development](docs/02_API_and_Development/Frontend_and_Backend_Development.md) for local workflow and [Git Workflow](docs/03_Operations_and_Security/Git_Workflow.md) for safe Git guidance.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Backend refuses to start | `NODE_ENV` must be explicitly set to `development`, `test`, or `production`; check the backend environment template and required secrets. |
+| API readiness returns `503` | Confirm local MongoDB is running and `MONGODB_URI` points to the intended development database. |
+| Browser API requests fail through CORS | `CLIENT_URL` must exactly match the browser origin. `localhost` and `127.0.0.1` are different origins. |
+| Production frontend build rejects API URL | Set `NEXT_PUBLIC_API_URL` to an HTTPS URL; never include credentials. |
+| OTP request returns `503` | The simulator must be enabled only for local development, or valid SMS.ir settings must be configured on the backend. The API does not reveal the OTP. |
+| Backend API tests stop before running | Configure both MongoDB variables to the isolated local `asoudeh_test` database; do not bypass the safety guard. |
+| Playwright cannot launch a browser | Install the configured Playwright browser and rerun from `frontend/` or use the root `npm run test:e2e` script. |
+
+## Documentation map
+
+- [System architecture and design](docs/01_Architecture_and_Design/System_Architecture.md) — component boundaries and key decisions.
+- [Database design](docs/01_Architecture_and_Design/Database_Design.md) — models, indexes, ownership and data cautions.
+- [API documentation](docs/02_API_and_Development/API_Documentation.md) — registered routes and response behavior.
+- [Environment and Services](docs/02_API_and_Development/Environment_and_Services.md) — environment variables, SMS.ir and assistant configuration.
+- [Frontend and Backend Development](docs/02_API_and_Development/Frontend_and_Backend_Development.md) — local workflow, implementation conventions and brand integration.
+- [Deployment and Backup](docs/03_Operations_and_Security/Deployment_and_Backup.md) — operational, backup and recovery checklists.
+- [Security](docs/03_Operations_and_Security/Security.md) — authentication, cookies, CSRF, privacy and operational risks.
+- [Git Workflow](docs/03_Operations_and_Security/Git_Workflow.md) — safe branch and change review guidance.
+- [Testing and Performance](docs/04_Academic_and_Quality/Testing_and_Performance.md) — test layers, verification, performance measurements and traceability summary.
+- [Roadmap and Specification](docs/04_Academic_and_Quality/Roadmap_and_Specification.md) — dated plan and summary of the original project specification.
+- [Brand guidance](docs/brand/BRAND-GUIDELINES.md) — approved marks, palette and typography.
+- [Engineering course report](docs/04_Academic_and_Quality/Project_Report.md) — academic analysis; not the operational source of truth.
+
+No `LICENSE` file is currently included. Confirm licensing with the maintainers before redistributing this project.

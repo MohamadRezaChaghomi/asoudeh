@@ -8,8 +8,7 @@ import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { Select } from '@/components/ui/Select';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
-
-type CategoryType = 'income' | 'expense' | 'both';
+import type { CategoryType } from '@/types/category';
 
 interface Category {
   id: string;

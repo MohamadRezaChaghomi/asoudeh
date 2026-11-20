@@ -573,6 +573,9 @@ export async function completeRegistration(
   };
 }
 
+/**
+ * Rotates a session token once and revokes its family when replay or a race is detected.
+ */
 export async function rotateRefreshToken(refreshToken: string): Promise<AuthTokens> {
   const now = new Date();
   const tokenHash = hashAuthValue('refresh-token', refreshToken);

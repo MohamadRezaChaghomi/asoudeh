@@ -35,8 +35,9 @@ export function BrandLogo({
 }: BrandLogoProps) {
   return (
     <span
-      role="img"
-      aria-label={alt}
+      role={alt ? 'img' : undefined}
+      aria-label={alt || undefined}
+      aria-hidden={alt ? undefined : true}
       className={cn(
         'brand-logo-frame',
         `brand-logo-frame--${size}`,
