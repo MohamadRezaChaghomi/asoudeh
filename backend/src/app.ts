@@ -45,6 +45,10 @@ app.use((_req, res, next) => {
   res.once('close', () => clearTimeout(timeout));
   next();
 });
+app.use('/api/v1', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  next();
+});
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/', (req, res) => {

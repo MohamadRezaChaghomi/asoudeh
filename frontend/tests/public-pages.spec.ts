@@ -150,6 +150,68 @@ test('public and authenticated page titles include the brand exactly once', asyn
   }
 });
 
+test('publishes canonical social metadata, structured data, robots and public sitemap', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const siteOrigin = new URL(page.url()).origin;
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    siteOrigin,
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    'content',
+    siteOrigin,
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    'content',
+    'مدیریت مالی شخصی',
+  );
+  await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute(
+    'content',
+    'مدیریت مالی شخصی',
+  );
+
+  const websiteJsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+  expect(JSON.parse(websiteJsonLd ?? 'null')).toMatchObject({
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    url: new URL('/', siteOrigin).toString(),
+    inLanguage: 'fa-IR',
+  });
+
+  await page.goto('/guide');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    new URL('/guide', siteOrigin).toString(),
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    'content',
+    'راهنمای استفاده',
+  );
+  await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute(
+    'content',
+    'راهنمای گام‌به‌گام امکانات فعلی آسوده، از ورود تا مدیریت هزینه‌ها و یادآورها.',
+  );
+
+  const sitemapResponse = await page.request.get('/sitemap.xml');
+  expect(sitemapResponse.ok()).toBe(true);
+  const sitemap = await sitemapResponse.text();
+  for (const path of ['/', '/about', '/guide', '/faq']) {
+    expect(sitemap).toContain(new URL(path, siteOrigin).toString());
+  }
+  for (const path of ['/login', '/dashboard', '/contact', '/terms', '/privacy']) {
+    expect(sitemap).not.toContain(new URL(path, siteOrigin).toString());
+  }
+
+  const robotsResponse = await page.request.get('/robots.txt');
+  expect(robotsResponse.ok()).toBe(true);
+  const robots = await robotsResponse.text();
+  expect(robots).toContain('Disallow: /login');
+  expect(robots).toContain('Disallow: /dashboard');
+  expect(robots).toContain(`Sitemap: ${new URL('/sitemap.xml', siteOrigin).toString()}`);
+});
+
 test('FAQ search filters answers and its accordion works with keyboard activation', async ({
   page,
 }) => {

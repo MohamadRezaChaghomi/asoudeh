@@ -168,6 +168,7 @@ describe('HTTP application baseline', () => {
     expect(response.headers['content-security-policy']).toContain("default-src 'self'");
     expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(response.headers['x-frame-options']).toBeDefined();
+    expect(response.headers['cache-control']).toBe('private, no-store');
   });
 
   it('caps JSON bodies and responds with 413', async () => {
