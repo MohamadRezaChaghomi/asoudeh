@@ -1,6 +1,6 @@
 # Asoudeh Requirements Traceability
 
-Audit snapshot: 2026-11-02. This matrix reconciles the original product specification, the current API contract, implementation decisions, roadmap, and observed source/tests. A feature is not marked complete merely because a route or component exists. For current system architecture, assistant scope, and verification totals, see [PROJECT_STATUS.md](./PROJECT_STATUS.md) and [TESTING.md](./TESTING.md).
+Audit snapshot: 2026-11-02. This matrix reconciles the original product specification, the API contract, implementation decisions, roadmap, and source/tests observed at that time. A feature is not marked complete merely because a route or component exists. This is a dated requirements record, not a live implementation status; start with the [project README](../README.md) and use [TESTING.md](./TESTING.md) for the latest recorded verification.
 
 ## Status definitions
 

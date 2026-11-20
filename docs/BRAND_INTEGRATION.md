@@ -38,11 +38,11 @@ Brand documentation and reference mockups are under `docs/brand/`; they are not 
 
 ## Verification
 
-- Frontend typecheck, lint, production build, and the four brand asset/contrast tests passed. The latest build's largest First Load JS bundle is 148 kB.
-- The production PWA test verified the v8 cache contains only `/offline.html` and `/logo/asoudeh-symbol.svg`.
-- The broader app-shell/auth/public/responsive run was not fully green (20/31 passed). Focused reruns passed after fixing the brand logo locator and PWA notice interactions. Speech/auth failures from the broad run were not resolved or rerun as a suite.
+- As of 2026-11-21, the full frontend Playwright run passed 72 tests with one intentional production-only PWA skip. After the latest asset cleanup, all four brand-asset, logo-dimension, ICO, and contrast tests passed again.
+- Frontend lint, typecheck, and production build passed after the current cleanup. See [TESTING.md](./TESTING.md) for exact scope and backend database-test limitations.
+- These automated checks do not certify WCAG conformance, installation behavior on every device, live provider delivery, or production performance.
 
-## Remaining issues
+## Asset notes
 
 - Historical primary and horizontal logos are unused and should not be reintroduced into the UI.
 - Source mockups are reference-only and remain under `docs/brand/mockups/`.

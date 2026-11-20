@@ -1,5 +1,7 @@
 # Roadmap
 
+> **Status snapshot:** 2026-11-02. This is a planning document, not a live release dashboard. Check the source, [README.md](../README.md), and [TESTING.md](./TESTING.md) before treating an item as current.
+
 ## Phase 0
 Repository, environment, GitHub, MongoDB, frontend/backend bootstrap. **Status:** bootstrap is present.
 

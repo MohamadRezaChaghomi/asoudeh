@@ -27,7 +27,7 @@ npm run build:frontend
 Install the Playwright browser once if needed, then run browser tests:
 
 ```powershell
-npm --prefix frontend run test:e2e
+npm run test:e2e
 ```
 
 The Playwright origin defaults to `http://localhost:3000` to match the backend's default `CLIENT_URL`. If `PLAYWRIGHT_BASE_URL` uses another hostname, configure `CLIENT_URL` to match it; `localhost` and `127.0.0.1` are different browser origins and a mismatch will block API requests through CORS.
@@ -77,7 +77,27 @@ Remove-Item Env:SMSIR_SANDBOX_TEST_ENABLED, Env:SMSIR_SANDBOX_TEST_MOBILE
 
 Configure valid Sandbox credentials in the backend environment first. Never run with production credentials or for a number you do not control. Do not interpret provider acceptance as handset delivery.
 
-## Verification snapshot (2026-11-09)
+## Current checkout verification (2026-11-21)
+
+The following checks were run during documentation and cleanup work. The full browser suite ran before the final removal of unused files; focused UI and brand regressions were rerun afterward. Backend API suites that require MongoDB did **not** complete because the environment's configured URIs did not satisfy the test guard for the isolated local `asoudeh_test` database.
+
+| Check | Result |
+|---|---|
+| Frontend lint, typecheck, and production build | **Passed** |
+| Backend lint, typecheck, and production build | **Passed** |
+| Full frontend Playwright suite, one worker (before final dead-file removal) | **72 passed, 1 skipped**; the skip is production-only PWA coverage |
+| Focused frontend app-shell/transaction tests after cleanup | **16 passed** |
+| Brand asset, logo and contrast tests after asset cleanup | **4 passed** |
+| Frontend Node utility tests (Jalali and digit normalization) | **8 passed** |
+| Backend database-independent unit tests | **59 passed across 6 files** |
+| Frontend performance budget | **Passed**: JavaScript 1,171,392 / 1,400,000 bytes; largest JS 219,011 / 300,000 bytes; public images 163,403 / 200,000 bytes |
+| Full backend suite | **Incomplete**: 8 API test files stopped at the local-database safety guard; 114 tests passed and 55 were skipped in that attempt. These counts are not a full-suite pass. |
+
+To run the database-backed API tests, configure both `MONGODB_URI` and `TEST_MONGODB_URI` exactly as described in [Safe backend API-test setup](#safe-backend-api-test-setup). Do not weaken the guard or point tests at a shared/non-local database.
+
+## Historical verification snapshot (2026-11-09)
+
+The table below records a dated audit baseline. It is not the latest verification; use the current-checkout results above for the most recent observed commands.
 
 Coverage was collected with Vitest V8 using the test database and synthetic test-only secrets documented above. This baseline predates the focused regression tests added below.
 

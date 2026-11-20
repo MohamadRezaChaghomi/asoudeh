@@ -1,5 +1,7 @@
 # Performance audit
 
+> **Historical audit:** measurements and repository state below were recorded on 2026-11-04 and 2026-11-09. They are not current field metrics or a production performance certification. Use the root README and current performance-budget command for present bundle/image limits.
+
 Audit date: 2026-11-04
 Repository: `MohamadRezaChaghomi/asoudeh`
 Branch: `main`
