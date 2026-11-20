@@ -7,8 +7,8 @@ import type {
   TransactionQuery,
   UpdateTransactionInput,
 } from '../validators/transaction.validator.js';
+import type { TransactionType } from '../types/finance.js';
 
-type TransactionType = 'income' | 'expense';
 const TRANSACTION_UNDO_WINDOW_MS = 10_000;
 
 interface TransactionRecord {

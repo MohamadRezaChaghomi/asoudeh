@@ -10,8 +10,7 @@ import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { formatJalaliDate } from '@/lib/jalaliDate';
-
-type TransactionType = 'income' | 'expense';
+import type { TransactionType } from '@/types/transaction';
 
 interface DashboardData {
   period: {

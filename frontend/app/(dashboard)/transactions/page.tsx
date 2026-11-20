@@ -21,9 +21,8 @@ import {
   formatTomanAmountInput,
   parseTomanAmount,
 } from '@/lib/tomanAmount';
-
-type TransactionType = 'income' | 'expense';
-type CategoryType = TransactionType | 'both';
+import type { CategoryType } from '@/types/category';
+import type { TransactionType } from '@/types/transaction';
 
 interface Category {
   id: string;
