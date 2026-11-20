@@ -9,6 +9,12 @@ const profile = {
   accessibilitySettings: { fontScale: 1, highContrast: false },
 };
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    await route.fulfill({ json: { success: true, data: { active: true } } });
+  });
+});
+
 test('keeps assistant unavailable until configured without inventing an AI reply', async ({
   page,
 }) => {

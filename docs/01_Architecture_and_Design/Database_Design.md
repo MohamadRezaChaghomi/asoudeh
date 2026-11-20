@@ -52,4 +52,4 @@ Category deletion remains disabled until a concurrency-safe option is agreed; th
 
 ## Test databases
 
-Development uses the local `asoudeh` database from `backend/.env.example`. Database/API tests must use the separate local `asoudeh_test` database with no credentials. Test cleanup is scoped to the fixtures created by those tests; do not point test commands at a shared or production URI. See [ENVIRONMENT.md](./ENVIRONMENT.md).
+Development uses the local `asoudeh` database from `backend/.env.example`. Database/API tests must use the separate local `asoudeh_test` database with no credentials. Test cleanup is scoped to the fixtures created by those tests; do not point test commands at a shared or production URI. See [Environment and Services](../02_API_and_Development/Environment_and_Services.md).

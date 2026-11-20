@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
 import Category from '../models/Category.js';
+import type { CategoryType } from '../types/finance.js';
 import { HttpError } from '../utils/httpError.js';
 import { isDuplicateKeyError } from '../utils/isDuplicateKeyError.js';
 import type {
   CreateCategoryInput,
   UpdateCategoryInput,
 } from '../validators/category.validator.js';
-
-type CategoryType = 'income' | 'expense' | 'both';
 
 const systemCategoryDefaults: Array<{ name: string; type: 'income' | 'expense' }> = [
   { name: 'خوراک', type: 'expense' },

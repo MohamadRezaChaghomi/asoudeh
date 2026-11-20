@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
+import type { TransactionType } from '../types/finance.js';
 import User from '../models/User.js';
 import { getUpcomingReminders } from './reminders.service.js';
 import { HttpError } from '../utils/httpError.js';
@@ -10,7 +11,6 @@ import {
   getCurrentJalaliMonthRange,
 } from '../utils/jalaliMonth.js';
 
-type TransactionType = 'income' | 'expense';
 interface MonthlyTotal {
   _id: TransactionType;
   amount: { toString(): string };

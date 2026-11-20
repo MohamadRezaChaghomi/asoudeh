@@ -636,7 +636,7 @@ export default function TransactionsPage() {
 
   return (
     <main className="min-h-screen p-5" id="main-content" tabIndex={-1}>
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
         <section className="app-panel order-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:order-1 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

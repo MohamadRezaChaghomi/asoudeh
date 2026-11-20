@@ -150,6 +150,16 @@ describe('HTTP application baseline', () => {
     });
   });
 
+  it('returns 304 for an unchanged response with a matching ETag', async () => {
+    const initialResponse = await request(app).get('/');
+    const etag = initialResponse.headers.etag;
+    expect(etag).toBeTruthy();
+
+    const conditionalResponse = await request(app).get('/').set('If-None-Match', etag);
+
+    expect(conditionalResponse.status).toBe(304);
+  });
+
   it('sets API security headers and trusts the configured proxy hop count', async () => {
     const response = await request(app).get('/api/v1/health');
 

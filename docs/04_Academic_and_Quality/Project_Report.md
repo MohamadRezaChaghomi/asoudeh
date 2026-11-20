@@ -1,6 +1,6 @@
 # گزارش تحلیل و مهندسی نیازمندی‌های سامانهٔ آسوده
 
-> گزارش دانشگاهی/آرشیوی: تحلیل و وضعیت قابلیت‌ها snapshot تهیهٔ گزارش در ۱۵ نوامبر ۲۰۲۶ هستند؛ جدول شواهد آزمون در ۲۱ نوامبر ۲۰۲۶ به‌روزرسانی شده است. برای راه‌اندازی و وضعیت عملیاتی جاری از [README.md](../README.md) و [TESTING.md](./TESTING.md) استفاده کنید.
+> گزارش دانشگاهی/آرشیوی: تحلیل و وضعیت قابلیت‌ها snapshot تهیهٔ گزارش در ۱۵ نوامبر ۲۰۲۶ هستند؛ جدول شواهد آزمون در ۲۱ نوامبر ۲۰۲۶ به‌روزرسانی شده است. برای راه‌اندازی و وضعیت عملیاتی جاری از [README.md](../../README.md) و [Testing and Performance](./Testing_and_Performance.md) استفاده کنید.
 
 ## صفحهٔ عنوان
 
@@ -35,7 +35,7 @@
 - **[تحلیل]**: تفسیر یا معیار پیشنهادی این گزارش است و نباید به‌عنوان واقعیت اندازه‌گیری‌شده خوانده شود.
 - **[نیازمند بررسی]**: شواهد موجود برای نتیجه‌گیری کافی نیست.
 
-منابع اصلی عبارت‌اند از `docs/SPECIFICATION.docx`, `docs/SPECIFICATION.pdf`, `README.md`, `docs/API.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/SECURITY.md`, `docs/REQUIREMENTS_TRACEABILITY.md`, `docs/TESTING.md` و کدهای `backend/src/` و `frontend/`. نسخهٔ DOCX برای خواندن متن فارسی استفاده شد؛ استخراج متن PDF در ابزار محلی درست رمزگشایی نشد، اما metadata آن با نسخهٔ DOCX هم‌خوان بود.
+منابع اصلی عبارت‌اند از `docs/SPECIFICATION.docx`, `docs/SPECIFICATION.pdf`, `README.md`, `docs/02_API_and_Development/API_Documentation.md`, `docs/01_Architecture_and_Design/System_Architecture.md`, `docs/01_Architecture_and_Design/Database_Design.md`, `docs/03_Operations_and_Security/Security.md`, `docs/04_Academic_and_Quality/Testing_and_Performance.md` و کدهای `backend/src/` و `frontend/`. نسخهٔ DOCX برای خواندن متن فارسی استفاده شد؛ متن PDF نیز به‌صورت محلی استخراج و برای خلاصهٔ مشخصات در راهنمای roadmap بررسی شد.
 
 ## ۳. انتخاب سیستم و معرفی
 
@@ -305,7 +305,7 @@ flowchart LR
 
 ### ۸.۱ قرارداد شناسه‌ها و اولویت
 
-**شناسهٔ مرجع:** FR-01 تا FR-19 مطابق جدول فصل ۵ مشخصات اولیه؛ FR-04 پروفایل، FR-05 هزینه و FR-06 درآمد. شناسه‌ها ثابت‌اند و در این گزارش تغییر نکرده‌اند. `docs/REQUIREMENTS_TRACEABILITY.md` ادامهٔ موجود خود را با FR-20 (مالکیت/جداسازی داده) و FR-21 (خطای قابل فهم و بازیابی) حفظ می‌کند. قابلیت‌های افزودهٔ دیگر این گزارش از FR-22 ادامه می‌یابند. BR-08 در سند traceability یک قانون کسب‌وکار حذف حساب است، نه جایگزین FR.
+**شناسهٔ مرجع:** FR-01 تا FR-19 مطابق جدول فصل ۵ مشخصات اولیه؛ FR-04 پروفایل، FR-05 هزینه و FR-06 درآمد. شناسه‌ها ثابت‌اند و در این گزارش تغییر نکرده‌اند. [راهنمای آزمون و ردیابی](./Testing_and_Performance.md) توسعه‌های FR-20 (مالکیت/جداسازی داده) و FR-21 (خطای قابل فهم و بازیابی) را ثبت می‌کند. قابلیت‌های افزودهٔ دیگر این گزارش از FR-22 ادامه می‌یابند. BR-08 یک قانون کسب‌وکار حذف حساب است، نه جایگزین FR.
 
 **MoSCoW:** M=ضروری، S=مهم، C=در صورت ظرفیت. اولویت FR-01..FR-19 از سند اولیه است؛ اولویت FR-20 به بعد تحلیل همین گزارش است و باید با ذی‌نفعان تأیید شود.
 
@@ -349,7 +349,7 @@ flowchart LR
 | ID / کیفیت | هدف یا معیار قابل آزمون | شاهد/اندازه‌گیری موجود | وضعیت |
 | --- | --- | --- | --- |
 | **NFR-01 دسترس‌پذیری** | هدف مشخصات: WCAG 2.2 AA؛ پیشنهاد: axe بدون violation در همهٔ routeهای اصلی و تم‌ها، سپس آزمون دستی keyboard، screen reader، contrast، reflow و authentication. هدف ۷:۱ در مشخصات «تکمیلی» است و الزام AA نیست. | `frontend/tests/accessibility.spec.ts` axe را روی ۹ route در light/dark/high-contrast و تست‌های focus/200% انجام می‌دهد؛ آخرین اجرای کامل Playwright در این checkout ۷۲ موفق/۱ skip گزارش شد. | اجرای خودکار محدود موفق؛ WCAG AA conformance و فناوری کمکی واقعی **تأییدنشده**. |
-| **NFR-02 کارایی** | هدف سند: صفحات اصلی کمتر از ۳s روی اتصال معمولی. معیار پیشنهادی: تعریف دستگاه/شبکه، سپس p75 LCP ≤3s برای login/dashboard و p95 API ≤200ms روی fixture/سخت‌افزار ثبت‌شده. | [PERFORMANCE_AUDIT.md](PERFORMANCE_AUDIT.md) گزارش می‌دهد Lighthouse محلی home LCP=1.951s پس از تغییر؛ با fixture محلی ۵۰هزار تراکنش p95 dashboard=23.3ms، report=24ms و page list=45.4ms. این اندازه‌گیری‌ها محیط تولید یا همهٔ صفحات نیستند. | شاهد محلی مستند وجود دارد؛ شرط «typical connection» و تولید **اثبات نشده**. |
+| **NFR-02 کارایی** | هدف سند: صفحات اصلی کمتر از ۳s روی اتصال معمولی. معیار پیشنهادی: تعریف دستگاه/شبکه، سپس p75 LCP ≤3s برای login/dashboard و p95 API ≤200ms روی fixture/سخت‌افزار ثبت‌شده. | [Testing and Performance](./Testing_and_Performance.md) گزارش می‌دهد Lighthouse محلی home LCP=1.951s پس از تغییر؛ با fixture محلی ۵۰هزار تراکنش p95 dashboard=23.3ms، report=24ms و page list=45.4ms. این اندازه‌گیری‌ها محیط تولید یا همهٔ صفحات نیستند. | شاهد محلی مستند وجود دارد؛ شرط «typical connection» و تولید **اثبات نشده**. |
 | **NFR-03 سازگاری** | پیشنهاد: smoke همهٔ workflowهای Must روی نسخه‌های پشتیبانی‌شدهٔ Chrome/Edge/Firefox/Safari در desktop/mobile، با فهرست نسخه و دستگاه. | تست اخیر با Playwright config پیش‌فرض `Desktop Chrome` اجرا شده؛ `PLAYWRIGHT_CHANNEL` در محیط بررسی unset بود. | یک engine/browser خودکار؛ ماتریس چندمرورگری/دستگاه واقعی **انجام‌نشده**. |
 | **NFR-04 نگهداشت‌پذیری** | TypeScript strict، lint/typecheck/build بدون خطا؛ تغییر قرارداد API همراه validator/test/docs. اندازهٔ صفحات پرمسئولیت باید پایش شود. | App Router و route/controller/service/model/validator، shared API client و Mongoose schemas موجودند؛ صفحات feature بزرگ گزارش شده‌اند. lint/typecheck اخیر frontend موفق است؛ این گزارش هیچ refactor کد انجام نمی‌دهد. | ساختار ماژولار موجود؛ نگهداشت‌پذیری انسانی با سنجهٔ code review/usability توسعه **اندازه‌گیری نشده**. |
 | **NFR-05 امنیت** | معیار پیشنهادی release: هر mutation با auth+Origin+CSRF؛ هر query مالی owner-scoped؛ هیچ secret/OTP/token در log یا browser storage؛ صفر advisory شناخته‌شدهٔ High/Critical در production dependency tree. | این کنترل‌ها در middleware/service/config دیده می‌شوند؛ آزمون ownership/auth و audit وابستگی در اسناد هست. `Secure` وابسته به `NODE_ENV=production`؛ entropy کلید، تنظیم واقعی deployment و آزمون نفوذ اثبات نشده‌اند. | کنترل‌های کدی/تستی جزئی موجود؛ penetration test/production certification **ندارد**. |
@@ -478,7 +478,7 @@ flowchart LR
 
 - **کامل‌بودن:** جریان‌های ورود، ثبت مالی، بودجه، یادآور، گزارش و caregiver API/صفحات دارند؛ notification delivery، بانک و voice/OCR ندارند.
 - **سازگاری شناسه:** FR-01..FR-19 با DOCX تطبیق داده شده؛ FR-04/05/06 همان معنای منبع را دارند. FR-20/21 در traceability پروژه توسعه‌های cross-cutting هستند؛ FR-22 به بعد در این گزارش extensionهای دیگر هستند.
-- **سازگاری snapshotها:** گزارش‌های تاریخ‌دار ۲ و ۹ نوامبر، نتایج متفاوت backend را ثبت می‌کنند؛ این‌ها snapshotهای تاریخ‌دارند، نه نتایج یک اجرای واحد. نتایج جدیدتر و محدودیت‌های اجرای فعلی در [TESTING.md](./TESTING.md) ثبت شده‌اند.
+- **سازگاری snapshotها:** گزارش‌های تاریخ‌دار ۲ و ۹ نوامبر، نتایج متفاوت backend را ثبت می‌کنند؛ این‌ها snapshotهای تاریخ‌دارند، نه نتایج یک اجرای واحد. نتایج جدیدتر و محدودیت‌های اجرای فعلی در [Testing and Performance](./Testing_and_Performance.md) ثبت شده‌اند.
 - **بی‌ابهامی:** اصطلاحاتی مانند «حذف دسته»، «ارسال دعوت» و «زمان معمول» باید مرز دقیق داشته باشند؛ کد حذف دسته را 409 می‌کند، invitation را فقط ثبت می‌کند و benchmark شبکهٔ معمول وجود ندارد.
 - **قابلیت آزمون:** سنجه‌های مبلغ، تاریخ، مجوز، expiry، status و pagination مستقیماً قابل آزمونند؛ اهداف کاربری نیازمند پروتکل و دادهٔ شرکت‌کننده هستند.
 - **قابلیت ردیابی:** هر FR به فایل/API/test در فصل ۱۷ وصل است؛ نبود تست مستقیم صریحاً ثبت شده است.
@@ -498,7 +498,7 @@ flowchart LR
 
 ## ۱۶. ماتریس ردیابی نهایی
 
-`موفق در اجرای مرورگر اخیر` به اجرای کامل Playwright تک‌worker با نتیجهٔ ۷۲/۱ اشاره دارد که پیش از حذف فایل‌های بلااستفاده اجرا شد؛ پس از آن آزمون‌های متمرکز UI/برند موفق شدند. این نتیجه آزمون‌های backend یا محیط تولید را شامل نمی‌شود. برای نتیجهٔ دقیق و محدودیت‌های آزمون backend به [TESTING.md](./TESTING.md) رجوع کنید. `مستند، اجرا نشد` یعنی فایل تست هست یا سند نتیجه دارد ولی در این بازبینی اجرا نشده است. اگر ردیف تست مستقیمی ندارد، همان‌طور نوشته شده.
+`موفق در اجرای مرورگر اخیر` به اجرای کامل Playwright تک‌worker با نتیجهٔ ۷۲/۱ اشاره دارد که پیش از حذف فایل‌های بلااستفاده اجرا شد؛ پس از آن آزمون‌های متمرکز UI/برند موفق شدند. این نتیجه آزمون‌های backend یا محیط تولید را شامل نمی‌شود. برای نتیجهٔ دقیق و محدودیت‌های آزمون backend به [Testing and Performance](./Testing_and_Performance.md) رجوع کنید. `مستند، اجرا نشد` یعنی فایل تست هست یا سند نتیجه دارد ولی در این بازبینی اجرا نشده است. اگر ردیف تست مستقیمی ندارد، همان‌طور نوشته شده.
 
 | ID | عنوان | فایل/ماژول پیاده‌سازی | endpoint | آزمون مستقیم | وضعیت تست این گزارش | پیاده‌سازی |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -571,7 +571,7 @@ flowchart LR
 
 - **[P1]** چاقمی، محمدرضا. *سند پروژه پایانی آسوده*، فایل داخلی `docs/SPECIFICATION.docx`. metadata فایل نام نویسنده را ثبت می‌کند؛ تاریخ metadata ۲۱ اکتبر ۲۰۲۶ است، اما ناشر/مؤسسه/نسخهٔ انتشار مستقل ندارد. منبع اولیهٔ نیازمندی‌ها است، نه مقالهٔ داوری‌شده.
 - **[P2]** چاقمی، محمدرضا. *سند پروژه پایانی آسوده*، `docs/SPECIFICATION.pdf`، ۳۴ صفحه، metadata عنوان/نویسنده/تاریخ سازگار با P1. PDF و DOCX هر دو در مخزن tracked هستند.
-- **[P3]** قرارداد API، معماری، مدل داده، امنیت، آزمون و ردیابی پروژه: `README.md`, `docs/API.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/REQUIREMENTS_TRACEABILITY.md`, `docs/PERFORMANCE_AUDIT.md` و source/testهای لینک‌شده در فصل ۱۶. این‌ها مدارک اولیهٔ مهندسی پروژه‌اند، نه منابع مستقل علمی.
+- **[P3]** قرارداد API، معماری، مدل داده، امنیت، آزمون و ردیابی پروژه: `README.md`, `docs/02_API_and_Development/API_Documentation.md`, `docs/01_Architecture_and_Design/System_Architecture.md`, `docs/01_Architecture_and_Design/Database_Design.md`, `docs/03_Operations_and_Security/Security.md`, `docs/04_Academic_and_Quality/Testing_and_Performance.md` و source/testهای لینک‌شده در فصل ۱۶. این‌ها مدارک اولیهٔ مهندسی پروژه‌اند، نه منابع مستقل علمی.
 
 ### ۲۰.۲ منبع خارجیِ بررسی‌شده
 

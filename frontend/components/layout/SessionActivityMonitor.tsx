@@ -10,6 +10,9 @@ const ACTIVITY_SYNC_INTERVAL_MS = 15_000;
 const IDLE_WARNING_MS = 9 * 60 * 1000;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
+/**
+ * Extends an idle session only after trusted foreground user activity.
+ */
 export function SessionActivityMonitor() {
   const router = useRouter();
   const pathname = usePathname();

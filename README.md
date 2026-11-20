@@ -67,7 +67,7 @@ The frontend is served at <http://localhost:3000>; the API listens on port `5000
 
 The backend sample enables the development-only OTP simulator. It requires `NODE_ENV=development`; the configured fallback code must be entered manually on `/verify-otp`. The API never returns the code, and the browser does not store it. Use only a dedicated local database. The simulator is not an automatic fallback for SMS delivery failures and must be disabled outside local development.
 
-SMS.ir delivery is backend-only and requires approved credentials and an active Verify template. A successful provider response, especially in Sandbox, confirms API acceptance only—not handset delivery. No live SMS delivery has been verified. See [SMS.ir setup](docs/SMSIR_SETUP.md).
+SMS.ir delivery is backend-only and requires approved credentials and an active Verify template. A successful provider response, especially in Sandbox, confirms API acceptance only—not handset delivery. No live SMS delivery has been verified. See [Environment and Services](docs/02_API_and_Development/Environment_and_Services.md).
 
 ## Architecture
 
@@ -117,7 +117,7 @@ scripts/             Repository-level backup, restore and helper scripts
 4. Mongoose models persist and query MongoDB documents. Personal financial records are always scoped to the authenticated user; caregiver reads require an accepted relationship and the specific permission.
 5. Authentication uses cookies rather than access or refresh tokens in browser storage. State-changing requests require the configured Origin and CSRF cookie/header pair.
 
-For the full registered request contract and response/error shapes, see [API.md](docs/API.md). For implementation boundaries and diagrams, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For the full registered request contract and response/error shapes, see [API documentation](docs/02_API_and_Development/API_Documentation.md). For implementation boundaries and diagrams, see [System architecture](docs/01_Architecture_and_Design/System_Architecture.md).
 
 ### Main API families
 
@@ -135,7 +135,7 @@ All versioned endpoints use `/api/v1`.
 | Caregiver | `/caregiver/links`, `/caregiver/invitations`, `/caregiver/seniors` | Accepted permission-scoped read-only access |
 | Assistant | `GET /assistant/status`, `POST /assistant/messages` | Optional public-guide help, disabled until configured |
 
-Some endpoints require cookies, CSRF, Origin, or query parameters; consult [the API contract](docs/API.md) before calling them.
+Some endpoints require cookies, CSRF, Origin, or query parameters; consult [the API contract](docs/02_API_and_Development/API_Documentation.md) before calling them.
 
 ### Data model overview
 
@@ -147,7 +147,7 @@ Some endpoints require cookies, CSRF, Origin, or query parameters; consult [the 
 | `CaregiverLink`, `AuditLog` | Accepted access grants, revocation and access audit events |
 | `AssistantRateLimit` | Per-user assistant request limits; conversation content is not persisted |
 
-Amounts are denominated in toman. Financial dates and monthly periods use Solar Hijri rules where applicable; APIs return exact aggregate amounts as integer strings. Model fields, indexes, ownership and migration cautions are documented in [DATABASE.md](docs/DATABASE.md).
+Amounts are denominated in toman. Financial dates and monthly periods use Solar Hijri rules where applicable; APIs return exact aggregate amounts as integer strings. Model fields, indexes, ownership and migration cautions are documented in [Database design](docs/01_Architecture_and_Design/Database_Design.md).
 
 ## Development and verification
 
@@ -171,7 +171,7 @@ npx playwright test --workers=1
 Set-Location ..
 ```
 
-Backend API tests require **both** `MONGODB_URI` and `TEST_MONGODB_URI` to target the credential-free local `asoudeh_test` database. The tests refuse unsafe targets. Never point test commands at a shared, development, or production database. Follow the guarded instructions in [TESTING.md](docs/TESTING.md).
+Backend API tests require **both** `MONGODB_URI` and `TEST_MONGODB_URI` to target the credential-free local `asoudeh_test` database. The tests refuse unsafe targets. Never point test commands at a shared, development, or production database. Follow the guarded instructions in [Testing and Performance](docs/04_Academic_and_Quality/Testing_and_Performance.md).
 
 The frontend bundle/image budget can be checked with:
 
@@ -187,7 +187,7 @@ The repository includes Dockerfiles, `docker-compose.staging.yml`, and a Caddy r
 
 For production builds, `NEXT_PUBLIC_API_URL` must be an HTTPS API URL. Set `NODE_ENV=production`, disable the development OTP simulator, configure production secrets and origins, and use the required MongoDB replica set. Review backup/restore, index rollout, deletion-worker monitoring, health checks, and rollback before exposing traffic. The checked-in deployment setup is a staging scaffold and has not been production-verified.
 
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md), [ENVIRONMENT.md](docs/ENVIRONMENT.md), and [BACKUP_RECOVERY.md](docs/BACKUP_RECOVERY.md) for operational requirements and safety steps.
+See [Deployment and Backup](docs/03_Operations_and_Security/Deployment_and_Backup.md) and [Environment and Services](docs/02_API_and_Development/Environment_and_Services.md) for operational requirements and safety steps.
 
 ## Contributing
 
@@ -198,7 +198,7 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md), [ENVIRONMENT.md](docs/ENVIRONMENT.md), 
 5. Review the final diff and staged file list before committing. Stage only intentional files rather than using a blanket `git add .`.
 6. Open a Pull Request with a concise problem statement, implementation summary, verification results, screenshots for UI changes, and any migration/configuration notes.
 
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local workflow and [GIT.md](docs/GIT.md) for safe Git guidance.
+See [Frontend and Backend Development](docs/02_API_and_Development/Frontend_and_Backend_Development.md) for local workflow and [Git Workflow](docs/03_Operations_and_Security/Git_Workflow.md) for safe Git guidance.
 
 ## Troubleshooting
 
@@ -214,18 +214,17 @@ See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for local workflow and [GIT.md](docs/G
 
 ## Documentation map
 
-- [API contract](docs/API.md) — registered routes and response behavior.
-- [Architecture](docs/ARCHITECTURE.md) — component boundaries and request flow.
-- [Database](docs/DATABASE.md) — models, indexes, ownership and data cautions.
-- [Security](docs/SECURITY.md) — auth, cookies, CSRF, privacy and operational risks.
-- [Environment](docs/ENVIRONMENT.md) — environment variables and safe test database setup.
-- [Testing](docs/TESTING.md) — test layers, commands, current verification and limitations.
-- [Deployment](docs/DEPLOYMENT.md) and [backup/recovery](docs/BACKUP_RECOVERY.md) — operational checklists.
-- [SMS.ir setup](docs/SMSIR_SETUP.md) — provider flow and explicitly opt-in Sandbox test.
-- [Decisions](docs/DECISIONS.md) and [roadmap](docs/ROADMAP.md) — product/engineering decisions and planned work.
-- [Requirements traceability](docs/REQUIREMENTS_TRACEABILITY.md) — dated requirement evidence snapshot.
+- [System architecture and design](docs/01_Architecture_and_Design/System_Architecture.md) — component boundaries and key decisions.
+- [Database design](docs/01_Architecture_and_Design/Database_Design.md) — models, indexes, ownership and data cautions.
+- [API documentation](docs/02_API_and_Development/API_Documentation.md) — registered routes and response behavior.
+- [Environment and Services](docs/02_API_and_Development/Environment_and_Services.md) — environment variables, SMS.ir and assistant configuration.
+- [Frontend and Backend Development](docs/02_API_and_Development/Frontend_and_Backend_Development.md) — local workflow, implementation conventions and brand integration.
+- [Deployment and Backup](docs/03_Operations_and_Security/Deployment_and_Backup.md) — operational, backup and recovery checklists.
+- [Security](docs/03_Operations_and_Security/Security.md) — authentication, cookies, CSRF, privacy and operational risks.
+- [Git Workflow](docs/03_Operations_and_Security/Git_Workflow.md) — safe branch and change review guidance.
+- [Testing and Performance](docs/04_Academic_and_Quality/Testing_and_Performance.md) — test layers, verification, performance measurements and traceability summary.
+- [Roadmap and Specification](docs/04_Academic_and_Quality/Roadmap_and_Specification.md) — dated plan and summary of the original project specification.
 - [Brand guidance](docs/brand/BRAND-GUIDELINES.md) — approved marks, palette and typography.
-- [Performance audit](docs/PERFORMANCE_AUDIT.md) — historical performance measurements, not current field metrics.
-- [Engineering course report](docs/ASOUDEH_SOFTWARE_ENGINEERING_REPORT.md) — academic analysis; not the operational source of truth.
+- [Engineering course report](docs/04_Academic_and_Quality/Project_Report.md) — academic analysis; not the operational source of truth.
 
 No `LICENSE` file is currently included. Confirm licensing with the maintainers before redistributing this project.

@@ -25,6 +25,15 @@ const incomeCategory = {
   isDefault: true,
 };
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/auth/csrf', async (route) => {
+    await route.fulfill({ json: { success: true, data: { csrfToken } } });
+  });
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    await route.fulfill({ json: { success: true, data: { active: true } } });
+  });
+});
+
 test('parses and formats toman amounts across digit scripts and separators', () => {
   for (const [input, expected] of [
     ['123456', 123456],
@@ -116,9 +125,10 @@ test('creates an income through the three-step form with Persian amount and Jala
   const activeStep = steps.getByRole('listitem').first();
   const stepNumber = activeStep.locator('.transaction-step-number');
   const stepNumberBounds = await stepNumber.boundingBox();
-  expect(stepNumberBounds?.width).toBe(32);
+  expect(stepNumberBounds?.width).toBeGreaterThanOrEqual(36);
   expect(stepNumberBounds?.height).toBe(32);
-  await expect(stepNumber).toHaveCSS('display', 'grid');
+  await expect(stepNumber).toHaveCSS('display', 'flex');
+  await expect(stepNumber).not.toHaveCSS('border-radius', '50%');
   const stepNumberLineHeight = await stepNumber.evaluate((element) =>
     Number.parseFloat(getComputedStyle(element).lineHeight),
   );

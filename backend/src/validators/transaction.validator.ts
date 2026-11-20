@@ -5,7 +5,7 @@ const MAX_TRANSACTION_AMOUNT = 1_000_000_000_000;
 
 function parseDateOnly(value: string, context: z.RefinementCtx): Date {
   const date = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+  if (Number.isNaN(date.getTime()) || formatUtcDateOnly(date) !== value) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: 'تاریخ معتبر نیست.' });
     return z.NEVER;
   }

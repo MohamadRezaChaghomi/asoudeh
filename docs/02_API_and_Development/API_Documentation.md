@@ -33,7 +33,7 @@ Request body: `{ "phone": "09121234567", "code": "012345" }`.
 
 When the local development simulator is enabled, verify using the configured `OTP_DEV_FALLBACK_CODE` (default `123456`) entered manually on `/verify-otp`. It remains single-use, expires after five minutes, and is subject to existing request and attempt limits. Development-issued codes cannot be verified outside development or after disabling the simulator. Do not use this fixed code with shared or production data. The simulator is the local no-SMS path, not an automatic fallback after a real SMS provider failure.
 
-See [SMS.ir setup and verification details](./SMSIR_SETUP.md) for provider configuration, account prerequisites, mocked tests, and the opt-in Sandbox connection test.
+See [Environment and Services](./Environment_and_Services.md) for SMS.ir configuration, provider behavior, mocked tests, and the opt-in Sandbox connection test.
 
 Success for an existing account: `{ success: true, data: { registrationRequired: false, csrfToken } }`, with access, refresh, and CSRF cookies set.
 

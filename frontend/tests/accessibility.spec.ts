@@ -186,8 +186,8 @@ for (const route of pageRoutes) {
       }
 
       await page.goto(route.path);
-      await expect(page.locator('main')).toBeVisible();
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator('main')).toBeVisible();
       await expect(page.locator('#main-content')).toHaveCount(1);
       const headingLevels = await page
         .locator('h1, h2, h3, h4, h5, h6')
