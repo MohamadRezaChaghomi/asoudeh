@@ -13,9 +13,15 @@ const additionalViewports = [
   { width: 390, height: 844 },
   { width: 414, height: 896 },
   { width: 430, height: 932 },
+  { width: 480, height: 900 },
+  { width: 481, height: 900 },
   { width: 600, height: 900 },
+  { width: 640, height: 900 },
+  { width: 641, height: 900 },
+  { width: 769, height: 900 },
   { width: 820, height: 1180 },
   { width: 1024, height: 900 },
+  { width: 1025, height: 900 },
   { width: 1280, height: 900 },
   { width: 1920, height: 1080 },
   { width: 844, height: 390 },
@@ -175,6 +181,9 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
       );
       const logo = page.locator('img.brand-logo-image:visible').first();
       await expect(logo).toBeVisible();
+      await expect.poll(() =>
+        logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+      ).toBe(true);
       const logoMetrics = await logo.evaluate((image: HTMLImageElement) => ({
         sourceAspectRatio: image.naturalWidth / image.naturalHeight,
         objectFit: getComputedStyle(image).objectFit,
@@ -186,7 +195,7 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
       expect(logoMetrics.bounds.right).toBeLessThanOrEqual(viewport.width);
 
       if (
-        viewport.width > 700 &&
+        viewport.width > 768 &&
         path !== '/' &&
         path !== '/login' &&
         path !== '/verify-otp'
@@ -221,14 +230,35 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
       const dimensions = await page.evaluate(() => ({
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: document.documentElement.clientWidth,
+        overflowingElements: [...document.querySelectorAll('body *')]
+          .map((element) => {
+            const bounds = element.getBoundingClientRect();
+            return {
+              tag: element.tagName,
+              id: element.id,
+              className: typeof element.className === 'string' ? element.className : '',
+              left: Math.round(bounds.left),
+              right: Math.round(bounds.right),
+              width: Math.round(bounds.width),
+              clientWidth: element.clientWidth,
+              scrollWidth: element.scrollWidth,
+            };
+          })
+          .filter(({ left, right, clientWidth, scrollWidth }) =>
+            left < -1 ||
+            right > document.documentElement.clientWidth + 1 ||
+            scrollWidth > clientWidth + 1,
+          )
+          .sort((left, right) => Math.max(right.right, right.scrollWidth) - Math.max(left.right, left.scrollWidth))
+          .slice(0, 8),
       }));
       expect(
         dimensions.documentWidth,
-        `Unexpected horizontal overflow on ${path} at ${viewport.width}px`,
+        `Unexpected horizontal overflow on ${path} at ${viewport.width}px: ${JSON.stringify(dimensions.overflowingElements)}`,
       ).toBeLessThanOrEqual(dimensions.viewportWidth + 1);
 
       if (
-        viewport.width <= 700 &&
+        viewport.width <= 768 &&
         path !== '/' &&
         path !== '/login' &&
         path !== '/verify-otp'
@@ -289,12 +319,27 @@ test('keeps every application route usable at mobile, tablet, and desktop widths
       dimensions.documentWidth,
       `Unexpected horizontal overflow on /dashboard at ${viewport.width}px`,
     ).toBeLessThanOrEqual(dimensions.viewportWidth + 1);
+
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'مدیریت مالی ساده و قابل اعتماد' })).toBeVisible();
+    const publicPageDimensions = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(publicPageDimensions.documentWidth).toBeLessThanOrEqual(
+      publicPageDimensions.viewportWidth + 1,
+    );
+    if (viewport.width <= 768) {
+      await expect(page.locator('.public-mobile-menu summary')).toBeVisible();
+    } else {
+      await expect(page.locator('.public-mobile-menu')).toBeHidden();
+    }
   }
 
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'ورود به حساب کاربری' })).toBeVisible();
-  await expect(page.locator('img.brand-logo-image[alt="نشان آسوده"]:visible').first())
+  await expect(page.locator('img.brand-logo-image--symbol:visible').first())
     .toBeVisible();
   const loginDimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,

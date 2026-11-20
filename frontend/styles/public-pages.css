@@ -1,0 +1,690 @@
+/* Public information pages */
+.public-site {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  color: var(--text);
+}
+
+.public-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.public-header {
+  position: relative;
+  z-index: 5;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.public-header-inner,
+.public-footer-inner {
+  display: flex;
+  width: min(100% - 1.25rem, 100%);
+  margin-inline: auto;
+  align-items: center;
+}
+
+.public-header-inner {
+  min-height: 4.5rem;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.public-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.public-brand {
+  display: inline-flex;
+  max-width: 32%;
+  min-height: 3rem;
+  flex: 0 0 auto;
+  align-items: center;
+  text-decoration: none;
+}
+
+.public-desktop-nav {
+  display: none;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.6rem);
+}
+
+.public-desktop-nav a,
+.public-footer-links a,
+.public-mobile-menu nav a {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.public-desktop-nav a:hover,
+.public-footer-links a:hover,
+.public-mobile-menu nav a:hover {
+  color: var(--brand-800);
+}
+
+.public-login-link {
+  display: inline-flex;
+  min-height: 2.85rem;
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.55rem;
+  border: 1px solid var(--brand-700);
+  border-radius: 0.85rem;
+  background: var(--brand-900);
+  color: var(--canvas);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.public-login-link:hover {
+  background: var(--brand-800);
+}
+
+.public-mobile-menu {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.public-mobile-menu summary {
+  display: flex;
+  width: 3rem;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+}
+
+.public-mobile-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.public-menu-icon {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.public-menu-icon span {
+  display: block;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand-900);
+}
+
+.public-mobile-menu nav {
+  position: absolute;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-end: 0;
+  display: grid;
+  width: min(17rem, calc(100vw - 2rem));
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.public-mobile-menu nav a {
+  padding-inline: 0.75rem;
+  border-radius: 0.6rem;
+}
+
+.public-mobile-menu nav a:hover {
+  background: var(--brand-50);
+}
+
+.public-main {
+  width: min(100% - 1.25rem, 100%);
+  flex: 1;
+  margin-inline: auto;
+  padding-block: 1.1rem clamp(3rem, 7vw, 5.5rem);
+}
+
+.public-article {
+  width: min(100%, 54rem);
+  margin-inline: auto;
+}
+
+.public-breadcrumbs {
+  display: flex;
+  max-width: 100%;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.65rem;
+  overflow-x: auto;
+  color: var(--text-subtle);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.public-breadcrumbs > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.public-breadcrumbs > * {
+  min-height: 0;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.public-breadcrumbs a,
+.public-content a,
+.public-related-links a {
+  color: var(--brand-800);
+  font-weight: 700;
+}
+
+.public-page-heading {
+  padding-block: 1.25rem 1.5rem;
+}
+
+.public-eyebrow {
+  margin: 0 0 0.65rem;
+  color: var(--brand-700);
+  font-size: 0.83rem;
+  font-weight: 800;
+}
+
+.public-page-heading h1 {
+  margin: 0;
+  color: var(--brand-950);
+  font-size: clamp(1.8rem, 4vw, 2.55rem);
+  font-weight: 850;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.public-page-description {
+  max-width: 46rem;
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+  font-size: clamp(1rem, 2vw, 1.12rem);
+  line-height: 1.9;
+}
+
+.public-notice {
+  margin-block-start: 1.25rem;
+  padding: 1rem 1.15rem;
+  border-inline-start: 4px solid var(--warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--warning-soft);
+  color: var(--text);
+}
+
+.public-notice strong {
+  display: block;
+  margin-block-end: 0.25rem;
+}
+
+.public-notice p {
+  margin: 0;
+  line-height: 1.85;
+}
+
+.public-toc {
+  margin-block: 0.75rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.public-toc summary {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  padding-inline: 1rem;
+  color: var(--brand-900);
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.public-toc nav {
+  padding: 0 1.25rem 1rem;
+}
+
+.public-toc ol {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding-inline-start: 1.4rem;
+}
+
+.public-toc a {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  color: var(--brand-800);
+}
+
+.public-content {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.public-content section {
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  scroll-margin-block-start: 1.5rem;
+}
+
+.public-content h2,
+.public-related-links h2,
+.public-faq-groups h2,
+.public-faq-empty h2 {
+  margin: 0 0 0.65rem;
+  color: var(--brand-950);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.public-content p,
+.public-content li {
+  max-width: 68ch;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 2;
+}
+
+.public-content p {
+  margin: 0.45rem 0 0;
+}
+
+.public-content ul,
+.public-content ol {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0;
+  padding-inline-start: 1.5rem;
+}
+
+.public-content li {
+  padding-inline-start: 0.2rem;
+}
+
+.public-related-links {
+  margin-block-start: 2rem;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.public-related-links h2 {
+  font-size: 1.05rem;
+}
+
+.public-related-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-related-links li {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+}
+
+.public-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.public-footer-inner {
+  min-height: auto;
+  align-items: flex-start;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-block: 1.5rem;
+}
+
+.public-footer-about p {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.public-footer-brand {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--brand-900);
+  font-size: 1.1rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.public-footer-links {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 0 0.8rem;
+}
+
+.public-footer-links a {
+  min-height: 2.75rem;
+  font-size: 0.85rem;
+}
+
+.public-copyright {
+  flex: 0 0 auto;
+  margin: 0;
+  margin-block-start: 0;
+  color: var(--text-subtle);
+  font-size: 0.8rem;
+}
+
+.public-home {
+  display: grid;
+  align-content: center;
+  gap: clamp(2rem, 6vw, 4rem);
+}
+
+.public-home-intro {
+  max-width: 48rem;
+  padding-block: clamp(2rem, 8vw, 6rem);
+}
+
+.public-home-intro h1 {
+  max-width: 14ch;
+  margin: 0;
+  color: var(--brand-950);
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 850;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.public-home-intro .public-page-description {
+  max-width: 42rem;
+  margin-block-start: 1rem;
+  font-size: clamp(1.05rem, 2vw, 1.2rem);
+}
+
+.public-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-block-start: 1.5rem;
+}
+
+.public-home-actions .public-login-link {
+  padding-inline: 1.4rem;
+}
+
+.public-home-guide {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  color: var(--brand-800);
+  font-weight: 750;
+}
+
+.public-faq {
+  margin-block-start: 0.5rem;
+}
+
+.public-faq-search {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.public-faq-search label {
+  display: block;
+  margin-block-end: 0.45rem;
+  color: var(--text);
+  font-weight: 750;
+}
+
+.public-faq-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.public-faq-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.public-faq-input-wrap button,
+.public-faq-empty button {
+  display: inline-flex;
+  min-height: 3rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--brand-900);
+  font-weight: 750;
+}
+
+.public-faq-count {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.public-faq-groups {
+  display: grid;
+  gap: 1.75rem;
+  margin-block-start: 2rem;
+}
+
+.public-faq-groups h2 {
+  margin-block-end: 0.6rem;
+}
+
+.public-faq-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.public-faq-item + .public-faq-item {
+  border-top: 1px solid var(--border);
+}
+
+.public-faq-item h3 {
+  margin: 0;
+}
+
+.public-faq-question {
+  display: flex;
+  width: 100%;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 750;
+  text-align: start;
+}
+
+.public-faq-question:hover {
+  background: var(--brand-50);
+}
+
+.public-faq-toggle {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-50);
+  color: var(--brand-900);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.public-faq-answer {
+  padding: 0 1rem 1rem;
+  color: var(--text-muted);
+  line-height: 1.95;
+}
+
+.public-faq-answer[hidden] {
+  display: none;
+}
+
+.public-faq-answer p {
+  max-width: 68ch;
+  margin: 0;
+}
+
+.public-faq-empty {
+  margin-block-start: 1.25rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.public-faq-empty p {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 420px) {
+  .public-faq-input-wrap {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .public-faq-input-wrap button {
+    align-self: flex-start;
+  }
+}
+
+@media (min-width: 421px) and (max-width: 768px) {
+  .public-header-inner,
+  .public-footer-inner {
+    width: min(100% - 2rem, 42rem);
+  }
+
+  .public-brand {
+    max-width: 45%;
+  }
+
+  .public-login-link {
+    padding-inline: 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .public-main {
+    width: min(100% - 2rem, 42rem);
+  }
+
+  .public-faq-input-wrap {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .public-faq-input-wrap button {
+    align-self: auto;
+  }
+}
+
+@media (min-width: 769px) {
+  .public-mobile-menu {
+    display: none;
+  }
+
+  .public-header-inner,
+  .public-footer-inner {
+    width: min(100% - 2.5rem, 76rem);
+  }
+
+  .public-header-inner {
+    min-height: 5rem;
+    gap: 1.5rem;
+  }
+
+  .public-header-actions {
+    gap: 0.5rem;
+  }
+
+  .public-brand {
+    max-width: none;
+  }
+
+  .public-desktop-nav {
+    display: flex;
+  }
+
+  .public-login-link {
+    min-height: 3rem;
+    margin-inline-start: 0;
+    padding-inline: 1.1rem;
+    font-size: 0.9rem;
+  }
+
+  .public-main {
+    width: min(100% - 2.5rem, 76rem);
+    padding-block: clamp(1.5rem, 4vw, 3rem) clamp(3rem, 7vw, 5.5rem);
+  }
+
+  .public-page-heading {
+    padding-block: clamp(1.5rem, 4vw, 2.5rem) 1.5rem;
+  }
+
+  .public-footer-inner {
+    min-height: 9rem;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1.5rem 2rem;
+  }
+
+  .public-footer-links {
+    width: auto;
+    gap: 0 1.1rem;
+  }
+}

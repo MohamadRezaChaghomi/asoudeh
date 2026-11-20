@@ -22,7 +22,7 @@ The supplied `frontend/public/scripts/export-assets.js` was reviewed and contain
 
 ## Typography and theme tokens
 
-The application self-hosts variable Estedad through `next/font/local` with Arabic, Latin, and Latin Extended subsets, `display: swap`, and a system fallback. No external font requests are made. Supplied `frontend/public/tokens.css` values were merged into `frontend/app/globals.css` as theme-aware aliases; existing component token names are retained. The offline page uses system fonts only.
+The application self-hosts variable Estedad through `next/font/local` with Arabic, Latin, and Latin Extended subsets, `display: swap`, and a system fallback. No external font requests are made. Design tokens live in `frontend/styles/tokens.css`; base styles and app-shell, public-page, control, and assistant styles are separated under `frontend/styles/` and imported by the root layout. The offline page uses system fonts only.
 
 The UI keeps the supplied brand greens and neutrals while using contrast-adjusted text, focus, border, and dark-mode action tokens. Text is checked against the 4.5:1 normal-text threshold; focus indicators and meaningful control boundaries are checked against 3:1.
 

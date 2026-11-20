@@ -1091,7 +1091,7 @@ export default function TransactionsPage() {
                   </span>
                   <input
                     checked={saveDraftLocally}
-                    className="relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-[var(--border)] transition-colors checked:bg-[var(--brand-action)] before:absolute before:start-1 before:top-1 before:size-4 before:rounded-full before:bg-[var(--surface)] before:transition-transform checked:before:-translate-x-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                    className="relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-[var(--border)] transition-transform checked:bg-[var(--brand-action)] before:absolute before:start-1 before:top-1 before:size-4 before:rounded-full before:bg-[var(--surface)] before:transition-transform checked:before:-translate-x-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
                     disabled={!userId}
                     id="saveTransactionDraft"
                     onChange={(event) => setSaveDraftLocally(event.target.checked)}
