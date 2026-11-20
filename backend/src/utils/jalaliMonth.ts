@@ -48,6 +48,10 @@ export interface JalaliMonthRange {
   today: Date;
 }
 
+/**
+ * Finds a Jalali month boundary by formatting UTC days because Intl exposes
+ * calendar parts, but no direct Gregorian-to-Jalali conversion operation.
+ */
 export function getJalaliMonthRange(year: number, month: number): Omit<JalaliMonthRange, 'today'> {
   if (!Number.isInteger(year) || year < 1200 || year > 1600) {
     throw new RangeError('Invalid Jalali year.');
@@ -134,6 +138,10 @@ export function formatUtcDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Preserves the anchor's Jalali day for a later month and clamps short months
+ * to their final day so recurring reminders remain valid.
+ */
 export function getMonthlyOccurrenceDate(
   anchorDate: Date,
   year: number,

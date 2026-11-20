@@ -25,6 +25,9 @@ function shiftIsoDate(value: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Provides an accessible Persian calendar while keeping its value Gregorian ISO date-only.
+ */
 export function JalaliDatePicker({
   value,
   onChange,

@@ -4,6 +4,7 @@ import {
   getJalaliMonthDays,
   getJalaliParts,
   getTehranTodayIso,
+  formatJalaliDate,
   formatJalaliMonth,
   formatJalaliYear,
   shiftJalaliMonthKey,
@@ -58,4 +59,9 @@ test('shifts Jalali month keys across year boundaries and clamps supported years
 test('formats a Jalali month key using its Persian month and year', () => {
   assert.equal(formatJalaliMonth('01-1405'), '۱۴۰۵ فروردین');
   assert.throws(() => formatJalaliMonth('00-1405'), RangeError);
+});
+
+test('formats date-only values in UTC using the requested Persian date style', () => {
+  assert.equal(formatJalaliDate('2024-03-20', 'medium'), '۱ فروردین ۱۴۰۳');
+  assert.equal(formatJalaliDate('2024-03-20', 'long'), '۱ فروردین ۱۴۰۳');
 });
