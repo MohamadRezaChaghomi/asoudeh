@@ -9,6 +9,7 @@ import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
+import { formatJalaliDate } from '@/lib/jalaliDate';
 
 type TransactionType = 'income' | 'expense';
 
@@ -42,13 +43,6 @@ interface DashboardData {
     date: string;
     recurrence: 'none' | 'monthly' | 'yearly';
   }>;
-}
-
-function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    dateStyle: 'medium',
-    timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00.000Z`));
 }
 
 function formatMonth(date: string): string {
@@ -215,7 +209,7 @@ export default function DashboardPage() {
                           <div>
                             <p className="font-semibold">{transaction.categoryName}</p>
                             <p className="app-muted mt-1 text-sm">
-                              {formatDate(transaction.date)}
+                              {formatJalaliDate(transaction.date, 'medium')}
                               {transaction.note ? ` · ${transaction.note}` : ''}
                             </p>
                           </div>
@@ -263,7 +257,7 @@ export default function DashboardPage() {
                       >
                         <p className="font-semibold">{reminder.title}</p>
                         <time className="app-muted text-sm" dateTime={reminder.date}>
-                          {formatDate(reminder.date)}
+                          {formatJalaliDate(reminder.date, 'medium')}
                         </time>
                       </li>
                     ))}

@@ -12,6 +12,7 @@ import { TomanAmount } from '@/components/ui/TomanAmount';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import {
+  formatJalaliDate,
   getJalaliParts,
   getTehranTodayIso,
 } from '@/lib/jalaliDate';
@@ -115,13 +116,6 @@ function todayDate(): string {
 
 function formatInteger(amount: number): string {
   return new Intl.NumberFormat('fa-IR').format(amount);
-}
-
-function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    dateStyle: 'medium',
-    timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00.000Z`));
 }
 
 export default function TransactionsPage() {
@@ -780,7 +774,7 @@ export default function TransactionsPage() {
                     <div>
                       <p className="font-semibold">{transaction.categoryName}</p>
                       <p className="app-muted mt-1 text-sm">
-                        {formatDate(transaction.date)}
+                        {formatJalaliDate(transaction.date, 'medium')}
                         {transaction.note ? ` · ${transaction.note}` : ''}
                       </p>
                     </div>
@@ -999,7 +993,7 @@ export default function TransactionsPage() {
                     />
                   </div>
                   <p className="app-muted mt-2 text-sm" aria-labelledby="transactionDateLabel">
-                    {formatDate(date)}
+                    {formatJalaliDate(date, 'medium')}
                   </p>
                 </div>
               </>
@@ -1021,7 +1015,7 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="app-muted">تاریخ</dt>
-                    <dd>{formatDate(date)}</dd>
+                    <dd>{formatJalaliDate(date, 'medium')}</dd>
                   </div>
                 </dl>
                 <div>
