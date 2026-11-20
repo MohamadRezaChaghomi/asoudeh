@@ -2,6 +2,17 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { siteUrl } from '@/lib/siteUrl';
+
+const websiteJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'آسوده',
+  alternateName: 'Asoudeh',
+  url: siteUrl.toString(),
+  inLanguage: 'fa-IR',
+  description: 'مدیریت مالی شخصی، ساده و دسترس‌پذیر به زبان فارسی',
+}).replace(/</g, '\\u003c');
 
 const primaryLinks = [
   { href: '/guide', label: 'راهنما' },
@@ -21,6 +32,10 @@ const footerLinks = [
 export function PublicPagesLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="public-site">
+      <script
+        dangerouslySetInnerHTML={{ __html: websiteJsonLd }}
+        type="application/ld+json"
+      />
       <PublicHeader />
       {children}
       <PublicFooter />

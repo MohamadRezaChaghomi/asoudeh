@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { AccessibilityNavigation } from '@/components/AccessibilityNavigation';
 import { SessionActivityMonitor } from '@/components/layout/SessionActivityMonitor';
+import { siteUrl } from '@/lib/siteUrl';
 import '@/styles/tokens.css';
 import './globals.css';
 import '@/styles/base.css';
@@ -11,12 +12,6 @@ import '@/styles/app-shell.css';
 import '@/styles/public-pages.css';
 import '@/styles/controls.css';
 import '@/styles/assistant.css';
-
-const metadataBase = new URL(
-  process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_API_URL
-    ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
-    : 'http://localhost:3000',
-);
 
 const estedadArabic = localFont({
   src: '../node_modules/@fontsource-variable/estedad/files/estedad-arabic-wght-normal.woff2',
@@ -58,7 +53,7 @@ const estedadLatinExt = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase,
+  metadataBase: siteUrl,
   applicationName: 'آسوده | Asoudeh',
   title: {
     default: 'آسوده',

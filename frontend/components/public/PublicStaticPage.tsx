@@ -1,11 +1,42 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { PublicPageContent } from '@/lib/publicPages/content';
+import { siteUrl } from '@/lib/siteUrl';
 
-export function publicPageMetadata(page: PublicPageContent): Metadata {
+const socialImage = {
+  url: '/preview/og-image.png',
+  width: 1200,
+  height: 630,
+  alt: 'آسوده؛ امور مالی‌ات منظم، ذهنت آسوده',
+};
+
+export function publicPageMetadata(
+  page: Pick<PublicPageContent, 'path' | 'title' | 'description'>,
+): Metadata {
+  const title = page.title.replace(/ آسوده$/, '');
+  const url = new URL(page.path, siteUrl).toString();
+
   return {
-    title: page.title.replace(/ آسوده$/, ''),
+    title,
     description: page.description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'fa_IR',
+      siteName: 'آسوده',
+      title,
+      description: page.description,
+      url,
+      images: [socialImage],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: page.description,
+      images: [socialImage.url],
+    },
   };
 }
 

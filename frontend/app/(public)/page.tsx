@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import type { Metadata } from 'next';
+import { publicPageMetadata } from '@/components/public/PublicStaticPage';
 
-export const metadata: Metadata = {
+export const metadata = publicPageMetadata({
+  path: '/',
   title: 'مدیریت مالی شخصی',
   description: 'درآمدها، هزینه‌ها، بودجه‌ها و یادآورها را در محیطی فارسی و دسترس‌پذیر مدیریت کنید.',
-};
+});
 
 export default function HomePage() {
   return (

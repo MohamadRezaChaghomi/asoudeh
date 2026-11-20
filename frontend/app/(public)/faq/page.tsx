@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import type { Metadata } from 'next';
 import { FaqSearch } from '@/components/public/FaqSearch';
+import { publicPageMetadata } from '@/components/public/PublicStaticPage';
 
-export const metadata: Metadata = {
+export const metadata = publicPageMetadata({
+  path: '/faq',
   title: 'سؤالات متداول',
   description: 'پاسخ پرسش‌های رایج درباره حساب، درآمد و هزینه، بودجه، گزارش و یادآورها در آسوده.',
-};
+});
 
 export default function FaqPage() {
   return (
