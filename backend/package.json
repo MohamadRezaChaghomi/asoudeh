@@ -19,6 +19,7 @@
     "db:ensure-indexes": "tsx scripts/ensure-indexes.ts",
     "db:report-orphans": "tsx scripts/report-orphans.ts",
     "db:restore-integrity": "tsx src/scripts/restoreIntegrity.ts",
+    "seed:test-users": "tsx src/scripts/seedTestUsers.ts",
     "perf:seed": "tsx src/scripts/performanceSeed.ts",
     "perf:measure": "tsx src/scripts/performanceMeasure.ts",
     "seed:system-categories": "tsx src/scripts/seedSystemCategories.ts",
