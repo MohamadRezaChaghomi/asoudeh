@@ -72,6 +72,16 @@ Database/API tests need both `MONGODB_URI` and `TEST_MONGODB_URI` set to the cre
 
 The system-category seed is a separate development-only operation. It requires `NODE_ENV=development`, a credential-free local `asoudeh_dev` URI, and its explicit confirmation value; it inserts missing system categories only. It never runs automatically at startup.
 
+The demo-user seed is also restricted to development and the credential-free local `asoudeh_dev` database. It additionally requires `OTP_DEV_SIMULATOR_ENABLED=true` and `SEED_TEST_USERS_CONFIRMATION=seed-test-users`. It upserts three reserved `.invalid` email accounts, sample senior finance records, and an active caregiver link; it does not send SMS or delete unrelated records. Authentication remains passwordless and requires the locally configured simulator code. Never use these accounts or the fixed development OTP with shared or production data.
+
+After confirming the backend environment points to the local `asoudeh_dev` database, run from PowerShell:
+
+```powershell
+$env:SEED_TEST_USERS_CONFIRMATION = 'seed-test-users'
+npm --prefix backend run seed:test-users
+Remove-Item Env:SEED_TEST_USERS_CONFIRMATION
+```
+
 ## Troubleshooting
 
 | Symptom | Check |
