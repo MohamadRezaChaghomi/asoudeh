@@ -42,6 +42,9 @@ const permissionLabels: Record<Permission, string> = {
   VIEW_REPORTS: 'مشاهدهٔ گزارش‌ها',
 };
 
+const caregiverAccessCardClass =
+  'grid gap-4 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center';
+
 export default function CaregiverPage() {
   const router = useRouter();
   const [data, setData] = useState<CaregiverData>({ links: [], invitations: [], seniors: [] });
@@ -228,13 +231,17 @@ export default function CaregiverPage() {
                 <fieldset
                   aria-invalid={permissionsFieldError}
                   aria-describedby={permissionsFieldError ? 'caregiver-permissions-error' : undefined}
-                  className="space-y-3"
+                  className="choice-fieldset space-y-2"
                 >
-                  <legend className="mb-2 font-medium">انتخاب دسترسی‌ها</legend>
+                  <legend>انتخاب دسترسی‌ها</legend>
                   {(Object.keys(permissionLabels) as Permission[]).map((permission) => (
-                    <label className="flex min-h-11 items-center gap-3" key={permission}>
+                    <label
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--surface)]"
+                      key={permission}
+                    >
                       <input
                         checked={permissions.includes(permission)}
+                        className="size-5 min-h-0 shrink-0 cursor-pointer accent-asoudeh-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
                         onChange={() => {
                           togglePermission(permission);
                           setPermissionsFieldError(false);
@@ -265,12 +272,24 @@ export default function CaregiverPage() {
               ) : (
                 <ul className="mt-4 space-y-3">
                   {data.invitations.map((invitation) => (
-                    <li className="rounded-xl border border-slate-200 p-4" key={invitation.id}>
-                      <p className="font-semibold">{invitation.seniorName} شما را به‌عنوان مراقب دعوت کرده است.</p>
-                      <p className="app-muted mt-1 text-sm">{permissionText(invitation.permissions)}</p>
-                      <div className="mt-3 flex gap-2">
+                    <li className={caregiverAccessCardClass} key={invitation.id}>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="app-muted text-xs">دعوت از طرف</p>
+                          <span className="rounded-full bg-[var(--warning-soft)] px-3 py-1 text-xs font-semibold text-[var(--warning)]">
+                            در انتظار پاسخ
+                          </span>
+                        </div>
+                        <p className="mt-1 text-lg font-bold">{invitation.seniorName}</p>
+                        <p className="app-muted mt-1 text-sm">شما را به‌عنوان مراقب دعوت کرده است.</p>
+                        <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+                          <p className="app-muted text-xs">دسترسی‌های درخواستی</p>
+                          <p className="mt-1 text-sm font-medium">{permissionText(invitation.permissions)}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:min-w-32">
                         <button
-                          className="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
+                          className="min-h-11 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
                           disabled={actionId === invitation.id}
                           onClick={() => void respond(invitation, 'accept')}
                           type="button"
@@ -278,7 +297,7 @@ export default function CaregiverPage() {
                           پذیرفتن
                         </button>
                         <button
-                          className="rounded-lg border border-slate-300 px-4 py-2 font-semibold disabled:opacity-60"
+                          className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 font-semibold disabled:opacity-60"
                           disabled={actionId === invitation.id}
                           onClick={() => void respond(invitation, 'reject')}
                           type="button"
@@ -299,17 +318,43 @@ export default function CaregiverPage() {
               ) : (
                 <ul className="mt-4 space-y-3">
                   {data.links.map((link) => (
-                    <li className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 p-4" key={link.id}>
-                      <div>
-                        <p className="font-semibold" dir="ltr">{link.caregiverPhone}</p>
-                        <p className="app-muted mt-1 text-sm">{permissionText(link.permissions)}</p>
-                        <p className="mt-1 text-sm">
-                          وضعیت: {link.status === 'pending' ? 'در انتظار پذیرش' : link.status === 'active' ? 'فعال' : 'لغوشده'}
+                    <li
+                      className={caregiverAccessCardClass}
+                      key={link.id}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="app-muted text-xs">شماره همراه مراقب</p>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              link.status === 'active'
+                                ? 'bg-[var(--positive-soft)] text-[var(--positive)]'
+                                : link.status === 'pending'
+                                  ? 'bg-[var(--warning-soft)] text-[var(--warning)]'
+                                  : 'bg-[var(--negative-soft)] text-[var(--negative)]'
+                            }`}
+                          >
+                            {link.status === 'pending'
+                              ? 'در انتظار پذیرش'
+                              : link.status === 'active'
+                                ? 'فعال'
+                                : 'لغوشده'}
+                          </span>
+                        </div>
+                        <p
+                          className="caregiver-link-phone mt-1 w-full text-end text-lg font-bold tabular-nums tracking-wide"
+                          dir="ltr"
+                        >
+                          {link.caregiverPhone}
                         </p>
+                        <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+                          <p className="app-muted text-xs">دسترسی‌های مجاز</p>
+                          <p className="mt-1 text-sm font-medium">{permissionText(link.permissions)}</p>
+                        </div>
                       </div>
                       {link.status !== 'revoked' && (
                         <button
-                          className="rounded-lg border border-rose-300 px-4 py-2 font-semibold text-rose-800 disabled:opacity-60"
+                          className="w-full rounded-lg border border-rose-300 px-4 py-2 font-semibold text-rose-800 disabled:opacity-60 sm:w-auto"
                           disabled={actionId === link.id}
                           onClick={() => void revoke(link)}
                           type="button"
@@ -330,13 +375,22 @@ export default function CaregiverPage() {
               ) : (
                 <ul className="mt-4 space-y-3">
                   {data.seniors.map((senior) => (
-                    <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4" key={senior.seniorId}>
-                      <div>
-                        <p className="font-semibold">{senior.seniorName}</p>
-                        <p className="app-muted mt-1 text-sm">{permissionText(senior.permissions)}</p>
+                    <li className={caregiverAccessCardClass} key={senior.seniorId}>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="app-muted text-xs">حساب در دسترس</p>
+                          <span className="rounded-full bg-[var(--positive-soft)] px-3 py-1 text-xs font-semibold text-[var(--positive)]">
+                            دسترسی فعال
+                          </span>
+                        </div>
+                        <p className="mt-1 text-lg font-bold">{senior.seniorName}</p>
+                        <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+                          <p className="app-muted text-xs">دسترسی‌های مجاز</p>
+                          <p className="mt-1 text-sm font-medium">{permissionText(senior.permissions)}</p>
+                        </div>
                       </div>
                       <Link
-                        className="rounded-lg border border-slate-300 px-4 py-2 font-semibold"
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 font-semibold"
                         href={`/caregiver/${senior.seniorId}`}
                       >
                         مشاهدهٔ مجاز

@@ -202,12 +202,6 @@
   opacity: 0.5;
 }
 
-@media (min-width: 1025px) {
-  .transaction-filter-form {
-    grid-template-columns: minmax(12rem, 1fr) minmax(12rem, auto) auto auto;
-  }
-}
-
 @media (min-width: 769px) {
   .assistant-widget {
     left: max(1.25rem, calc(env(safe-area-inset-left) + 1.25rem));

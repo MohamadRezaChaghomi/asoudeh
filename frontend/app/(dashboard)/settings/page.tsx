@@ -10,7 +10,11 @@ import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
 import { setSessionHint } from '@/lib/auth/sessionHint';
 import { normalizeDigits } from '@/lib/normalizeDigits';
-import { parseTomanAmount } from '@/lib/tomanAmount';
+import {
+  formatTomanAmountInput,
+  formatTomanAmountInputWithCaret,
+  parseTomanAmount,
+} from '@/lib/tomanAmount';
 
 interface Profile {
   id: string;
@@ -57,7 +61,7 @@ export default function SettingsPage() {
         setProfile(loaded);
         setDisplayName(loaded.displayName);
         setBirthYear(loaded.birthYear === null ? '' : String(loaded.birthYear));
-        setInitialBalance(String(loaded.initialBalance));
+        setInitialBalance(formatTomanAmountInput(String(loaded.initialBalance)));
         setFontScale(loaded.accessibilitySettings.fontScale);
         setHighContrast(loaded.accessibilitySettings.highContrast);
       } catch (loadError) {
@@ -263,8 +267,19 @@ export default function SettingsPage() {
               aria-invalid={fieldError === 'initialBalance'}
               aria-describedby={fieldError === 'initialBalance' ? 'profile-field-error' : undefined}
               onChange={(event) => {
-                setInitialBalance(event.target.value);
+                const input = event.currentTarget;
+                const formatted = formatTomanAmountInputWithCaret(
+                  input.value,
+                  input.selectionStart,
+                  input.selectionEnd,
+                );
+                setInitialBalance(formatted.value);
                 setFieldError(null);
+                requestAnimationFrame(() => {
+                  if (document.activeElement === input) {
+                    input.setSelectionRange(formatted.selectionStart, formatted.selectionEnd);
+                  }
+                });
               }}
               required
               value={initialBalance}

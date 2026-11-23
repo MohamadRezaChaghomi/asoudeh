@@ -38,7 +38,10 @@ const nextConfig: NextConfig = {
       {
         source: '/_next/static/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          {
+            key: 'Cache-Control',
+            value: isProduction ? 'public, max-age=31536000, immutable' : 'no-store',
+          },
         ],
       },
       {
@@ -50,7 +53,10 @@ const nextConfig: NextConfig = {
       {
         source: '/logo/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+          {
+            key: 'Cache-Control',
+            value: isProduction ? 'public, max-age=86400, stale-while-revalidate=604800' : 'no-store',
+          },
         ],
       },
       {

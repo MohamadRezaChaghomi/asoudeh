@@ -21,6 +21,7 @@ import {
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { AssistantWidget } from '@/components/assistant/AssistantWidget';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { rememberPublicReturnPath } from '@/lib/auth/sessionHint';
 import { cn } from '@/lib/utils/cn';
 
 const navigation = [
@@ -169,9 +170,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <nav aria-label="راهنمای آسوده" className="sidebar-public-links">
-          <Link href="/guide">راهنمای استفاده</Link>
-          <Link href="/faq">سؤالات متداول</Link>
-          <Link href="/about">درباره آسوده</Link>
+          <Link href="/guide" onClick={() => rememberPublicReturnPath(pathname)}>
+            راهنمای استفاده
+          </Link>
+          <Link href="/faq" onClick={() => rememberPublicReturnPath(pathname)}>
+            سؤالات متداول
+          </Link>
+          <Link href="/about" onClick={() => rememberPublicReturnPath(pathname)}>
+            درباره آسوده
+          </Link>
         </nav>
 
         <div className="sidebar-note">
@@ -270,10 +277,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           );
         })}
-        <Link className="mobile-nav-link mobile-nav-public-link" href="/guide">
+        <Link
+          className="mobile-nav-link mobile-nav-public-link"
+          href="/guide"
+          onClick={() => rememberPublicReturnPath(pathname)}
+        >
           <span>راهنمای استفاده</span>
         </Link>
-        <Link className="mobile-nav-link mobile-nav-public-link" href="/faq">
+        <Link
+          className="mobile-nav-link mobile-nav-public-link"
+          href="/faq"
+          onClick={() => rememberPublicReturnPath(pathname)}
+        >
           <span>سؤالات متداول</span>
         </Link>
       </nav>

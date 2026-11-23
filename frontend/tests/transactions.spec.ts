@@ -3,6 +3,7 @@ import { expectThemeAwareIllustration } from './assert-theme-aware-illustration'
 import {
   formatTomanAmount,
   formatTomanAmountInput,
+  formatTomanAmountInputWithCaret,
   parseTomanAmount,
 } from '../lib/tomanAmount';
 
@@ -49,8 +50,20 @@ test('parses and formats toman amounts across digit scripts and separators', () 
   }
   expect(formatTomanAmountInput('١٢٣٬٤٥٦')).toBe('۱۲۳٬۴۵۶');
   expect(formatTomanAmountInput('12.5')).toBe('12.5');
+  expect(formatTomanAmountInput('۱٬۲۳۴5')).toBe('۱۲٬۳۴۵');
   expect(formatTomanAmount('123456')).toBe('۱۲۳٬۴۵۶');
   expect(formatTomanAmount(Number.MAX_SAFE_INTEGER)).toBe('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۱');
+
+  let value = '';
+  let caret = 0;
+  for (const digit of '12345') {
+    const rawValue = `${value.slice(0, caret)}${digit}${value.slice(caret)}`;
+    const formatted = formatTomanAmountInputWithCaret(rawValue, caret + 1, caret + 1);
+    value = formatted.value;
+    caret = formatted.selectionStart;
+  }
+  expect(value).toBe('۱۲٬۳۴۵');
+  expect(parseTomanAmount(value)).toBe(12_345);
 });
 
 test('creates an income through the three-step form with Persian amount and Jalali date', async ({
@@ -125,10 +138,10 @@ test('creates an income through the three-step form with Persian amount and Jala
   const activeStep = steps.getByRole('listitem').first();
   const stepNumber = activeStep.locator('.transaction-step-number');
   const stepNumberBounds = await stepNumber.boundingBox();
-  expect(stepNumberBounds?.width).toBeGreaterThanOrEqual(36);
-  expect(stepNumberBounds?.height).toBe(32);
+  expect(stepNumberBounds?.width).toBe(40);
+  expect(stepNumberBounds?.height).toBe(40);
   await expect(stepNumber).toHaveCSS('display', 'flex');
-  await expect(stepNumber).not.toHaveCSS('border-radius', '50%');
+  await expect(stepNumber).toHaveCSS('border-radius', '50%');
   const stepNumberLineHeight = await stepNumber.evaluate((element) =>
     Number.parseFloat(getComputedStyle(element).lineHeight),
   );
@@ -193,6 +206,7 @@ test('creates an income through the three-step form with Persian amount and Jala
   });
   expect(createPayload?.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   await expect(page.getByText('حقوق', { exact: true }).last()).toBeVisible();
+  await expect(page.locator('.financial-amount').first()).toHaveText('۱۲۳٬۴۵۶+');
 });
 
 test('allows editing an existing transaction while retaining its inactive category', async ({
@@ -402,6 +416,7 @@ test('searches transactions and applies the selected sort on the server', async 
 
   await page.goto('/transactions');
   await expect(page.getByText('اجاره ماهانه')).toBeVisible();
+  await expect(page.locator('.financial-amount').first()).toHaveText('۲۵۰٬۰۰۰−');
   await page.getByLabel('جست‌وجو در توضیحات یا نام گروه مالی').fill('اجاره');
   await page.getByLabel('مرتب‌سازی فهرست').click();
   await page.getByRole('option', { name: 'کمترین مبلغ' }).click();
@@ -414,6 +429,60 @@ test('searches transactions and applies the selected sort on the server', async 
     sortOrder: 'asc',
     page: '1',
   });
+});
+
+test('keeps transaction filters within the panel at tablet and mobile widths', async ({ page }) => {
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: activeUserId,
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/categories', async (route) => {
+    await route.fulfill({ json: { success: true, data: { categories: [expenseCategory] } } });
+  });
+  await page.route('**/api/v1/transactions**', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          transactions: [],
+          pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 },
+        },
+      },
+    });
+  });
+
+  await page.setViewportSize({ width: 1155, height: 900 });
+  await page.goto('/transactions');
+  const form = page.getByRole('form', { name: 'جست‌وجو و مرتب‌سازی تراکنش‌ها' });
+  await expect(form).toBeVisible();
+
+  const getLayout = () => form.evaluate((element) => {
+    const formRect = element.getBoundingClientRect();
+    const children = Array.from(element.children).map((child) => {
+      const rect = child.getBoundingClientRect();
+      return { left: rect.left, right: rect.right };
+    });
+    return {
+      columnCount: getComputedStyle(element).gridTemplateColumns.split(' ').length,
+      childrenWithinForm: children.every(
+        (child) => child.left >= formRect.left && child.right <= formRect.right,
+      ),
+    };
+  });
+
+  expect(await getLayout()).toEqual({ columnCount: 2, childrenWithinForm: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await getLayout()).toEqual({ columnCount: 1, childrenWithinForm: true });
 });
 
 test('restores an opted-in draft only for the same authenticated account', async ({ page }) => {

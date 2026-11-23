@@ -81,6 +81,40 @@ test('public information pages share navigation and are available without signin
   expect(errors).toEqual([]);
 });
 
+test('offers signed-in users a return link on public pages', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('asoudeh.authenticated', 'true');
+    sessionStorage.setItem('asoudeh.publicReturnPath', '/reports');
+  });
+  await page.route('**/api/v1/auth/activity', async (route) => {
+    await route.fulfill({ json: { success: true, data: { active: true } } });
+  });
+
+  await page.goto('/guide');
+
+  await expect(page.getByRole('link', { name: 'بازگشت به صفحهٔ قبلی' })).toHaveAttribute(
+    'href',
+    '/reports',
+  );
+});
+
+test('keeps the signed-in return link in the mobile menu on narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.addInitScript(() => {
+    localStorage.setItem('asoudeh.authenticated', 'true');
+    sessionStorage.setItem('asoudeh.publicReturnPath', '/reports');
+  });
+  await page.goto('/guide');
+
+  await expect(page.locator('.public-header-actions > .public-login-link')).toBeHidden();
+  const menu = page.getByRole('navigation', { name: 'منوی صفحات عمومی' });
+  await page.locator('.public-mobile-menu summary').click();
+  await expect(menu.getByRole('link', { name: 'بازگشت به صفحهٔ قبلی' })).toHaveAttribute(
+    'href',
+    '/reports',
+  );
+});
+
 test('not-found page uses the brand symbol and provides overview and home actions', async ({ page }) => {
   await page.goto('/this-route-does-not-exist');
   await expect(page.getByRole('heading', { name: 'این صفحه پیدا نشد' })).toBeVisible();

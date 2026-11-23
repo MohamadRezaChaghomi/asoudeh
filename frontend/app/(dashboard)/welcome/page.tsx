@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { api, ensureCsrfToken } from '@/lib/api/client';
 import { getApiErrorMessage } from '@/lib/api/errorMessage';
-import { formatTomanAmountInput, parseTomanAmount } from '@/lib/tomanAmount';
+import {
+  formatTomanAmountInput,
+  formatTomanAmountInputWithCaret,
+  parseTomanAmount,
+} from '@/lib/tomanAmount';
 
 interface ProfileResponse {
   data: {
@@ -158,7 +162,20 @@ export default function WelcomePage() {
               dir="ltr"
               id="welcome-balance"
               inputMode="numeric"
-              onChange={(event) => setInitialBalance(formatTomanAmountInput(event.target.value))}
+              onChange={(event) => {
+                const input = event.currentTarget;
+                const formatted = formatTomanAmountInputWithCaret(
+                  input.value,
+                  input.selectionStart,
+                  input.selectionEnd,
+                );
+                setInitialBalance(formatted.value);
+                requestAnimationFrame(() => {
+                  if (document.activeElement === input) {
+                    input.setSelectionRange(formatted.selectionStart, formatted.selectionEnd);
+                  }
+                });
+              }}
               placeholder="۰"
               value={initialBalance}
             />

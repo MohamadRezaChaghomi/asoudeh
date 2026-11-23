@@ -17,7 +17,15 @@ interface JalaliDatePickerProps {
   maxDate?: string;
 }
 
-const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+const WEEKDAYS = [
+  { name: 'شنبه', compact: 'شن' },
+  { name: 'یکشنبه', compact: 'یک' },
+  { name: 'دوشنبه', compact: 'دو' },
+  { name: 'سه‌شنبه', compact: 'سه' },
+  { name: 'چهارشنبه', compact: 'چه' },
+  { name: 'پنجشنبه', compact: 'پن' },
+  { name: 'جمعه', compact: 'جم' },
+];
 
 function shiftIsoDate(value: string, days: number) {
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -77,7 +85,11 @@ export function JalaliDatePicker({
 
   function closePicker(returnFocus: boolean) {
     setOpen(false);
-    if (returnFocus) requestAnimationFrame(() => triggerRef.current?.focus());
+    if (returnFocus) {
+      requestAnimationFrame(() => {
+        if (document.activeElement === document.body) triggerRef.current?.focus();
+      });
+    }
   }
 
   function moveMonth(direction: -1 | 1) {
@@ -201,19 +213,32 @@ export function JalaliDatePicker({
               </button>
             </header>
             <div className="jalali-calendar-grid" role="grid" aria-label="روزهای ماه">
-              <div className="grid grid-cols-7 gap-1 text-center" role="row">
-                {WEEKDAYS.map((weekday) => (
+              <div className="grid grid-cols-7 gap-1.5 text-center" role="row">
+                {WEEKDAYS.map(({ name, compact }) => (
                   <span
-                    className="app-muted flex min-h-10 items-center justify-center text-xs"
-                    key={weekday}
+                    aria-label={name}
+                    className="app-muted flex min-h-10 min-w-0 items-center justify-center overflow-hidden text-xs"
+                    key={name}
                     role="columnheader"
+                    title={name}
                   >
-                    {weekday}
+                    <span
+                      aria-hidden="true"
+                      className="jalali-calendar-weekday-compact whitespace-nowrap"
+                    >
+                      {compact}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="jalali-calendar-weekday-full whitespace-nowrap"
+                    >
+                      {name}
+                    </span>
                   </span>
                 ))}
               </div>
               {Array.from({ length: cells.length / 7 }, (_, row) => (
-                <div className="grid grid-cols-7 gap-1 text-center" key={`week-${row}`} role="row">
+                <div className="grid grid-cols-7 gap-1.5 text-center" key={`week-${row}`} role="row">
                   {cells.slice(row * 7, row * 7 + 7).map((day, column) => {
                     if (!day) return <span aria-hidden="true" key={`blank-${row}-${column}`} role="gridcell" />;
                     const dayNumber = getJalaliParts(day).day;

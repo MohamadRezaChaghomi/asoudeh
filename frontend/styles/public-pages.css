@@ -593,6 +593,10 @@
 }
 
 @media (max-width: 420px) {
+  .public-header-actions > .public-login-link {
+    display: none;
+  }
+
   .public-faq-input-wrap {
     align-items: stretch;
     flex-direction: column;

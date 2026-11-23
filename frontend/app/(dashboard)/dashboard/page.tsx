@@ -217,8 +217,10 @@ export default function DashboardPage() {
                               transaction.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
                             }`}
                           >
-                            {transaction.type === 'income' ? '+' : '−'}
-                            <TomanAmount amount={transaction.amount} />
+                            <TomanAmount
+                              amount={transaction.amount}
+                              sign={transaction.type === 'income' ? '+' : '−'}
+                            />
                           </p>
                         </div>
                       </li>

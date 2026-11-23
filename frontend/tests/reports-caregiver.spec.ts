@@ -48,19 +48,34 @@ test('shows a Jalali monthly report and loads the previous month', async ({ page
     });
   });
 
+  await page.setViewportSize({ width: 1048, height: 900 });
   await page.goto('/reports');
   await expect(page.getByText('۲۰۰٬۰۰۰ تومان')).toBeVisible();
-  await expect(
-    page.getByRole('region', { name: 'جمع‌های ماهانه' }).getByText('۷۵٬۰۰۰ تومان'),
-  ).toBeVisible();
+  const monthlyTotals = page.getByRole('region', { name: 'جمع‌های ماهانه' });
+  await expect(monthlyTotals.getByText('۷۵٬۰۰۰ تومان')).toBeVisible();
+  await expect(monthlyTotals.locator('article').first().locator('bdi.financial-amount'))
+    .toHaveCSS('white-space', 'nowrap');
   await expect(page.getByText('۱۰۰٪ هزینه‌ها صرف درمان شده است.')).toBeVisible();
-  await expect(page.getByText(/۲۵٪ کمتر شده است/)).toBeVisible();
-  const categoryChart = page.getByRole('img', { name: 'هزینه به تفکیک دسته' });
+  const comparison = page.getByRole('region', { name: 'مقایسه هزینه با ماه قبل' });
+  await expect(comparison).toContainText('هزینه‌ها نسبت به ماه قبل کاهش داشته است.');
+  await expect(comparison).toContainText('۲۵٪ کاهش');
+  await expect(comparison).toContainText('۱۰۰٬۰۰۰ تومان');
+  const categoryChart = page.getByRole('list', { name: 'هزینه به تفکیک دسته' });
   await expect(categoryChart).toBeVisible();
+  await expect(categoryChart).toContainText('۷۵٬۰۰۰ تومان');
+  await expect(categoryChart.getByRole('progressbar', { name: 'سهم هزینهٔ درمان' }))
+    .toHaveAttribute('aria-valuenow', '100');
   await expect(categoryChart.locator('.expense-category-chart-bar')).toHaveAttribute(
     'style',
     'width: 100%;',
   );
+  for (const width of [375, 768, 1048]) {
+    await page.setViewportSize({ width, height: 900 });
+    const reportLayoutFits = await page.locator('#main-content').evaluate((main) =>
+      main.scrollWidth <= main.clientWidth,
+    );
+    expect(reportLayoutFits, `report layout fits at ${width}px`).toBe(true);
+  }
   await page.getByRole('button', { name: 'ماه قبل' }).click();
   await expect.poll(() => months.length).toBeGreaterThan(1);
   expect(months[0]).toMatch(/^\d{2}-\d{4}$/);
@@ -78,7 +93,11 @@ test('invites, accepts, and revokes a caregiver with selected read-only permissi
     status: 'pending',
     permissions: ['VIEW_SUMMARY'],
   }];
-  const seniors: Array<Record<string, unknown>> = [];
+  const seniors: Array<Record<string, unknown>> = [{
+    seniorId: '64b000000000000000000024',
+    seniorName: 'حساب تحت مراقبت',
+    permissions: ['VIEW_SUMMARY'],
+  }];
 
   await page.route('**/api/v1/me', async (route) => {
     await route.fulfill({
@@ -141,12 +160,26 @@ test('invites, accepts, and revokes a caregiver with selected read-only permissi
   page.on('dialog', (dialog) => dialog.accept());
 
   await page.goto('/caregiver');
-  await expect(page.getByText('کاربر دعوت‌کننده شما را به‌عنوان مراقب دعوت کرده است.')).toBeVisible();
+  const incomingInvitation = page.locator('li').filter({ hasText: 'کاربر دعوت‌کننده' });
+  await expect(incomingInvitation.getByText('شما را به‌عنوان مراقب دعوت کرده است.')).toBeVisible();
+  await expect(incomingInvitation.getByText('در انتظار پاسخ')).toBeVisible();
+  await expect(incomingInvitation.getByText('دسترسی‌های درخواستی')).toBeVisible();
+  const accessibleSenior = page.locator('li').filter({ hasText: 'حساب تحت مراقبت' });
+  await expect(accessibleSenior.getByText('دسترسی فعال')).toBeVisible();
+  await expect(accessibleSenior.getByText('دسترسی‌های مجاز')).toBeVisible();
+  const summaryPermission = page.getByLabel('مشاهدهٔ خلاصهٔ مالی');
+  await expect(summaryPermission).toHaveCSS('accent-color', /rgb\(/);
+  await expect(summaryPermission).toHaveCSS('width', '20px');
   await page.getByLabel('شماره همراه مراقب').fill('09120000002');
-  await page.getByLabel('مشاهدهٔ خلاصهٔ مالی').check();
+  await summaryPermission.check();
   await page.getByRole('button', { name: 'ثبت دعوت' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'دعوت ثبت شد' })).toContainText('دعوت ثبت شد');
-  await expect(page.getByText('09120000002')).toBeVisible();
+  const caregiverLink = page.locator('li').filter({ hasText: '09120000002' });
+  const caregiverPhone = caregiverLink.locator('.caregiver-link-phone');
+  await expect(caregiverPhone).toBeVisible();
+  await expect(caregiverPhone).toHaveCSS('text-align', 'end');
+  await expect(caregiverLink.getByText('در انتظار پذیرش')).toBeVisible();
+  await expect(caregiverLink.getByText('دسترسی‌های مجاز')).toBeVisible();
 
   await page.getByRole('button', { name: 'پذیرفتن' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'دعوت پذیرفته شد' })).toContainText(

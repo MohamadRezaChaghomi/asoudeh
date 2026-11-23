@@ -462,12 +462,17 @@ test('keeps browser errors clear after confirmed OTP login', async ({ page }) =>
   await expect(page).toHaveURL(/\/guide$/);
   await expect.poll(() => activityRequests).toBeGreaterThan(0);
   expect(await page.evaluate(() => localStorage.getItem('asoudeh.authenticated'))).toBe('true');
+  await expect(page.getByRole('link', { name: 'بازگشت به صفحهٔ قبلی' })).toHaveAttribute(
+    'href',
+    '/dashboard',
+  );
   await page.clock.runFor(11 * 60 * 1000);
   await expect(page).toHaveURL(/\/guide$/);
   await expect.poll(() => activityRequests).toBeGreaterThan(1);
-  await page.goBack();
+  await page.getByRole('link', { name: 'بازگشت به صفحهٔ قبلی' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('asoudeh.authenticated'))).toBe('true');
   await page.waitForTimeout(3000);
   expect(browserErrors).toEqual([]);
   await expect(page.getByRole('heading', { name: 'خوش آمدید' })).toHaveCount(0);

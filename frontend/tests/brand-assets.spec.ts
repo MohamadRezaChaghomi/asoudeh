@@ -82,6 +82,7 @@ test('logo component dimensions match the supplied SVG viewBoxes', async ({ page
     const response = await page.request.get(logo.path);
     const svg = await response.text();
     const viewBox = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+    expect(svg, `${logo.path} should have a transparent background`).not.toMatch(/<rect\b/);
     expect(viewBox, logo.path).not.toBeNull();
     expect(Number(viewBox?.[1]), logo.path).toBe(logo.width);
     expect(Number(viewBox?.[2]), logo.path).toBe(logo.height);

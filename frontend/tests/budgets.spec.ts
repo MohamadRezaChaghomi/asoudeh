@@ -118,7 +118,9 @@ test('creates, edits, and deletes a monthly budget using live API responses', as
   await expect(page.getByText('برای برنامه‌ریزی هزینه‌های ماه، یک سقف برای دسته‌ای دلخواه تعیین کنید.')).toBeVisible();
   await expectThemeAwareIllustration(page, 'empty-budgets-illustration');
   await expect(page.getByLabel('دستهٔ هزینه')).toHaveAttribute('data-value', expenseCategory.id);
-  await page.getByLabel('سقف بودجه (تومان)').fill('۱۰۰۰۰۰');
+  const budgetAmount = page.getByLabel('سقف بودجه (تومان)');
+  await budgetAmount.pressSequentially('100000');
+  await expect(budgetAmount).toHaveValue('۱۰۰٬۰۰۰');
   await page.getByRole('button', { name: 'ثبت بودجه' }).click();
 
   await expect(page.getByRole('status').filter({ hasText: 'بودجه ثبت شد.' })).toContainText(

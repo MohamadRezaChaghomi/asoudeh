@@ -6,6 +6,50 @@ select {
   accent-color: var(--brand-700);
 }
 
+input[type='checkbox']:not([role='switch']) {
+  accent-color: var(--brand-700);
+}
+
+.choice-fieldset {
+  min-width: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+  padding: var(--space-3);
+}
+
+.choice-fieldset legend {
+  padding-inline: var(--space-2);
+  color: var(--brand-900);
+  font-weight: var(--font-weight-semibold);
+}
+
+.choice-fieldset[aria-invalid='true'] {
+  border-color: var(--negative);
+}
+
+.jalali-date-picker {
+  container-type: inline-size;
+}
+
+.jalali-calendar-weekday-compact {
+  display: inline;
+}
+
+.jalali-calendar-weekday-full {
+  display: none;
+}
+
+@container (min-width: 30rem) {
+  .jalali-calendar-weekday-compact {
+    display: none;
+  }
+
+  .jalali-calendar-weekday-full {
+    display: inline;
+  }
+}
+
 .jalali-calendar-backdrop {
   position: fixed;
   inset: 0;
@@ -44,7 +88,7 @@ select {
     inset-inline: 0;
     inset-block-end: auto;
     top: calc(100% + 0.5rem);
-    width: min(100%, 22rem);
+    width: min(100%, 30rem);
     max-height: min(28rem, calc(100vh - 2rem));
     overflow: auto;
     border-radius: var(--radius-lg);
@@ -89,28 +133,44 @@ select {
 
 .transaction-filter-form button {
   min-width: 8rem;
+  justify-self: start;
+}
+
+@media (max-width: 480px) {
+  .transaction-filter-form button {
+    width: 100%;
+  }
 }
 
 .transaction-step-number {
   display: inline-flex;
-  min-width: 2.25rem;
-  height: 2rem;
-  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
   align-items: center;
   justify-content: center;
-  padding-inline: 0.35rem;
-  border-radius: 0.65rem;
-  background: var(--surface-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+  background: var(--surface);
   color: var(--brand-800);
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   line-height: 1;
 }
 
 .transaction-step-number-active {
+  border-color: var(--text-on-action);
   background: var(--text-on-action);
   color: var(--brand-action);
+}
+
+@media (max-width: 480px) {
+  .transaction-step-number {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-basis: 2.25rem;
+  }
 }
 
 .auth-back-button {

@@ -18,7 +18,7 @@ import {
 } from '@/lib/jalaliDate';
 import {
   formatTomanAmount,
-  formatTomanAmountInput,
+  formatTomanAmountInputWithCaret,
   parseTomanAmount,
 } from '@/lib/tomanAmount';
 
@@ -375,8 +375,19 @@ export default function RemindersPage() {
                 aria-invalid={fieldError === 'amount'}
                 aria-describedby={fieldError === 'amount' ? 'reminder-field-error' : undefined}
                 onChange={(event) => {
-                  setAmount(formatTomanAmountInput(event.target.value));
+                  const input = event.currentTarget;
+                  const formatted = formatTomanAmountInputWithCaret(
+                    input.value,
+                    input.selectionStart,
+                    input.selectionEnd,
+                  );
+                  setAmount(formatted.value);
                   setFieldError(null);
+                  requestAnimationFrame(() => {
+                    if (document.activeElement === input) {
+                      input.setSelectionRange(formatted.selectionStart, formatted.selectionEnd);
+                    }
+                  });
                 }}
                 placeholder="۱٬۰۰۰٬۰۰۰"
                 value={amount}

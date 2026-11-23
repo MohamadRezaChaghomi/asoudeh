@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { PublicSessionLink } from '@/components/public/PublicSessionLink';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { siteUrl } from '@/lib/siteUrl';
 
@@ -65,9 +66,7 @@ function PublicHeader() {
         </nav>
         <div className="public-header-actions">
           <ThemeToggle compact />
-          <Link className="public-login-link" href="/login">
-            ورود به آسوده
-          </Link>
+          <PublicSessionLink className="public-login-link" />
           <details className="public-mobile-menu">
             <summary aria-label="بازکردن منوی صفحات عمومی">
               <span aria-hidden="true" className="public-menu-icon">
@@ -83,7 +82,7 @@ function PublicHeader() {
                   {link.label}
                 </Link>
               ))}
-              <Link href="/login">ورود به آسوده</Link>
+              <PublicSessionLink />
             </nav>
           </details>
         </div>

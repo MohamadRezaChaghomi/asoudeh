@@ -18,7 +18,7 @@ import {
 } from '@/lib/jalaliDate';
 import {
   formatTomanAmount,
-  formatTomanAmountInput,
+  formatTomanAmountInputWithCaret,
   parseTomanAmount,
 } from '@/lib/tomanAmount';
 import type { CategoryType } from '@/types/category';
@@ -782,8 +782,10 @@ export default function TransactionsPage() {
                         transaction.type === 'income' ? 'text-emerald-700' : 'text-rose-700'
                       }`}
                     >
-                      {transaction.type === 'income' ? '+' : '−'}
-                      <TomanAmount amount={transaction.amount} />
+                      <TomanAmount
+                        amount={transaction.amount}
+                        sign={transaction.type === 'income' ? '+' : '−'}
+                      />
                     </p>
                   </div>
                   <div className="mt-3 flex gap-2">
@@ -843,14 +845,14 @@ export default function TransactionsPage() {
           <h2 className="text-xl font-bold text-asoudeh-navy">
             {editingId ? 'ویرایش تراکنش' : 'ثبت تراکنش'}
           </h2>
-          <ol className="mt-5 grid grid-cols-3 gap-2 text-sm" aria-label="مراحل ثبت تراکنش">
+          <ol className="mt-5 grid gap-2 text-base sm:grid-cols-3" aria-label="مراحل ثبت تراکنش">
             {['مبلغ', 'دسته و تاریخ', 'بازبینی'].map((label, index) => (
               <li
                 aria-current={step === index + 1 ? 'step' : undefined}
-                className={`flex min-h-14 items-center justify-center gap-2 rounded-xl px-2 py-2 text-center ${
+                className={`flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 sm:justify-center sm:gap-2 sm:px-2 sm:text-sm ${
                   step === index + 1
-                    ? 'bg-[var(--brand-action)] font-semibold text-[var(--text-on-action)]'
-                    : 'bg-[var(--surface-muted)]'
+                    ? 'border-[var(--brand-action)] bg-[var(--brand-action)] font-semibold text-[var(--text-on-action)]'
+                    : 'border-[var(--border-soft)] bg-[var(--surface-muted)]'
                 }`}
                 key={label}
               >
@@ -873,15 +875,15 @@ export default function TransactionsPage() {
             )}
             {step === 1 && (
               <>
-                <div role="group" aria-label="نوع تراکنش">
-                  <p className="mb-2 font-medium">نوع تراکنش</p>
-                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface-muted)] p-1">
+                <fieldset className="choice-fieldset">
+                  <legend>نوع تراکنش</legend>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       aria-pressed={type === 'expense'}
-                      className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 font-semibold ${
+                      className={`flex min-h-14 items-center justify-center gap-2 rounded-lg border px-3 text-base font-semibold ${
                         type === 'expense'
-                          ? 'bg-[var(--brand-action)] text-[var(--text-on-action)] shadow-sm'
-                          : 'text-[var(--text)]'
+                          ? 'border-[var(--brand-action)] bg-[var(--brand-action)] text-[var(--text-on-action)]'
+                          : 'border-[var(--border-soft)] bg-[var(--surface)] text-[var(--text)]'
                       }`}
                       onClick={() => setType('expense')}
                       type="button"
@@ -891,10 +893,10 @@ export default function TransactionsPage() {
                     </button>
                     <button
                       aria-pressed={type === 'income'}
-                      className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 font-semibold ${
+                      className={`flex min-h-14 items-center justify-center gap-2 rounded-lg border px-3 text-base font-semibold ${
                         type === 'income'
-                          ? 'bg-[var(--brand-action)] text-[var(--text-on-action)] shadow-sm'
-                          : 'text-[var(--text)]'
+                          ? 'border-[var(--brand-action)] bg-[var(--brand-action)] text-[var(--text-on-action)]'
+                          : 'border-[var(--border-soft)] bg-[var(--surface)] text-[var(--text)]'
                       }`}
                       onClick={() => setType('income')}
                       type="button"
@@ -903,7 +905,7 @@ export default function TransactionsPage() {
                       درآمد
                     </button>
                   </div>
-                </div>
+                </fieldset>
                 <div>
                   <label className="mb-2 block font-medium" htmlFor="transactionAmount">
                     مبلغ
@@ -919,8 +921,19 @@ export default function TransactionsPage() {
                       aria-invalid={fieldError === 'amount'}
                       aria-describedby={fieldError === 'amount' ? 'transaction-field-error' : undefined}
                       onChange={(event) => {
-                        setAmount(formatTomanAmountInput(event.target.value));
+                        const input = event.currentTarget;
+                        const formatted = formatTomanAmountInputWithCaret(
+                          input.value,
+                          input.selectionStart,
+                          input.selectionEnd,
+                        );
+                        setAmount(formatted.value);
                         setFieldError(null);
+                        requestAnimationFrame(() => {
+                          if (document.activeElement === input) {
+                            input.setSelectionRange(formatted.selectionStart, formatted.selectionEnd);
+                          }
+                        });
                       }}
                       placeholder="۲۰۰٬۰۰۰"
                       required

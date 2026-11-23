@@ -3,6 +3,70 @@ import { expectThemeAwareIllustration } from './assert-theme-aware-illustration'
 
 const csrfToken = 'reminder-e2e-csrf-token';
 
+test('keeps weekday labels separated at available calendar widths', async ({ page }) => {
+  await page.route('**/api/v1/me', async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          profile: {
+            id: '64b000000000000000000099',
+            accessibilitySettings: { fontScale: 1, highContrast: false },
+          },
+        },
+      },
+    });
+  });
+  await page.route('**/api/v1/reminders**', async (route) => {
+    await route.fulfill({
+      json: { success: true, data: { monthKey: '07-1405', reminders: [] } },
+    });
+  });
+
+  await page.goto('/reminders');
+  await page.getByRole('button', { name: 'تغییر تاریخ' }).click();
+  const calendar = page.getByRole('dialog', { name: 'انتخاب تاریخ سررسید شمسی' });
+  const weekdayHeaders = calendar.getByRole('grid').getByRole('row').first().getByRole('columnheader');
+
+  for (const width of [323, 375, 480, 481, 640, 641, 768, 769, 1024]) {
+    await page.setViewportSize({ width, height: 844 });
+    const pickerWidth = await page.locator('.jalali-date-picker').evaluate((picker) =>
+      picker.getBoundingClientRect().width,
+    );
+    const weekdayLayout = await weekdayHeaders.evaluateAll((headers) => {
+      const labels = headers.map((header) => {
+        const compact = header.querySelector<HTMLElement>('.jalali-calendar-weekday-compact')!;
+        const full = header.querySelector<HTMLElement>('.jalali-calendar-weekday-full')!;
+        const compactVisible = getComputedStyle(compact).display !== 'none';
+        const label = compactVisible ? compact : full;
+        const cellBounds = header.getBoundingClientRect();
+        const labelBounds = label.getBoundingClientRect();
+        return {
+          cellLeft: cellBounds.left,
+          cellRight: cellBounds.right,
+          left: labelBounds.left,
+          right: labelBounds.right,
+          compactVisible,
+        };
+      });
+      const labelsInVisualOrder = [...labels].sort((first, second) => first.left - second.left);
+      return {
+        allLabelsFit: labels.every(
+          (item) => item.left >= item.cellLeft && item.right <= item.cellRight,
+        ),
+        labelsAreSeparated: labelsInVisualOrder.every(
+          (item, index) => index === 0 || labelsInVisualOrder[index - 1].right + 2 <= item.left,
+        ),
+        compactVisible: labels[0].compactVisible,
+      };
+    });
+
+    expect(weekdayLayout.allLabelsFit, `weekday labels fit at ${width}px`).toBe(true);
+    expect(weekdayLayout.labelsAreSeparated, `weekday labels are separated at ${width}px`).toBe(true);
+    expect(weekdayLayout.compactVisible, `weekday label style at ${width}px`).toBe(pickerWidth < 480);
+  }
+});
+
 test('creates, completes, and archives a monthly reminder while showing persisted status', async ({
   page,
 }) => {
@@ -112,7 +176,7 @@ test('creates, completes, and archives a monthly reminder while showing persiste
   const calendar = page.getByRole('dialog', { name: 'انتخاب تاریخ سررسید شمسی' });
   await expect(
     calendar.getByRole('grid').getByRole('columnheader').first(),
-  ).toHaveText('شنبه');
+  ).toHaveAttribute('aria-label', 'شنبه');
   const initiallySelectedDate = await calendar.locator('[aria-pressed="true"]').getAttribute('data-date');
   const initiallyFocusedDate = await calendar.locator(':focus').getAttribute('data-date');
   await page.keyboard.press('ArrowLeft');
@@ -129,7 +193,9 @@ test('creates, completes, and archives a monthly reminder while showing persiste
   );
   const selectedDate = await reopenedCalendar.locator('[data-day="10"]').getAttribute('data-date');
   await reopenedCalendar.locator('[data-day="10"]').click();
-  await page.getByLabel('مبلغ (اختیاری، تومان)').fill('۱۲۵۰۰۰');
+  const reminderAmount = page.getByLabel('مبلغ (اختیاری، تومان)');
+  await reminderAmount.pressSequentially('125000');
+  await expect(reminderAmount).toHaveValue('۱۲۵٬۰۰۰');
   await page.getByLabel('تکرار').click();
   await page.getByRole('option', { name: 'ماهانه' }).click();
   await page.getByRole('button', { name: 'ثبت یادآور' }).click();
@@ -165,13 +231,4 @@ test('creates, completes, and archives a monthly reminder while showing persiste
     'یادآور بایگانی شد.',
   );
   await expect(page.getByText(/وضعیت: انجام‌شده در این ماه/)).toBeVisible();
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'تغییر تاریخ' }).click();
-  const mobileCalendar = page.getByRole('dialog', { name: 'انتخاب تاریخ سررسید شمسی' });
-  const bounds = await mobileCalendar.boundingBox();
-  expect(bounds).not.toBeNull();
-  expect(bounds!.x).toBe(0);
-  expect(bounds!.y + bounds!.height).toBeGreaterThanOrEqual(844);
-  await page.getByRole('button', { name: 'بستن انتخاب تاریخ' }).click();
 });

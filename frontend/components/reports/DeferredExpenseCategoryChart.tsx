@@ -51,15 +51,15 @@ export function DeferredExpenseCategoryChart({ data }: { data: ExpenseCategory[]
 
   return (
     <div
-      aria-label="نمودار هزینه دسته‌ها"
-      className="mt-6 h-72 w-full"
+      className="mt-6 w-full"
       ref={containerRef}
+      style={{ minHeight: `${data.length * 11}rem` }}
     >
       {Chart ? (
         <Chart data={data} />
       ) : loadError ? (
         <p className="app-muted p-4" role="alert">
-          بارگذاری نمودار ممکن نشد؛ جزئیات هزینه‌ها در فهرست زیر در دسترس است.
+          بارگذاری جزئیات هزینه‌ها ممکن نشد؛ برای تلاش دوباره صفحه را تازه‌سازی کنید.
         </p>
       ) : (
         <span className="sr-only" role="status">در حال بارگذاری نمودار…</span>

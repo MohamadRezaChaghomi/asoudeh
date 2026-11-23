@@ -17,7 +17,7 @@ import {
 } from '@/lib/jalaliDate';
 import {
   formatTomanAmount,
-  formatTomanAmountInput,
+  formatTomanAmountInputWithCaret,
   parseTomanAmount,
 } from '@/lib/tomanAmount';
 import type { CategoryType } from '@/types/category';
@@ -423,8 +423,19 @@ export default function BudgetsPage() {
                 aria-invalid={fieldError === 'amount'}
                 aria-describedby={fieldError === 'amount' ? 'budget-field-error' : undefined}
                 onChange={(event) => {
-                  setLimitAmount(formatTomanAmountInput(event.target.value));
+                  const input = event.currentTarget;
+                  const formatted = formatTomanAmountInputWithCaret(
+                    input.value,
+                    input.selectionStart,
+                    input.selectionEnd,
+                  );
+                  setLimitAmount(formatted.value);
                   setFieldError(null);
+                  requestAnimationFrame(() => {
+                    if (document.activeElement === input) {
+                      input.setSelectionRange(formatted.selectionStart, formatted.selectionEnd);
+                    }
+                  });
                 }}
                 placeholder="۱٬۰۰۰٬۰۰۰"
                 required
